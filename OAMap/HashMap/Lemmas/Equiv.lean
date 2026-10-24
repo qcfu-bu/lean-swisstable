@@ -62,87 +62,27 @@ theorem contains_eq [EquivBEq α] [LawfulHashable α] {k : α} (h : m₁ ~m m₂
 theorem mem_iff [EquivBEq α] [LawfulHashable α] {k : α} (h : m₁ ~m m₂) : k ∈ m₁ ↔ k ∈ m₂ := by
   simpa only [mem_iff_contains, Bool.coe_iff_coe] using contains_eq h
 
-theorem toList_perm (h : m₁ ~m m₂) : m₁.toList.Perm m₂.toList :=
-  -- REVIEW: no generated proof compiles.
-  -- error: `simp` made no progress
-  -- Std (HashMap): h.1.constToList_perm
-  -- Std (DHashMap.Equiv.constToList_perm): (Raw₀.Const.equiv_iff_toList_perm_toList m₁.1 m₂.1).mp h.1
-  -- Std (DHashMap.Internal.Raw₀.Const.equiv_iff_toList_perm_toList): by
-  --   simp_to_model [Const.toList, Equiv]
-  --   constructor
-  --   · exact List.Perm.map _
-  --   · intro h
-  --     have := h.map (fun (x, y) => (⟨x, y⟩ : (_ : α) × β))
-  --     simpa only [List.map_map, Function.comp_def, List.map_id'] using this
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   simp_to_model [Const.toList, Equiv]
-  --   constructor
-  --   · exact List.Perm.map _
-  --   · intro h
-  --     have := h.map (fun (x, y) => (⟨x, y⟩ : (_ : α) × β))
-  --     simpa only [List.map_map, Function.comp_def, List.map_id'] using this
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   simp_to_model [toList, Equiv]
-  --   constructor
-  --   · exact List.Perm.map _
-  --   · intro h
-  --     have := h.map (fun (x, y) => (⟨x, y⟩ : (_ : α) × β))
-  --     simpa only [List.map_map, Function.comp_def, List.map_id'] using this
-  --   error 1: Type mismatch
-  sorry
+theorem toList_perm (h : m₁ ~m m₂) : m₁.toList.Perm m₂.toList := by
+  rw [Model.toList_eq_toListModel_map, Model.toList_eq_toListModel_map]
+  exact h.1.map _
 
-theorem of_toList_perm (h : m₁.toList.Perm m₂.toList) : m₁ ~m m₂ :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown constant `List.Perm.of_constToList_perm`
-  -- Std (HashMap): ⟨.of_constToList_perm h⟩
-  -- Std (DHashMap.Equiv.of_constToList_perm): ⟨(Raw₀.Const.equiv_iff_toList_perm_toList m₁.1 m₂.1).mpr h⟩
-  -- Std (DHashMap.Internal.Raw₀.Const.equiv_iff_toList_perm_toList): by
-  --   simp_to_model [Const.toList, Equiv]
-  --   constructor
-  --   · exact List.Perm.map _
-  --   · intro h
-  --     have := h.map (fun (x, y) => (⟨x, y⟩ : (_ : α) × β))
-  --     simpa only [List.map_map, Function.comp_def, List.map_id'] using this
-  -- tried 0 (copy-HashMap): ⟨.of_constToList_perm h⟩
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   simp_to_model [toList, Equiv]
-  --   constructor
-  --   · exact List.Perm.map _
-  --   · intro h
-  --     have := h.map (fun (x, y) => (⟨x, y⟩ : (_ : α) × β))
-  --     simpa only [List.map_map, Function.comp_def, List.map_id'] using this
-  --   error 1: Type mismatch
-  sorry
+theorem of_toList_perm (h : m₁.toList.Perm m₂.toList) : m₁ ~m m₂ := by
+  rw [Model.toList_eq_toListModel_map, Model.toList_eq_toListModel_map] at h
+  refine ⟨?_⟩
+  have := h.map (fun (x, y) => (⟨x, y⟩ : (_ : α) × β))
+  simpa only [List.map_map, Function.comp_def, List.map_id'] using this
 
 theorem keys_perm (h : m₁ ~m m₂) : m₁.keys.Perm m₂.keys := by
   simp_to_model [keys]
   simp only [List.keys_eq_map]
   exact h.1.map _
 
-theorem of_keys_unit_perm {m₁ m₂ : HashMap α Unit} (h : m₁.keys.Perm m₂.keys) : m₁ ~m m₂ :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown constant `List.Perm.of_keys_unit_perm`
-  -- Std (HashMap): ⟨.of_keys_unit_perm h⟩
-  -- Std (DHashMap.Equiv.of_keys_unit_perm): ⟨(Raw₀.Const.equiv_iff_keys_perm_keys m₁.1 m₂.1).mpr h⟩
-  -- Std (DHashMap.Internal.Raw₀.Const.equiv_iff_keys_perm_keys): by
-  --   simp_to_model [keys, Equiv]
-  --   simp only [List.keys_eq_map]
-  --   constructor
-  --   · exact List.Perm.map _
-  --   · intro h
-  --     have := h.map (fun x => (⟨x, ()⟩ : (_ : α) × Unit))
-  --     simpa only [List.map_map, Function.comp_def, List.map_id'] using this
-  -- tried 0 (copy-HashMap): ⟨.of_keys_unit_perm h⟩
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   simp_to_model [keys, Equiv]
-  --   simp only [List.keys_eq_map]
-  --   constructor
-  --   · exact List.Perm.map _
-  --   · intro h
-  --     have := h.map (fun x => (⟨x, ()⟩ : (_ : α) × Unit))
-  --     simpa only [List.map_map, Function.comp_def, List.map_id'] using this
-  --   error 1: `simp` made no progress
-  sorry
+theorem of_keys_unit_perm {m₁ m₂ : HashMap α Unit} (h : m₁.keys.Perm m₂.keys) : m₁ ~m m₂ := by
+  rw [Model.keys_eq_keys_toListModel, Model.keys_eq_keys_toListModel, List.keys_eq_map,
+    List.keys_eq_map] at h
+  refine ⟨?_⟩
+  have := h.map (fun x => (⟨x, ()⟩ : (_ : α) × Unit))
+  simpa only [List.map_map, Function.comp_def, List.map_id'] using this
 
 theorem getElem?_eq [EquivBEq α] [LawfulHashable α] {k : α} (h : m₁ ~m m₂) :
     m₁[k]? = m₂[k]? := by
@@ -189,22 +129,11 @@ theorem insertIfNew [EquivBEq α] [LawfulHashable α] (k : α) (v : β) (h : m�
   simp_to_model [Equiv, insertIfNew] using List.insertEntryIfNew_of_perm _ h.1
 
 theorem insertMany_list [EquivBEq α] [LawfulHashable α] (l : List (α × β)) (h : m₁ ~m m₂) :
-    m₁.insertMany l ~m m₂.insertMany l :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Invalid field `constInsertMany_list`: The environment does not contain `List.Perm.constInsertMany_list`, so it is not possible to project the field `constInsertMany_list` from an expression
-  -- Std (HashMap): ⟨h.1.constInsertMany_list l⟩
-  -- Std (DHashMap.Equiv.constInsertMany_list): ⟨Raw₀.Const.insertMany_list_equiv_congr ⟨m₁.1, _⟩ ⟨m₂.1, _⟩ m₁.2 m₂.2 h.1⟩
-  -- Std (DHashMap.Internal.Raw₀.Const.insertMany_list_equiv_congr): by
-  --   simp_to_model [Equiv, Const.insertMany] using List.insertList_perm_of_perm_first h.1
-  -- tried 0 (copy-HashMap): ⟨h.1.constInsertMany_list l⟩
-  -- tried 1 (simp_to_model (chain)): by simp_to_model [Equiv, insertMany] using List.insertList_perm_of_perm_first h.1
-  --   error 1: Tactic `apply` failed: could not unify the conclusion of `insertList_perm_of_perm_first h.inner`
-  -- tried 2 (renamed Raw0 text (chain)): by
-  --   simp_to_model [Equiv, insertMany] using List.insertList_perm_of_perm_first h.1
-  --   error 2: Tactic `apply` failed: could not unify the conclusion of `insertList_perm_of_perm_first h.inner`
-  -- tried 3 (simp_to_model (chain) (at *)): by simp_to_model [Equiv, insertMany] at * using List.insertList_perm_of_perm_first h.1
-  --   error 3: Invalid projection: Projections extract constructor fields for one-constructor inductive types. The expression
-  sorry
+    m₁.insertMany l ~m m₂.insertMany l := by
+  rw [Model.insertMany_list_eq_foldl, Model.insertMany_list_eq_foldl]
+  induction l generalizing m₁ m₂ with
+  | nil => exact h
+  | cons p l ih => exact ih (insert p.1 p.2 h)
 
 theorem insertManyIfNewUnit_list [EquivBEq α] [LawfulHashable α] {m₁ m₂ : HashMap α Unit}
     (l : List α) (h : m₁ ~m m₂) :
@@ -233,18 +162,10 @@ theorem of_forall_getKey_eq_of_forall_getElem?_eq [EquivBEq α] [LawfulHashable 
     m₁ ~m m₂ := by
   simp_to_model [getKey, getElem?, contains, mem, Equiv] at * using List.getKey_getValue?_ext
 
-theorem of_forall_getElem?_eq [LawfulBEq α] (h : ∀ k : α, m₁[k]? = m₂[k]?) : m₁ ~m m₂ :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown constant `List.Perm.of_forall_constGet?_eq`
-  -- Std (HashMap): ⟨.of_forall_constGet?_eq h⟩
-  -- Std (DHashMap.Equiv.of_forall_constGet?_eq): ⟨Raw₀.Const.equiv_of_forall_get?_eq m₁.2 m₂.2 hv⟩
-  -- Std (DHashMap.Internal.Raw₀.Const.equiv_of_forall_get?_eq): by
-  --   simpa only [Const.get?_eq_get?, h₁, h₂] using Raw₀.equiv_of_forall_get?_eq m₁ m₂ h₁ h₂
-  -- tried 0 (copy-HashMap): ⟨.of_forall_constGet?_eq h⟩
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   simpa only [Const.get?_eq_get?] using Raw₀.equiv_of_forall_get?_eq m₁ m₂ h₁ h₂
-  --   error 1: Unknown identifier `Const.get?_eq_get?`
-  sorry
+theorem of_forall_getElem?_eq [LawfulBEq α] (h : ∀ k : α, m₁[k]? = m₂[k]?) : m₁ ~m m₂ := by
+  simp_to_model [getElem?, Equiv] at *
+  simp only [List.getValue?_eq_getValueCast?] at h
+  exact List.getValueCast?_ext (Model.distinctKeys _) (Model.distinctKeys _) h
 
 theorem of_forall_getKey?_unit_eq [EquivBEq α] [LawfulHashable α]
     {m₁ m₂ : HashMap α Unit} (h : ∀ k, m₁.getKey? k = m₂.getKey? k) : m₁ ~m m₂ := by
@@ -256,16 +177,7 @@ theorem of_forall_contains_unit_eq [LawfulBEq α]
 
 theorem of_forall_mem_unit_iff [LawfulBEq α]
     {m₁ m₂ : HashMap α Unit} (h : ∀ k, k ∈ m₁ ↔ k ∈ m₂) : m₁ ~m m₂ :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown constant `List.Perm.of_forall_mem_unit_iff`
-  -- Std (HashMap): ⟨.of_forall_mem_unit_iff h⟩
-  -- Std (DHashMap.Equiv.of_forall_mem_unit_iff): by
-  --   simpa only [mem_iff_contains, Bool.coe_iff_coe] using of_forall_contains_unit_eq
-  -- tried 0 (copy-HashMap): ⟨.of_forall_mem_unit_iff h⟩
-  -- tried 1 (copy-DHashMap-renamed (chain)): by
-  --   simpa only [mem_iff_contains, Bool.coe_iff_coe] using of_forall_contains_unit_eq
-  --   error 1: typeclass instance problem is stuck
-  sorry
+  of_forall_contains_unit_eq fun k => by simpa only [mem_iff_contains, Bool.coe_iff_coe] using h k
 
 end Equiv
 
@@ -310,12 +222,9 @@ theorem insertMany_list_equiv_foldl {m : HashMap α β} {l : List (α × β)} :
   rw [Model.insertMany_list_eq_foldl]
 
 theorem ofList_equiv_foldl {l : List (α × β)} :
-    ofList l ~m l.foldl (init := ∅) fun acc p => acc.insert p.1 p.2 :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Type mismatch
-  -- Std (HashMap): insertMany_list_equiv_foldl
-  -- tried 0 (copy-HashMap): insertMany_list_equiv_foldl
-  sorry
+    ofList l ~m l.foldl (init := ∅) fun acc p => acc.insert p.1 p.2 := by
+  rw [ofList_eq_insertMany_empty]
+  exact insertMany_list_equiv_foldl
 
 theorem insertManyIfNewUnit_list_equiv_foldl {m : HashMap α Unit}
     {l : List α} :
@@ -323,12 +232,9 @@ theorem insertManyIfNewUnit_list_equiv_foldl {m : HashMap α Unit}
   rw [Model.insertManyIfNewUnit_list_eq_foldl]
 
 theorem unitOfList_equiv_foldl {l : List α} :
-    unitOfList l ~m l.foldl (init := ∅) fun acc a => acc.insertIfNew a () :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Type mismatch
-  -- Std (HashMap): insertManyIfNewUnit_list_equiv_foldl
-  -- tried 0 (copy-HashMap): insertManyIfNewUnit_list_equiv_foldl
-  sorry
+    unitOfList l ~m l.foldl (init := ∅) fun acc a => acc.insertIfNew a () := by
+  rw [unitOfList_eq_insertManyIfNewUnit_empty]
+  exact insertManyIfNewUnit_list_equiv_foldl
 
 end Equiv
 
