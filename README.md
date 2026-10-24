@@ -33,32 +33,107 @@ path = "../lean-swisstable"
   last duplicate, and so on. No `Inhabited` requirement is added.
 * **Fully proved.** No `sorry`. Every constant depends only on `propext`, `Classical.choice` and
   `Quot.sound`. There is no `native_decide`, `bv_decide`, `implemented_by`, `extern`, `unsafe`,
-  `partial` or `opaque`. The `_unsafe_rec` helpers that Lean's compiler generates for well-founded
-  definitions are the only exception, and the audit allows them only for such definitions. The
-  compiled code is the code the proofs are about.
+  `partial` or `opaque`. The compiled code is the code the proofs are about.
 * **Known differences from Std.**
   * The iteration order is different (Std leaves it unspecified).
   * `Repr` prints `SwissTable.HashMap.ofList …`.
   * The `inner` field of a map has a different type, as does the state type of the iterators.
-  * After an `erase`, the table may keep one reference to the erased key and value until it next
-    rebuilds; values that release a resource when freed (such as file handles) can notice this.
+  * The empty slots of a table are filled with one key and one value from the map: the pair
+    whose insert last made the table grow or rebuild. A Lean array cannot have uninitialised
+    cells, and requiring `Inhabited` would break the drop-in promise. If that entry is later
+    erased, or its value replaced, the old key and value stay referenced until the next rebuild
+    or until the map is freed. That is at most one key and one value per map, so memory does not
+    grow, but such a value is released late. This matters only for a very large value, or one
+    that releases a resource when freed, such as a file handle.
+
+## Compared with `Std.HashMap`
+
+| | `Std.HashMap` | `SwissTable.HashMap` |
+|---|---|---|
+| layout | array of buckets, each a linked list of cells | control bytes + key array + value array |
+| per entry | one heap cell (key, value, next) | one key cell and one value cell in the arrays, plus 1 control byte |
+| collisions | walk the bucket's list, comparing every key | 8 slots per step, keys compared only on a 7-bit tag match |
+| growth | at 3/4 load, rehash every key | at 7/8 load, rebuild into a fresh table, rehash every key |
+| erase | unlink the cell | empty slot or tombstone |
+| freeing a map | one free per entry | three arrays |
+| iteration | bucket order | slot order, a group at a time |
+| `Inhabited` needed | no | no |
+
+**Speed.** The benchmark covers:
+* 16 workloads;
+* 5 key types: random `Nat`, a flat 8-field structure, an 8-field structure behind an array,
+  `String`, and the consecutive `Nat`s `0 .. n−1`;
+* 8 sizes from 10³ to 10⁷;
+* one process per cell, taking the minimum ns per operation over repetitions, on an Apple M5 Pro.
+
+Ratios are SwissTable/Std; below 1 means faster. The middle column is the geometric mean over the
+4 non-consecutive key types at all 8 sizes:
+
+| workload | SwissTable / Std | worst cell |
+|---|---|---|
+| lookup hit, shuffled (`getD` / `get?`) | 0.68 / 0.50 | 1.08 / 0.74 |
+| lookup hit, insertion order (`getD` / `get?`) | 0.76 / 0.48 | 1.65 / 0.72 |
+| lookup miss | 0.58 | 1.20 |
+| insert into `∅` / into `emptyWithCapacity n` | 0.69 / 0.84 | 0.94 / 1.11 |
+| update existing keys | 0.52 | 0.85 |
+| lookup-or-insert (`getThenInsertIfNew?`) | 0.57 | 0.78 |
+| erase half / erase all | 0.66 / 0.72 | 1.29 / 1.63 |
+| lookups after erasing half | 0.85 | 1.37 |
+| insert-and-erase churn / lookups after churn | 0.75 / 0.82 | 1.25 / 1.21 |
+| `fold` | 0.20 | 0.59 |
+| freeing the map | 0.10 | 0.39 |
+| **all 512 cells** | **0.55** | 23 cells above 1.10 |
+
+For example, at 10⁶ random `Nat` keys (ns per operation, Std → SwissTable):
+
+| operation | Std | SwissTable |
+|---|---|---|
+| shuffled `getD` | 14.8 | 9.3 |
+| miss | 11.0 | 2.4 |
+| insert | 44.9 | 23.5 |
+| erase | 46.4 | 23.8 |
+| `fold` | 9.2 | 1.6 |
+
+Where Std is faster:
+* **Consecutive `Nat` keys** (`0 .. n−1`). Std's bucket index keeps them in sequential buckets.
+  SwissTable's multiplicative hash spreads them, which costs locality. Over all such cells the two
+  are even (1.00), but at 10⁶ entries and more, in-order lookups and pre-sized inserts are
+  4–12× slower.
+* **A few small in-cache cells:** erasing from a map at load 3/4 (up to 1.63×), lookups after many
+  erases with no insert in between (up to 1.37×), and in-order `getD` at about 1000 entries (up
+  to 1.65×, under 1 ns more per lookup).
+* **Expensive keys during growth.** Hashes are not stored, so a rebuild hashes every key again, as
+  Std does. For keys whose hash is expensive, cache it in the key.
+
+**Memory** per entry, at 10⁵ entries and more:
+
+| map | SwissTable / Std |
+|---|---|
+| built with `emptyWithCapacity n` | 0.63× (e.g. 30 against 46 bytes at 10⁷) |
+| grown from `∅` | 1.03× |
+
+A map that is shared when updated is copied first, as with Std. With `String` keys such a copy
+costs 3–5× Std's: copying the arrays touches every key and value object to raise its reference
+count, placeholders included, and these objects are scattered in memory. With `Nat` keys a copy
+is cheaper than Std's.
+
+`lake exe swisstable-bench` runs a smaller version of this benchmark (`rand` and `String` keys,
+10³–10⁶, under a minute); `swisstable-bench compare --keys … --sizes … --workloads …` selects cells.
 
 ## Structure
 
 ```
 SwissTable/
-  Core/Swiss/   the table: a SwissTable with its invariant and proofs   ← the only layout-specific part
-  Core/Table    the one line that selects the core
-  Core/ListRef  a list-backed reference core with the same interface (for testing)
-  Core/Derived, Core/Bulk   queries, traversals, insertMany/union/inter/diff, on top of the core
+  Core/Swiss/   the table: a SwissTable with its invariant and proofs
+  Core/Derived, Core/Bulk   queries, traversals, insertMany/union/inter/diff, on top of the table
   HashMap/      Std's API (Basic), the model bridge and tactic, and Std's lemmas (Lemmas/)
   HashSet/      Std's HashSet over HashMap α Unit, as in Std
-test/           parity checker, contract test, axiom audit, seal check, #guard tests
+test/           parity checker, interface test, axiom audit, seal check, #guard tests
 tools/          lemma generator, audits, C check, CI script
 bench/          SwissTable.HashMap against Std.HashMap
 ```
 
-**The core contract.** Everything above `Core/` sees the table only through 23 definitions
+**The table interface.** Everything above `Core/Swiss/` sees the table only through 23 definitions
 (`lookup`, `insert`, `erase`, `alter`, `filter`, `foldM`, …) and 22 lemmas. The lemmas relate
 each operation to a list model `toListModel : Table α β → List ((_ : α) × β)`. For example,
 inserting permutes the model into `insertEntry k v` of the old model. These are the list functions
@@ -68,9 +143,7 @@ of `Std.Internal.List`, the same model Std's own proofs use.
   Std's do. Lemmas about traversals and filtering hold for any `BEq`/`Hashable`, as Std's do.
 * The table bundles its invariant, and the part that needs lawful instances is stated only under
   them. So the operations themselves need no lawfulness, again as in Std.
-* `SealCheck` makes sure nothing above the core uses anything else, so a different core can be
-  slotted in by changing `Core/Table.lean`. The list-backed `ListRef` core passes the same contract
-  test.
+* A test (`SealCheck`) checks that nothing above the table uses anything else.
 
 **Std's lemmas, reused.** Std proves its map lemmas in layers, ending in proofs of the form
 `simp_to_model [insert, get?] using List.getValue?_insertEntry`: rewrite to the list model, then
@@ -81,7 +154,7 @@ the statements are Std's character for character. 56 lemmas needed a short hand 
 kept in `tools/data/hand.json`. `tools/ci.sh` checks that the generated files are exactly what the
 generator produces.
 
-## The SwissTable core
+## How the table works
 
 The layout is Abseil's SwissTable in the portable, non-SIMD form of Rust's hashbrown.
 
@@ -179,85 +252,11 @@ lowestLane m := (((m &&& (0 − m)) >>> 7) * 0x0001020304050607) >>> 56
   * no array shared just before its in-place update;
   * the table cell reused on update.
 
-## Compared with `Std.HashMap`
-
-| | `Std.HashMap` | `SwissTable.HashMap` |
-|---|---|---|
-| layout | array of buckets, each a linked list of cells | control bytes + key array + value array |
-| per entry | one heap cell (key, value, next) | one key cell and one value cell in the arrays, plus 1 control byte |
-| collisions | walk the bucket's list, comparing every key | 8 slots per step, keys compared only on a 7-bit tag match |
-| growth | at 3/4 load, rehash every key | at 7/8 load, rebuild into a fresh table, rehash every key |
-| erase | unlink the cell | empty slot or tombstone |
-| freeing a map | one free per entry | three arrays |
-| iteration | bucket order | slot order, a group at a time |
-| `Inhabited` needed | no | no |
-
-**Speed.** The benchmark covers:
-* 16 workloads;
-* 5 key types: random `Nat`, a flat 8-field structure, an 8-field structure behind an array,
-  `String`, and the consecutive `Nat`s `0 .. n−1`;
-* 8 sizes from 10³ to 10⁷;
-* one process per cell, taking the minimum ns per operation over repetitions, on an Apple M5 Pro.
-
-Ratios are SwissTable/Std; below 1 means faster. The middle column is the geometric mean over the
-4 non-consecutive key types at all 8 sizes:
-
-| workload | SwissTable / Std | worst cell |
-|---|---|---|
-| lookup hit, shuffled (`getD` / `get?`) | 0.68 / 0.50 | 1.08 / 0.74 |
-| lookup hit, insertion order (`getD` / `get?`) | 0.76 / 0.48 | 1.65 / 0.72 |
-| lookup miss | 0.58 | 1.20 |
-| insert into `∅` / into `emptyWithCapacity n` | 0.69 / 0.84 | 0.94 / 1.11 |
-| update existing keys | 0.52 | 0.85 |
-| lookup-or-insert (`getThenInsertIfNew?`) | 0.57 | 0.78 |
-| erase half / erase all | 0.66 / 0.72 | 1.29 / 1.63 |
-| lookups after erasing half | 0.85 | 1.37 |
-| insert-and-erase churn / lookups after churn | 0.75 / 0.82 | 1.25 / 1.21 |
-| `fold` | 0.20 | 0.59 |
-| freeing the map | 0.10 | 0.39 |
-| **all 512 cells** | **0.55** | 23 cells above 1.10 |
-
-For example, at 10⁶ random `Nat` keys (ns per operation, Std → SwissTable):
-
-| operation | Std | SwissTable |
-|---|---|---|
-| shuffled `getD` | 14.8 | 9.3 |
-| miss | 11.0 | 2.4 |
-| insert | 44.9 | 23.5 |
-| erase | 46.4 | 23.8 |
-| `fold` | 9.2 | 1.6 |
-
-Where Std is faster:
-* **Consecutive `Nat` keys** (`0 .. n−1`). Std's bucket index keeps them in sequential buckets.
-  SwissTable's multiplicative hash spreads them, which costs locality. Over all such cells the two
-  are even (1.00), but at 10⁶ entries and more, in-order lookups and pre-sized inserts are
-  4–12× slower.
-* **A few small in-cache cells:** erasing from a map at load 3/4 (up to 1.63×), lookups after many
-  erases with no insert in between (up to 1.37×), and in-order `getD` at about 1000 entries (up
-  to 1.65×, under 1 ns more per lookup).
-* **Expensive keys during growth.** Hashes are not stored, so a rebuild hashes every key again, as
-  Std does. For keys whose hash is expensive, cache it in the key.
-
-**Memory** per entry, at 10⁵ entries and more:
-
-| map | SwissTable / Std |
-|---|---|
-| built with `emptyWithCapacity n` | 0.63× (e.g. 30 against 46 bytes at 10⁷) |
-| grown from `∅` | 1.03× |
-
-A map that is shared when updated is copied first, as with Std. With `String` keys such a copy
-costs 3–5× Std's: copying the arrays touches every key and value object to raise its reference
-count, placeholders included, and these objects are scattered in memory. With `Nat` keys a copy
-is cheaper than Std's.
-
-`lake exe swisstable-bench` runs a smaller version of this benchmark (`rand` and `String` keys,
-10³–10⁶, under a minute); `swisstable-bench compare --keys … --sizes … --workloads …` selects cells.
-
 ## Building and checking
 
 ```sh
 lake build                 # the library and every proof
-lake test                  # parity with Std, contract, axiom audit, seal, #guard tests
+lake test                  # parity with Std, axiom audit, interface and seal checks, #guard tests
 lake exe swisstable-bench  # SwissTable.HashMap against Std.HashMap
 tools/ci.sh                # all of the above, plus the source audit, the lemma-generator check
                            # and the generated-C check
