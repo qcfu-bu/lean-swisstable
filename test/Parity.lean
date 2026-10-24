@@ -21,7 +21,7 @@ Run it from a file that imports Std, the candidate library and this file:
 
 ```
 import Std
-import OAMap
+import SwissTable
 import Parity
 #eval Parity.run {}
 ```
@@ -38,11 +38,11 @@ namespace Parity
 structure Config where
   /-- Namespace prefix renaming `Std ↦ ours`, applied to every constant (longest prefix wins). -/
   nsMap : Array (Name × Name) :=
-    #[(`Std.HashMap, `OAMap.HashMap), (`Std.HashSet, `OAMap.HashSet)]
+    #[(`Std.HashMap, `SwissTable.HashMap), (`Std.HashSet, `SwissTable.HashSet)]
   /-- Explicit constant renamings; they take precedence over `nsMap`. -/
   constMap : Array (Name × Name) := #[]
   /-- Std declarations outside the source namespaces to check too, with their counterparts
-  (e.g. `(`List.groupByKey, `OAMap.List.groupByKey)`); they are also added to the renaming. -/
+  (e.g. `(`List.groupByKey, `SwissTable.List.groupByKey)`); they are also added to the renaming. -/
   extraDecls : Array (Name × Name) := #[]
   /-- Std prefixes that are not checked (deferred or internal APIs). -/
   exclude : Array Name :=

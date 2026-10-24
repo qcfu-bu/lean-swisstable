@@ -24,7 +24,7 @@ carry only `BEq α` and `Hashable α`, so a map kind needing anything more does 
 then derives the instance of `BenchMap` the workloads run on.
 
 The workloads (`Bench/Loops.lean`) are written once against the class `BenchMap` and marked
-`@[specialize]`; `bench/Main.lean` instantiates them at `Std.HashMap` and at `OAMap.HashMap`
+`@[specialize]`; `bench/Main.lean` instantiates them at `Std.HashMap` and at `SwissTable.HashMap`
 (`Bench.mainFor`, `Bench/Run.lean`), so the compiler specialises every loop to the map's own
 functions with the key type's `hash` and `==` called directly.
 -/

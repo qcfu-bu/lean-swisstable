@@ -1,7 +1,7 @@
 module
 
-public import OAMap.HashMap
-public import OAMap.HashSet
+public import SwissTable.HashMap
+public import SwissTable.HashSet
 
 /-!
 # Monomorphic instances for the C check
@@ -28,36 +28,36 @@ namespace Bench.CCheck
 
 /-! ## Lookups -/
 
-def getDNat (m : OAMap.HashMap Nat Nat) (a : Nat) : Nat := m.getD a 0
-def getDStr (m : OAMap.HashMap String Nat) (a : String) : Nat := m.getD a 0
-def getBangNat (m : OAMap.HashMap Nat Nat) (a : Nat) : Nat := m[a]!
-def containsNat (m : OAMap.HashMap Nat Nat) (a : Nat) : Bool := m.contains a
-def containsStr (m : OAMap.HashMap String Nat) (a : String) : Bool := m.contains a
-def getKeyDStr (m : OAMap.HashMap String Nat) (a : String) : String := m.getKeyD a ""
-def setContainsNat (s : OAMap.HashSet Nat) (a : Nat) : Bool := s.contains a
-def setContainsStr (s : OAMap.HashSet String) (a : String) : Bool := s.contains a
+def getDNat (m : SwissTable.HashMap Nat Nat) (a : Nat) : Nat := m.getD a 0
+def getDStr (m : SwissTable.HashMap String Nat) (a : String) : Nat := m.getD a 0
+def getBangNat (m : SwissTable.HashMap Nat Nat) (a : Nat) : Nat := m[a]!
+def containsNat (m : SwissTable.HashMap Nat Nat) (a : Nat) : Bool := m.contains a
+def containsStr (m : SwissTable.HashMap String Nat) (a : String) : Bool := m.contains a
+def getKeyDStr (m : SwissTable.HashMap String Nat) (a : String) : String := m.getKeyD a ""
+def setContainsNat (s : SwissTable.HashSet Nat) (a : Nat) : Bool := s.contains a
+def setContainsStr (s : SwissTable.HashSet String) (a : String) : Bool := s.contains a
 
 /-! ## Updates -/
 
-def insertNat (m : OAMap.HashMap Nat Nat) (a b : Nat) : OAMap.HashMap Nat Nat := m.insert a b
-def insertStr (m : OAMap.HashMap String Nat) (a : String) (b : Nat) : OAMap.HashMap String Nat :=
+def insertNat (m : SwissTable.HashMap Nat Nat) (a b : Nat) : SwissTable.HashMap Nat Nat := m.insert a b
+def insertStr (m : SwissTable.HashMap String Nat) (a : String) (b : Nat) : SwissTable.HashMap String Nat :=
   m.insert a b
-def insertIfNewNat (m : OAMap.HashMap Nat Nat) (a b : Nat) : OAMap.HashMap Nat Nat :=
+def insertIfNewNat (m : SwissTable.HashMap Nat Nat) (a b : Nat) : SwissTable.HashMap Nat Nat :=
   m.insertIfNew a b
-def getThenInsertIfNewStr (m : OAMap.HashMap String Nat) (a : String) (b : Nat) :
-    Option Nat × OAMap.HashMap String Nat :=
+def getThenInsertIfNewStr (m : SwissTable.HashMap String Nat) (a : String) (b : Nat) :
+    Option Nat × SwissTable.HashMap String Nat :=
   m.getThenInsertIfNew? a b
-def containsThenInsertNat (m : OAMap.HashMap Nat Nat) (a b : Nat) : Bool × OAMap.HashMap Nat Nat :=
+def containsThenInsertNat (m : SwissTable.HashMap Nat Nat) (a b : Nat) : Bool × SwissTable.HashMap Nat Nat :=
   m.containsThenInsert a b
-def eraseNat (m : OAMap.HashMap Nat Nat) (a : Nat) : OAMap.HashMap Nat Nat := m.erase a
-def eraseStr (m : OAMap.HashMap String Nat) (a : String) : OAMap.HashMap String Nat := m.erase a
-def modifyNat (m : OAMap.HashMap Nat Nat) (a : Nat) : OAMap.HashMap Nat Nat := m.modify a (· + 1)
-def alterStr (m : OAMap.HashMap String Nat) (a : String) : OAMap.HashMap String Nat :=
+def eraseNat (m : SwissTable.HashMap Nat Nat) (a : Nat) : SwissTable.HashMap Nat Nat := m.erase a
+def eraseStr (m : SwissTable.HashMap String Nat) (a : String) : SwissTable.HashMap String Nat := m.erase a
+def modifyNat (m : SwissTable.HashMap Nat Nat) (a : Nat) : SwissTable.HashMap Nat Nat := m.modify a (· + 1)
+def alterStr (m : SwissTable.HashMap String Nat) (a : String) : SwissTable.HashMap String Nat :=
   m.alter a fun | some v => some (v + 1) | none => some 0
-def setInsertStr (s : OAMap.HashSet String) (a : String) : OAMap.HashSet String := s.insert a
+def setInsertStr (s : SwissTable.HashSet String) (a : String) : SwissTable.HashSet String := s.insert a
 
 /-! ## Traversal -/
 
-def foldNat (m : OAMap.HashMap Nat Nat) : Nat := m.fold (fun acc _ v => acc + v) 0
+def foldNat (m : SwissTable.HashMap Nat Nat) : Nat := m.fold (fun acc _ v => acc + v) 0
 
 end Bench.CCheck

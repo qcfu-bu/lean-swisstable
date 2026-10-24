@@ -1,8 +1,8 @@
-# OAMap proof architecture: porting Std's HashMap and HashSet lemmas
+# SwissTable proof architecture: porting Std's HashMap and HashSet lemmas
 
 Scope: the 678 theorems of `Std/Data/HashMap/Lemmas.lean` and the 320 of
-`Std/Data/HashSet/Lemmas.lean` (Lean v4.35.0), restated for `OAMap.HashMap α β` and
-`OAMap.HashSet α` with identical names, statements and attributes. The table layout is still
+`Std/Data/HashSet/Lemmas.lean` (Lean v4.35.0), restated for `SwissTable.HashMap α β` and
+`SwissTable.HashSet α` with identical names, statements and attributes. The table layout is still
 being chosen, so everything below assumes only an open-addressing table whose observable model
 is its list of entries.
 
@@ -201,7 +201,7 @@ theorem toListModel_map (m) {f : α → β → γ} :
 
 `insertEntry` replaces the stored key and value of an existing key (`replaceEntry`). This is
 Std's semantics, and `getKey?_insert` says so (`… = if k == a then some k else …`). The existing
-OAMap insert keeps the stored key, and it has to change.
+`Wnetkat2/Data/OAMap` insert keeps the stored key, and it has to change.
 
 **Generic operations (Layer 1.5).** These are proved once from the Layer 1 lemmas and Std-shaped
 definitions, so they do not depend on the layout (proved in the mock, section `Layer 1.5`):
@@ -438,7 +438,7 @@ Other details of a full port:
   `attribute [simp] contains_eq_false_iff_not_mem`, and the section `variable`s (some sections
   fix `{m : HashMap α Unit}`). Also copy the `DecidableEquiv` instance.
 * HashSet uses one DHashMap-only lemma (`DHashMap.mem_of_mem_insertIfNew'`), so we provide
-  `OAMap.HashMap.mem_of_mem_insertIfNew'` as an extra (non-Std) lemma.
+  `SwissTable.HashMap.mem_of_mem_insertIfNew'` as an extra (non-Std) lemma.
 * Keep Std's `@[cbv_opaque]` and `@[inline]` attributes on our definitions, and `@[cbv_eval]` on
   lemmas, so the `cbv` tactic sees the same API.
 

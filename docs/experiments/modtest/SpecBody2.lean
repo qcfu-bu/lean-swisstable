@@ -1,4 +1,4 @@
-open OAMap.Core Std.Internal.List
+open SwissTable.Core Std.Internal.List
 
 variable {α : Type u} {β : Type v} {γ : Type w}
 

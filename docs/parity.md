@@ -1,4 +1,4 @@
-# Parity: a statement-parity checker for `OAMap` against `Std.HashMap`/`Std.HashSet`
+# Parity: a statement-parity checker for `SwissTable` against `Std.HashMap`/`Std.HashSet`
 
 `Parity.lean` is a Lean 4.35 meta-program (it imports only `Lean`). `Parity.run cfg` goes
 through every public Std declaration under the source namespaces, translates its elaborated type
@@ -11,7 +11,7 @@ any check fails with an error, so the checker can gate CI.
 | file | role |
 |---|---|
 | `Parity.lean` | the checker |
-| `ParityMock.lean` | the mock candidate library: `OAMap.HashMap` over a list model, with planted differences |
+| `ParityMock.lean` | the mock candidate library: `SwissTable.HashMap` over a list model, with planted differences |
 | `ParityRunMock.lean` | runs the checker on the mock, restricted to the 26 Std declarations the mock copies |
 | `ParityRunMockFull.lean` | the mock against all 1134 Std declarations, at most 8 entries shown per section |
 | `ParityMockExtra.lean` | self-contained second mock covering the other kinds of difference |
@@ -39,14 +39,14 @@ test directory), and keep the driver out of the library build:
 ```lean
 -- ParityRun.lean
 import Std
-import OAMap
+import SwissTable
 import Parity
 
 #eval Parity.run {
   jsonOut := some "parity.json" }
 ```
 
-Then run `lake build OAMap Parity && lake env lean ParityRun.lean`.
+Then run `lake build SwissTable Parity && lake env lean ParityRun.lean`.
 
 **Struct-literal pitfall.** In `Parity.run { … }`, every field that starts a new line must begin at
 or right of the column of the first field. Writing `#eval Parity.run { a := 1,` and then `b := 2 }`
@@ -57,10 +57,10 @@ the `#eval` line and indent all the fields equally, as in `ParityRunMock.lean`.
 
 | field | default | meaning |
 |---|---|---|
-| `nsMap` | `Std.HashMap ↦ OAMap.HashMap`, `Std.HashSet ↦ OAMap.HashSet` | prefix renaming applied to every constant (longest prefix wins) |
+| `nsMap` | `Std.HashMap ↦ SwissTable.HashMap`, `Std.HashSet ↦ SwissTable.HashSet` | prefix renaming applied to every constant (longest prefix wins) |
 | `constMap` | `#[]` | explicit renamings; they take precedence over `nsMap` |
-| `extraDecls` | `#[]` | Std declarations outside the namespaces to check as well, with their counterparts, e.g. `(`List.groupByKey, `OAMap.List.groupByKey)` |
-| `exclude` | `Std.HashMap.Raw`, `Std.HashSet.Raw`, `….Internal` | Std prefixes that are not checked (`Raw` is a deferred API; OAMap's `ParityRun` excludes only the two `Raw` prefixes, so `Internal` is checked) |
+| `extraDecls` | `#[]` | Std declarations outside the namespaces to check as well, with their counterparts, e.g. `(`List.groupByKey, `SwissTable.List.groupByKey)` |
+| `exclude` | `Std.HashMap.Raw`, `Std.HashSet.Raw`, `….Internal` | Std prefixes that are not checked (`Raw` is a deferred API; SwissTable's `ParityRun` excludes only the two `Raw` prefixes, so `Internal` is checked) |
 | `ignore` | `#[]` | exact Std names that are not checked |
 | `only` | `#[]` | when nonempty, check only these Std names |
 | `checkTheorems` / `checkDefs` / `checkInstances` | `true` | the three sections |
@@ -142,7 +142,7 @@ values are not compared, except for notation declarations (`ParserDescr`), whose
 description is compared, after renaming the `Name` literals in Std's (a notation's description
 names its own syntax kind, such as `` `Std.HashMap.«term_~m_» ``). Inductive types (`HashMap`, `HashSet`, `Equiv`) are checked by type.
 Their constructors and projections are internals and are skipped by default
-(`checkStructureInternals := true` checks them; OAMap's `ParityRun` does, ignoring the 14
+(`checkStructureInternals := true` checks them; SwissTable's `ParityRun` does, ignoring the 14
 HashMap internals that mention its `inner` field).
 
 **Root causes.** When a statement mentions a Std operation whose own signature differs (for

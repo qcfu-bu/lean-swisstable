@@ -5,7 +5,7 @@ open Std.Internal.List
 
 universe u v w w'
 
-namespace OAMap.Core
+namespace SwissTable.Core
 
 structure Table (α : Type u) (β : Type v) [BEq α] [Hashable α] : Type (max u v) where
   impl : List ((_ : α) × β)
@@ -104,4 +104,4 @@ theorem getThenInsertIfNew?_fst (t : Table α β) (a : α) (b : β) :
     (t.getThenInsertIfNew? a b).1 = t.get? a := by
   rw [getThenInsertIfNew?_eq]; unfold get?; rfl
 end Table
-end OAMap.Core
+end SwissTable.Core

@@ -1,13 +1,13 @@
 """Source-text check of the 16 iterator declarations that the parity checker ignores.
 
-Usage: python3 -I tools/srccheck.py tools/inventory.json OAMap
+Usage: python3 -I tools/srccheck.py tools/inventory.json SwissTable
 
 `docs/ARCHITECTURE.md` §8 and §9.1: the elaborated types of `iter`, `keysIter`, `valuesIter`,
 `HashSet.iter` and of their 12 lemmas mention the iterator state, which is necessarily different
-from Std's (Std's exposes its bucket `AssocList`s), so `test/OAMapTest/ParityRun.lean` ignores
+from Std's (Std's exposes its bucket `AssocList`s), so `test/SwissTableTest/ParityRun.lean` ignores
 them. This script checks instead that each one is declared in the file corresponding to Std's
-(`Std/Data/HashMap/Iterator.lean` -> `OAMap/HashMap/Iterator.lean`, ...), in namespace
-`OAMap.HashMap`/`OAMap.HashSet`, with Std's statement text (the `src_statement` of
+(`Std/Data/HashMap/Iterator.lean` -> `SwissTable/HashMap/Iterator.lean`, ...), in namespace
+`SwissTable.HashMap`/`SwissTable.HashSet`, with Std's statement text (the `src_statement` of
 `inventory.json`, whitespace-normalised) and Std's attributes (`inherit_doc Raw.…` excepted:
 there is no `Raw`, so the docstring is literal).
 
@@ -81,10 +81,10 @@ def main():
     bad = 0
     for name in ITER_DECLS:
         d = decls[name]
-        rel = d['file'].replace('Std/Data/', 'OAMap/')
+        rel = d['file'].replace('Std/Data/', 'SwissTable/')
         path = os.path.join(root, rel)
         fam, short = name.rsplit('.', 1)
-        ns = fam.replace('Std.', 'OAMap.')
+        ns = fam.replace('Std.', 'SwissTable.')
         found = find_decl(open(path).read(), ns, short) if os.path.exists(path) else None
         if found is None:
             print(f'srccheck: MISSING {name} (expected in {rel}, namespace {ns})')

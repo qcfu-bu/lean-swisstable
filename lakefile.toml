@@ -1,18 +1,18 @@
-name = "oamap"
+name = "swisstable"
 version = "0.1.0"
-defaultTargets = ["OAMap"]
+defaultTargets = ["SwissTable"]
 # `lake test` builds this library: "A library will just be built" (Lake's PackageConfig doc).
-testDriver = "OAMapTest"
+testDriver = "SwissTableTest"
 
 [leanOptions]
 autoImplicit = false
 relaxedAutoImplicit = false
 
-# The library: every module reachable from OAMap.lean (with the SwissTable core selected by
-# OAMap/Core/Table.lean, that is all of OAMap/ except the reference core OAMap/Core/ListRef.lean,
-# which the test library checks against the contract).
+# The library: every module reachable from SwissTable.lean (with the Swiss core selected by
+# SwissTable/Core/Table.lean, that is all of SwissTable/ except the reference core
+# SwissTable/Core/ListRef.lean, which the test library checks against the contract).
 [[lean_lib]]
-name = "OAMap"
+name = "SwissTable"
 
 # The statement-parity checker (imports only Lean).
 [[lean_lib]]
@@ -21,16 +21,16 @@ srcDir = "test"
 roots = ["Parity"]
 
 # Conformance, seal, axiom, parity, cbv and #guard tests (run by `lake test`). The second and
-# third roots check the reference core OAMap.Core.ListRef against the contract and audit its
+# third roots check the reference core SwissTable.Core.ListRef against the contract and audit its
 # axioms; they are separate roots because ListRef and the selected core define the same names and
 # cannot be imported together.
 [[lean_lib]]
-name = "OAMapTest"
+name = "SwissTableTest"
 srcDir = "test"
-roots = ["OAMapTest", "OAMapTest.CoreSpecListRef", "OAMapTest.AuditListRef"]
+roots = ["SwissTableTest", "SwissTableTest.CoreSpecListRef", "SwissTableTest.AuditListRef"]
 
-# The benchmark (bench/Main.lean, `lake exe oamap-bench`): the bake-off harness's workloads for
-# OAMap.HashMap and Std.HashMap, compiled with the harness's flags. Not built by `lake build`.
+# The benchmark (bench/Main.lean, `lake exe swisstable-bench`): the bake-off harness's workloads for
+# SwissTable.HashMap and Std.HashMap, compiled with the harness's flags. Not built by `lake build`.
 [[lean_lib]]
 name = "Bench"
 srcDir = "bench"
@@ -38,7 +38,7 @@ roots = ["Bench", "Bench.CCheck"]
 moreLeancArgs = ["-O3", "-march=native", "-fno-plt", "-flto"]
 
 [[lean_exe]]
-name = "oamap-bench"
+name = "swisstable-bench"
 srcDir = "bench"
 root = "Main"
 moreLeancArgs = ["-O3", "-march=native", "-fno-plt", "-flto"]

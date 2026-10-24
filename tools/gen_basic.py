@@ -1,8 +1,9 @@
-"""Generate OAMap/HashMap/Basic.lean and OAMap/HashMap/AdditionalOperations.lean from Std's text.
+"""Generate SwissTable/HashMap/Basic.lean and SwissTable/HashMap/AdditionalOperations.lean from
+Std's text.
 
 ARCHITECTURE.md section 4.3: the files are Std's `Std/Data/HashMap/Basic.lean` and
 `Std/Data/HashMap/AdditionalOperations.lean` with the namespace renamed, the imports replaced and
-the bodies rewritten onto `OAMap.Core.Table`; binders, attributes, declaration order and the
+the bodies rewritten onto `SwissTable.Core.Table`; binders, attributes, declaration order and the
 anonymous instances are Std's text, so elaborated signatures and auto-generated instance names
 match. `@[inherit_doc DHashMap.X]` (there is no DHashMap to inherit from) becomes a literal
 docstring with the text of the `doc` field of `inventory.json`.
@@ -12,7 +13,7 @@ the script fail instead of silently producing something else.
 
 Usage: python3 -I gen_basic.py STD_DATA_DIR INVENTORY_JSON OUT_DIR
   STD_DATA_DIR   ~/.elan/toolchains/leanprover--lean4---v4.35.0/src/lean/Std/Data
-  OUT_DIR        the package's OAMap/HashMap directory
+  OUT_DIR        the package's SwissTable/HashMap directory
 """
 import json
 import re
@@ -64,7 +65,7 @@ public import Init.Data.List.Impl
 
 BASIC_HEADER_OURS = '''module
 
-public import OAMap.Core.Bulk
+public import SwissTable.Core.Bulk
 
 @[expose] public section
 '''
@@ -89,22 +90,22 @@ nested inductive types.
 BASIC_MODDOC_OURS = '''/-!
 # Hash maps
 
-This module develops the type `OAMap.HashMap` of hash maps, a drop-in replacement for
+This module develops the type `SwissTable.HashMap` of hash maps, a drop-in replacement for
 `Std.HashMap`: the same operations, with Std's names, binders, attributes and semantics.
 
-The operations `map` and `filterMap` on `OAMap.HashMap` are defined in the module
-`OAMap.HashMap.AdditionalOperations`.
+The operations `map` and `filterMap` on `SwissTable.HashMap` are defined in the module
+`SwissTable.HashMap.AdditionalOperations`.
 
-Lemmas about the operations on `OAMap.HashMap` are available in the
-module `OAMap.HashMap.Lemmas`.
+Lemmas about the operations on `SwissTable.HashMap` are available in the
+module `SwissTable.HashMap.Lemmas`.
 
 Implementation notes (`docs/ARCHITECTURE.md` §4.3). This file is Std's
-`Std/Data/HashMap/Basic.lean`, generated from Std's text so that binders, attributes,
-declaration order and auto-generated instance names are Std's; only the bodies differ. A map is a
-one-field wrapper of the sealed core table `OAMap.Core.Table` (§3), and every operation is a
-one-line call to a core, `OAMap.Core.Derived` or `OAMap.Core.Bulk` function. Docstrings that
-Std inherits from `DHashMap` are copied as literal text. The file also defines
-`OAMap.Model.toListModel`, the entry list that `Equiv` and all lemmas are stated against.
+`Std/Data/HashMap/Basic.lean`, generated from Std's text so that binders, attributes, declaration
+order and auto-generated instance names are Std's; only the bodies differ. A map is a one-field
+wrapper of the sealed core table `SwissTable.Core.Table` (§3), and every operation is a one-line
+call to a core, `SwissTable.Core.Derived` or `SwissTable.Core.Bulk` function. Docstrings that Std
+inherits from `DHashMap` are copied as literal text. The file also defines
+`SwissTable.Model.toListModel`, the entry list that `Equiv` and all lemmas are stated against.
 `Array.groupByKey` and `List.groupByKey` stay Std's (they return `Std.HashMap`).
 
 Owner: API, Wave 1.
@@ -117,7 +118,7 @@ HASHMAP_DOC_OURS = '''/--
 Hash maps.
 
 This is a drop-in replacement for `Std.HashMap`, with the same operations, lemmas and semantics.
-The data of the hash map is a hash table (`OAMap.Core.Table`) whose layout is an implementation
+The data of the hash map is a hash table (`SwissTable.Core.Table`) whose layout is an implementation
 detail: no lemma depends on it, and every lemma is stated in terms of the operations, exactly as
 for `Std.HashMap`.
 
@@ -136,19 +137,19 @@ be used in nested inductive types.
 
 # (Std text, our text): bodies and the few signature-free edits of section 4.3.
 BASIC_EDITS = [
-    ('namespace Std\n', 'namespace OAMap\n'),
+    ('namespace Std\n', 'namespace SwissTable\n'),
     ('''  /-- Internal implementation detail of the hash map -/
   inner : DHashMap α (fun _ => β)
 
 namespace HashMap
 ''', '''  /-- Internal implementation detail of the hash map -/
-  inner : OAMap.Core.Table α β
+  inner : SwissTable.Core.Table α β
 
 namespace HashMap
 
 /-- The entries of a map in iteration order: the model that `Equiv` and all lemmas are stated
 against (ARCHITECTURE.md §2.3). The core's `Table.toListModel` below it stays sealed. -/
-def _root_.OAMap.Model.toListModel (m : HashMap α β) : List ((_ : α) × β) :=
+def _root_.SwissTable.Model.toListModel (m : HashMap α β) : List ((_ : α) × β) :=
   m.inner.toListModel
 '''),
     ('  ⟨DHashMap.emptyWithCapacity capacity⟩\n', '  ⟨Core.Table.emptyWithCapacity capacity⟩\n'),
@@ -186,7 +187,8 @@ def _root_.OAMap.Model.toListModel (m : HashMap α β) : List ((_ : α) × β) :
     ('  ⟨DHashMap.diff m₁.inner m₂.inner⟩\n', '  ⟨m₁.inner.diff m₂.inner⟩\n'),
     ('  ⟨DHashMap.Const.unitOfArray l⟩\n', '  ⟨Core.Table.unitOfArray l⟩\n'),
     ('  DHashMap.Internal.numBuckets m.inner\n', '  m.inner.numBuckets\n'),
-    ('("Std.HashMap.ofList " ++ reprArg m.toList)', '("OAMap.HashMap.ofList " ++ reprArg m.toList)'),
+    ('("Std.HashMap.ofList " ++ reprArg m.toList)',
+     '("SwissTable.HashMap.ofList " ++ reprArg m.toList)'),
 ]
 
 ADDOPS_HEADER_STD = '''module
@@ -208,19 +210,19 @@ Lemmas about these operations are found in `Std.Data.HashMap.Lemmas`.
 
 ADDOPS_HEADER_OURS = '''module
 
-public import OAMap.HashMap.Basic
+public import SwissTable.HashMap.Basic
 
 @[expose] public section
 
 /-!
 # Additional hash map operations
 
-This module defines the operations `map` and `filterMap` on `OAMap.HashMap`.
-Lemmas about these operations are found in `OAMap.HashMap.Lemmas`.
+This module defines the operations `map` and `filterMap` on `SwissTable.HashMap`.
+Lemmas about these operations are found in `SwissTable.HashMap.Lemmas`.
 
 Implementation notes: Std's `Std/Data/HashMap/AdditionalOperations.lean`, generated from Std's
 text (`docs/ARCHITECTURE.md` §4.3) without the `Raw` part (deferred); the bodies call
-`OAMap.Core.Table.filterMap` and `OAMap.Core.Table.map`.
+`SwissTable.Core.Table.filterMap` and `SwissTable.Core.Table.map`.
 
 Owner: API, Wave 1.
 -/
@@ -256,7 +258,7 @@ def main():
         t = sub1(t, old, new)
     # drop Array.groupByKey / List.groupByKey (they stay Std's, ARCHITECTURE.md Q8)
     k = t.index('end Std.HashMap\n')
-    t = t[:k] + 'end OAMap.HashMap\n'
+    t = t[:k] + 'end SwissTable.HashMap\n'
     t = inline_docs(t, docs, 'Std.HashMap')
     if 'DHashMap' in t.replace('DHashMap`', '').replace('`DHashMap', ''):
         bad = [l for l in t.split('\n') if 'DHashMap' in l]
@@ -266,8 +268,8 @@ def main():
     # ---- AdditionalOperations.lean
     a = open(std_dir + '/HashMap/AdditionalOperations.lean').read()
     a = sub1(a, ADDOPS_HEADER_STD, ADDOPS_HEADER_OURS)
-    a = sub1(a, 'namespace Std\n', 'namespace OAMap\n')
-    a = sub1(a, 'end Std\n', 'end OAMap\n')
+    a = sub1(a, 'namespace Std\n', 'namespace SwissTable\n')
+    a = sub1(a, 'end Std\n', 'end SwissTable\n')
     a = sub1(a, ADDOPS_RAW, '')
     a = inline_docs(a, docs, 'Std.HashMap')
     if 'DHashMap' in a:

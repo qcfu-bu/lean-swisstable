@@ -3,7 +3,7 @@
 
 `bench/Bench/CCheck.lean` defines one monomorphic function per operation (`getDNat`, `insertStr`,
 ...). Build it with `lake build Bench.CCheck`; this script reads `.lake/build/ir/Bench/CCheck.c`
-and the library's own C (`.lake/build/ir/OAMap/**/*.c`), follows every direct call from each of
+and the library's own C (`.lake/build/ir/SwissTable/**/*.c`), follows every direct call from each of
 those functions to the functions defined there, and checks:
 
 1. closures: no `lean_apply_*` anywhere: `hash`, `==`, the probes and the traversals are
@@ -26,7 +26,7 @@ import glob, os, re, sys
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 IR = os.path.join(HERE, ".lake/build/ir")
-PREFIX = "lp_oamap_Bench_CCheck_"
+PREFIX = "lp_swisstable_Bench_CCheck_"
 LOOKUPS = ["getDNat", "getDStr", "getBangNat", "containsNat", "containsStr", "getKeyDStr",
            "setContainsNat", "setContainsStr"]
 UPDATES = ["insertNat", "insertStr", "insertIfNewNat", "getThenInsertIfNewStr",
@@ -118,8 +118,8 @@ def main():
         print(f"{path} is not built: run `lake build Bench.CCheck` first")
         return 1
     funcs = parse(path)
-    for p in glob.glob(os.path.join(IR, "OAMap/**/*.c"), recursive=True) + \
-            [os.path.join(IR, "OAMap.c")]:
+    for p in glob.glob(os.path.join(IR, "SwissTable/**/*.c"), recursive=True) + \
+            [os.path.join(IR, "SwissTable.c")]:
         if os.path.exists(p):
             for k, v in parse(p).items():
                 funcs.setdefault(k, v)

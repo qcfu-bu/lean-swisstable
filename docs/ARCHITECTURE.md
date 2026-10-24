@@ -1,8 +1,8 @@
-# OAMap: architecture of a verified drop-in for `Std.HashMap` and `Std.HashSet`
+# SwissTable: architecture of a verified drop-in for `Std.HashMap` and `Std.HashSet`
 
 Status: implemented, 2026-10-24. Target: Lean v4.35.0, core and Std only (no Mathlib). The design
 below is what was built; the bake-off chose the SwissTable layout (`docs/bakeoff/decision.md`),
-whose core `OAMap.Core.Swiss` is selected (section 3.7), and the measured performance is in
+whose core `SwissTable.Core.Swiss` is selected (section 3.7), and the measured performance is in
 section 9.4. Where the text says a step is still to come, section 3.7 and 9.4 give the outcome.
 Inputs: `inventory.md`/`inventory.json` (the API to reproduce), `proofs.md` (the proof
 architecture and its mock experiments), `parity.md` (the statement checker). All three are in
@@ -12,10 +12,11 @@ outputs are recorded in `modtest/results.log`), and a section-dependency script 
 
 ## 0. Decisions in brief
 
-1. **One standalone lake package `oamap`**, namespace `OAMap`, types `OAMap.HashMap α β` and
-   `OAMap.HashSet α`. File and module names mirror Std (`OAMap.HashMap.Basic`,
-   `OAMap.HashMap.Lemmas`, …) so that `import Std.Data.HashMap` becomes `import OAMap.HashMap`.
-2. **Layering.** A layout-specific core (`OAMap.Core.Table`, chosen by the bake-off) exports
+1. **One standalone lake package `swisstable`**, namespace `SwissTable`, types
+   `SwissTable.HashMap α β` and `SwissTable.HashSet α`. File and module names mirror Std
+   (`SwissTable.HashMap.Basic`, `SwissTable.HashMap.Lemmas`, …) so that `import Std.Data.HashMap`
+   becomes `import SwissTable.HashMap`.
+2. **Layering.** A layout-specific core (`SwissTable.Core.Table`, chosen by the bake-off) exports
    23 definitions and 22 model lemmas over `toListModel : Table α β → List ((_ : α) × β)`.
    Everything above it is layout-free: derived queries and traversals, Std's bulk algorithms
    (insertMany, ofList, union, inter, diff, beq), the user API, the model bridge, and the
@@ -29,10 +30,10 @@ outputs are recorded in `modtest/results.log`), and a section-dependency script 
    `@[expose]`d. Importing modules cannot unfold them, while `@[inline]` and `@[specialize]`
    still work across modules (checked in `modtest/`, section 2.3). The swap-safety rule ("layers
    above the core use only the 45 contract names") is checked mechanically.
-5. **A list-backed reference core** (`OAMap.Core.ListRef`) satisfies the same contract. Every
+5. **A list-backed reference core** (`SwissTable.Core.ListRef`) satisfies the same contract. Every
    layer above the core is developed and proved against it, in parallel with the real core, and
    the real core is switched in by changing one import line.
-6. **Parity is a test.** `Parity.run` runs inside the test library `OAMapTest`, so `lake test`
+6. **Parity is a test.** `Parity.run` runs inside the test library `SwissTableTest`, so `lake test`
    fails when a statement, binder, attribute or instance differs from Std, or when a theorem
    depends on `sorry`.
 
@@ -70,17 +71,17 @@ lemmas, and the `Repr` output prefix (section 11, question Q5).
 
 ```toml
 # lean-toolchain:  leanprover/lean4:v4.35.0
-name = "oamap"
+name = "swisstable"
 version = "0.1.0"
-defaultTargets = ["OAMap"]
-testDriver = "OAMapTest"          # "A library will just be built" (Lake's PackageConfig doc)
+defaultTargets = ["SwissTable"]
+testDriver = "SwissTableTest"     # "A library will just be built" (Lake's PackageConfig doc)
 
 [leanOptions]
 autoImplicit = false
 relaxedAutoImplicit = false
 
 [[lean_lib]]
-name = "OAMap"                    # the library: every module reachable from OAMap.lean
+name = "SwissTable"               # the library: every module reachable from SwissTable.lean
 
 [[lean_lib]]
 name = "Parity"                   # the statement checker (imports only Lean)
@@ -88,17 +89,17 @@ srcDir = "test"
 roots = ["Parity"]
 
 [[lean_lib]]
-name = "OAMapTest"                # conformance, seal, parity, cbv and #guard tests
+name = "SwissTableTest"           # conformance, seal, parity, cbv and #guard tests
 srcDir = "test"
-roots = ["OAMapTest"]
+roots = ["SwissTableTest"]
 
 [[lean_exe]]
-name = "oamap-bench"
+name = "swisstable-bench"
 srcDir = "bench"
 root = "Main"
 ```
 
-`lake build` builds and checks every proof. `lake test` builds `OAMapTest`, and each of its
+`lake build` builds and checks every proof. `lake test` builds `SwissTableTest`, and each of its
 modules logs an error (so the build fails) when its check fails. `tools/ci.sh` (section 9.3)
 runs both plus the text-level audits.
 
@@ -108,68 +109,68 @@ Sizes are the files' line counts as built (they replace the design's estimates, 
 on Std's files and on `Mock2.lean`).
 
 ```
-OAMap.lean                         aggregator: HashMap, HashSet                           13
-OAMap/
+SwissTable.lean                         aggregator: HashMap, HashSet                           13
+SwissTable/
   Core/
-    Table.lean                     selector, ONE line: public import OAMap.Core.<X>       13
-    Swiss.lean                     the selected core (§3.7): collects the contract        18
-    Swiss/Group.lean               SWAR control-byte groups, probing, erase rule        1349
-    Swiss/{Defs,Loops,Build,Table} the code (frozen at the bake-off's version)          1779
-    Swiss/Proofs/                  Bounds, Probe, Rebuild, Write, Bulk, Query,
-                                   Update, Traverse                                     6610
-    ListRef.lean                   reference core: list-backed, satisfies the contract   292
-    Derived.lean                   queries and traversals from the primitives            397
-    Bulk.lean                      Std's algorithms: insertMany/ofList/union/inter/
-                                   diff/beq/partition, and their model lemmas            546
+    Table.lean                          selector, ONE line: public import SwissTable.Core.<X>  13
+    Swiss.lean                          the selected core (§3.7): collects the contract        18
+    Swiss/Group.lean                    SWAR control-byte groups, probing, erase rule        1349
+    Swiss/{Defs,Loops,Build,Table}      the code (frozen at the bake-off's version)          1779
+    Swiss/Proofs/                       Bounds, Probe, Rebuild, Write, Bulk, Query,
+                                        Update, Traverse                                     6610
+    ListRef.lean                        reference core: list-backed, satisfies the contract   292
+    Derived.lean                        queries and traversals from the primitives            397
+    Bulk.lean                           Std's algorithms: insertMany/ofList/union/inter/
+                                        diff/beq/partition, and their model lemmas            546
   HashMap/
-    Basic.lean                     Std's Basic.lean: wrappers ⟨m.inner.op ...⟩           525
-    AdditionalOperations.lean      filterMap, map                                         53
-    Model.lean                     Layer 1 at HashMap level (simp_to_model's tables)     362
-    Tactic.lean                    simp_to_model, wf_trivial, wf_finish                  170
-    Lemmas/Basic.lean              Std Lemmas.lean l.34-502: isEmpty ... getD            519
-    Lemmas/GetKey.lean             l.503-859: getKey* ... LawfulGetElem                  399
-    Lemmas/Iterate.lean            l.860-1192: keys, toList, monadic, all/any            431
-    Lemmas/InsertMany.lean         l.1193-1395                                           250
-    Lemmas/SetOps.lean             l.1396-2069: BEq, Union, Inter, Diff                  732
-    Lemmas/UnitOf.lean             l.2070-2527: insertManyIfNewUnit, ofList, unitOfList  528
-    Lemmas/Alter.lean              l.2528-2879: alter, modify                            392
-    Lemmas/Equiv.lean              l.2880-3075: namespace Equiv, section Equiv           245
-    Lemmas/FilterMap.lean          l.3076-3580: filterMap, filter, map                   565
-    Lemmas.lean                    aggregator, and `attribute [simp]` for
-                                   `contains_eq_false_iff_not_mem`                        29
-    DecidableEquiv.lean            Decidable (m₁ ~m m₂)                                   27
-    Iterator.lean                  iter, keysIter, valuesIter                             78
-    IteratorLemmas.lean            9 theorems                                            101
-  HashMap.lean                     aggregator                                             14
+    Basic.lean                          Std's Basic.lean: wrappers ⟨m.inner.op ...⟩           525
+    AdditionalOperations.lean           filterMap, map                                         53
+    Model.lean                          Layer 1 at HashMap level (simp_to_model's tables)     362
+    Tactic.lean                         simp_to_model, wf_trivial, wf_finish                  170
+    Lemmas/Basic.lean                   Std Lemmas.lean l.34-502: isEmpty ... getD            519
+    Lemmas/GetKey.lean                  l.503-859: getKey* ... LawfulGetElem                  399
+    Lemmas/Iterate.lean                 l.860-1192: keys, toList, monadic, all/any            431
+    Lemmas/InsertMany.lean              l.1193-1395                                           250
+    Lemmas/SetOps.lean                  l.1396-2069: BEq, Union, Inter, Diff                  732
+    Lemmas/UnitOf.lean                  l.2070-2527: insertManyIfNewUnit, ofList, unitOfList  528
+    Lemmas/Alter.lean                   l.2528-2879: alter, modify                            392
+    Lemmas/Equiv.lean                   l.2880-3075: namespace Equiv, section Equiv           245
+    Lemmas/FilterMap.lean               l.3076-3580: filterMap, filter, map                   565
+    Lemmas.lean                         aggregator, and `attribute [simp]` for
+                                        `contains_eq_false_iff_not_mem`                        29
+    DecidableEquiv.lean                 Decidable (m₁ ~m m₂)                                   27
+    Iterator.lean                       iter, keysIter, valuesIter                             78
+    IteratorLemmas.lean                 9 theorems                                            101
+  HashMap.lean                          aggregator                                             14
   HashSet/
-    Basic.lean                     Std's text, namespace renamed                         321
-    Lemmas.lean                    Std's text, 2 references renamed                     1592
-    DecidableEquiv.lean, Iterator.lean, IteratorLemmas.lean                         32/46/51
-  HashSet.lean                     aggregator                                             13
+    Basic.lean                          Std's text, namespace renamed                         321
+    Lemmas.lean                         Std's text, 2 references renamed                     1592
+    DecidableEquiv.lean, Iterator.lean, IteratorLemmas.lean                              32/46/51
+  HashSet.lean                          aggregator                                             13
 test/
-  Parity.lean                      the checker (the design directory's, plus the
-                                   Merge's failOnWarning and notation renaming)         1010
-  OAMapTest.lean                   aggregator of the tests below                          33
-  OAMapTest/CoreSpec.lean          the core contract as `example`s (section 3.4)         118
-  OAMapTest/CoreSpecListRef.lean   the same text against ListRef (second root, §3.6)     119
-  OAMapTest/SealCheck.lean         layers above the core use only contract names         112
-  OAMapTest/AuditLib.lean          the kernel-level audit, as a command                  110
-  OAMapTest/Audit.lean             the audit of every constant of `OAMap`                 20
-  OAMapTest/AuditListRef.lean      the audit of ListRef (third root, §3.6)                14
-  OAMapTest/ParityRun.lean         Parity.run against Std                                 46
-  OAMapTest/Cbv.lean               `by cbv` examples, same as on Std                     133
-  OAMapTest/Unverified.lean        #guard tests: partition, values, valuesArray, Repr,
-                                   the SwissTable core's slot counts                     212
-  OAMapTest/Semantics.lean         #guard tests: kept keys and values, traversal
-                                   order, `~m` scoping                                   264
-  OAMapTest/SwissGroupUse.lean     Group.lean's exported lemmas, from another module      69
+  Parity.lean                           the checker (the design directory's, plus the
+                                        Merge's failOnWarning and notation renaming)         1010
+  SwissTableTest.lean                   aggregator of the tests below                          33
+  SwissTableTest/CoreSpec.lean          the core contract as `example`s (section 3.4)         118
+  SwissTableTest/CoreSpecListRef.lean   the same text against ListRef (second root, §3.6)     119
+  SwissTableTest/SealCheck.lean         layers above the core use only contract names         112
+  SwissTableTest/AuditLib.lean          the kernel-level audit, as a command                  110
+  SwissTableTest/Audit.lean             the audit of every constant of `SwissTable`            20
+  SwissTableTest/AuditListRef.lean      the audit of ListRef (third root, §3.6)                14
+  SwissTableTest/ParityRun.lean         Parity.run against Std                                 46
+  SwissTableTest/Cbv.lean               `by cbv` examples, same as on Std                     133
+  SwissTableTest/Unverified.lean        #guard tests: partition, values, valuesArray, Repr,
+                                        the Swiss core's slot counts                          212
+  SwissTableTest/Semantics.lean         #guard tests: kept keys and values, traversal
+                                        order, `~m` scoping                                   264
+  SwissTableTest/SwissGroupUse.lean     Group.lean's exported lemmas, from another module      69
 bench/
-  Main.lean                        OAMap vs Std timing (the harness's workloads)         186
-  Bench/{Keys,Iface,Loops,Run}     the bake-off harness's modules                        791
-  Bench/CCheck.lean                one function per API operation, for check_c.py         63
-tools/                             port.py, chain.py, extract2.py, split.py, srccheck.py,
-                                   audit.py, check_c.py, gen_basic.py, select-core.sh,
-                                   ci.sh, inventory.json (copied from here)
+  Main.lean                             SwissTable vs Std timing (the harness's workloads)    186
+  Bench/{Keys,Iface,Loops,Run}          the bake-off harness's modules                        791
+  Bench/CCheck.lean                     one function per API operation, for check_c.py         63
+tools/                                  port.py, chain.py, extract2.py, split.py, srccheck.py,
+                                        audit.py, check_c.py, gen_basic.py, select-core.sh,
+                                        ci.sh, inventory.json (copied from here)
 ```
 
 The Lemmas files keep Std's order and each imports the previous one, so the cut points do not
@@ -211,7 +212,7 @@ Every file of the library starts with `module`, as Std's do. The rules, with wha
   `ModTac2Use.lean` uses it from another module. Keep `Mock2.lean`'s quotation layout, with
   `$[apply …];*` on its own line: a one-line variant does not parse.
 * **`Model.toListModel` lives at the top of `HashMap/Basic.lean`** (exposed, namespace
-  `OAMap.Model`), and `Equiv`'s field is stated with it. Std's `using` terms pass `h.1` to list
+  `SwissTable.Model`), and `Equiv`'s field is stated with it. Std's `using` terms pass `h.1` to list
   lemmas in files far from `Basic`; with the field typed by the model itself, `h.1` has exactly
   the type the rewritten goal mentions and no cross-module unfolding is needed. `Table.toListModel`
   below it stays sealed.
@@ -225,7 +226,7 @@ Every file of the library starts with `module`, as Std's do. The rules, with wha
 ### 3.1 Shape
 
 ```lean
-namespace OAMap.Core
+namespace SwissTable.Core
 /-- The table, with its invariant bundled. Layout-specific; opaque to everything above. -/
 structure Table (α : Type u) (β : Type v) [BEq α] [Hashable α] : Type (max u v) where
   ...                      -- arrays, size, capacity data, and `wf : WF ...`
@@ -236,7 +237,7 @@ structure Table (α : Type u) (β : Type v) [BEq α] [Hashable α] : Type (max u
 ```lean
 structure HashMap (α : Type u) (β : Type v) [BEq α] [Hashable α] where
   /-- Internal implementation detail of the hash map -/
-  inner : OAMap.Core.Table α β
+  inner : SwissTable.Core.Table α β
 ```
 
 A one-field structure is represented by its field at runtime, so the wrapper costs nothing.
@@ -252,7 +253,7 @@ The only observable model is `toListModel`, a sigma list. That is the type every
 
 ### 3.2 Primitive definitions (23)
 
-The core has to define exactly these, with these signatures, in namespace `OAMap.Core.Table`.
+The core has to define exactly these, with these signatures, in namespace `SwissTable.Core.Table`.
 Everything else is derived in `Derived.lean`/`Bulk.lean`.
 
 | # | name | signature (after `[BEq α] [Hashable α]`) | note |
@@ -338,7 +339,7 @@ replace the eleven iteration lemmas, and 9–11 replace the six fused-operation 
 is derived once, in `Derived.lean`. `alter` and `modify` stay core obligations (they could be
 derived with two probes, see Q3).
 
-### 3.4 The contract as a test: `test/OAMapTest/CoreSpec.lean`
+### 3.4 The contract as a test: `test/SwissTableTest/CoreSpec.lean`
 
 This file compiles exactly when the selected core provides every name above with a type that
 is at least as general. It is the acceptance test for a bake-off winner.
@@ -346,8 +347,8 @@ is at least as general. It is the acceptance test for a bake-off winner.
 ```lean
 module
 
-import OAMap.Core.Table
-open OAMap.Core Std.Internal.List
+import SwissTable.Core.Table
+open SwissTable.Core Std.Internal.List
 
 universe u v w w'
 variable {α : Type u} {β : Type v} {γ : Type w}
@@ -456,20 +457,20 @@ end
 (The exact argument explicitness of each core lemma is free, provided these `example`s
 elaborate. `Model.lean` uses them in the same shapes.)
 
-**Seal check** (`test/OAMapTest/SealCheck.lean`): every constant that is defined in a
-layout module (`OAMap.Core.Linear.*`, `.Swiss.*`, `.Dense.*` or `OAMap.Core.ListRef`) and is used
+**Seal check** (`test/SwissTableTest/SealCheck.lean`): every constant that is defined in a layout
+module (`SwissTable.Core.Linear.*`, `.Swiss.*`, `.Dense.*` or `SwissTable.Core.ListRef`) and is used
 in the type or value of a declaration outside those modules must be one of the 45 contract names.
 Then any core that passes `CoreSpec` can be swapped in without breaking a proof above it. Sketch:
 
 ```lean
 import Lean
-import OAMap
+import SwissTable
 open Lean Elab Command
 
-def contract : NameSet := .ofList [``OAMap.Core.Table, ``OAMap.Core.Table.toListModel, ...]  -- 45 names
+def contract : NameSet := .ofList [``SwissTable.Core.Table, ``SwissTable.Core.Table.toListModel, ...]  -- 45 names
 
 def isLayoutModule (m : Name) : Bool :=
-  [`OAMap.Core.Linear, `OAMap.Core.Swiss, `OAMap.Core.Dense, `OAMap.Core.ListRef].any (·.isPrefixOf m)
+  [`SwissTable.Core.Linear, `SwissTable.Core.Swiss, `SwissTable.Core.Dense, `SwissTable.Core.ListRef].any (·.isPrefixOf m)
 
 #eval show CommandElabM Unit from do
   let env ← getEnv
@@ -477,7 +478,7 @@ def isLayoutModule (m : Name) : Bool :=
   let mut bad : Array (Name × Name) := #[]
   for (n, ci) in env.constants.toList do
     let some m := modOf n | continue
-    unless (`OAMap).isPrefixOf m && !isLayoutModule m do continue
+    unless (`SwissTable).isPrefixOf m && !isLayoutModule m do continue
     -- `allowOpaque := true` includes theorem bodies; the default `value?` skips them
     let used := ci.type.getUsedConstants ++
       (((ci.value? (allowOpaque := true)).map Expr.getUsedConstants).getD #[])
@@ -545,7 +546,7 @@ becomes `toListModel` by `map (fun p => ⟨p.1, p.2⟩)`, and `entries_pairwise`
 (the largest piece), alter/modify, filter/filterMap/map, the monadic traversals, the fused
 operations other than `getThenInsertIfNew?`, key replacement, and the `Inhabited`-free shape.
 
-### 3.6 The reference core `OAMap.Core.ListRef`
+### 3.6 The reference core `SwissTable.Core.ListRef`
 
 `Mock2.lean`'s Layer 0 reorganised to the 23 primitives: a structure holding
 `impl : List ((_ : α) × β)` and `distinct : ∀ [EquivBEq α] [LawfulHashable α], DistinctKeys impl`.
@@ -554,14 +555,15 @@ operations other than `getThenInsertIfNew?`, key replacement, and the `Inhabited
 selection in `Core/Table.lean` until the real core passes `CoreSpec`. A full build against it
 takes seconds, which is what lets eight agents port lemmas at once.
 
-Since the SwissTable core is selected (§3.7), ListRef stays in the repository as the reference
-implementation of the contract: `test/OAMapTest/CoreSpecListRef.lean` (CoreSpec's text, importing
-`OAMap.Core.ListRef` directly; `tools/ci.sh` checks the text is the same) is a second root of the
-test library, so `lake test` keeps checking it, and `test/OAMapTest/AuditListRef.lean`, a third
-root, runs `Audit`'s kernel checks on it (the library no longer imports it, so `Audit` does not
-see it). `tools/select-core.sh listref` selects it again.
+Since the Swiss core is selected (§3.7), ListRef stays in the repository as the reference
+implementation of the contract: `test/SwissTableTest/CoreSpecListRef.lean` (CoreSpec's text,
+importing `SwissTable.Core.ListRef` directly; `tools/ci.sh` checks the text is the same) is a second
+root of the test library, so `lake test` keeps checking it, and
+`test/SwissTableTest/AuditListRef.lean`, a third root, runs `Audit`'s kernel checks on it (the
+library no longer imports it, so `Audit` does not see it). `tools/select-core.sh listref` selects it
+again.
 
-### 3.7 The selected core `OAMap.Core.Swiss`
+### 3.7 The selected core `SwissTable.Core.Swiss`
 
 The bake-off (`docs/bakeoff/`) chose hashbrown's generic layout: a byte array of control bytes
 (EMPTY `0xFF`, DELETED `0x80`, FULL `0b0hhhhhhh` with a 7-bit tag), `cap + 8` long with the first
@@ -593,9 +595,9 @@ erased field `Table.wf`, with the probe and distinctness parts under
 
 Every operation runs on `USize` indices on tables of at most `2 ^ 31` slots and on `Nat` indices
 beyond (the same algorithms; one guard at the top of each operation). The proofs (6,610 lines in
-`OAMap/Core/Swiss/Proofs/`, plus the 1,349-line SWAR library `Group.lean`) only add erased
-arguments, so the code is the frozen version measured in the bake-off: instructions per operation
-of `OAMap.HashMap` on the bake-off harness equal the frozen core's (ratio 1.0002 over 36 cells).
+`SwissTable/Core/Swiss/Proofs/`, plus the 1,349-line SWAR library `Group.lean`) only add erased
+arguments, so the code is the frozen version measured in the bake-off: instructions per operation of
+`SwissTable.HashMap` on the bake-off harness equal the frozen core's (ratio 1.0002 over 36 cells).
 The layers above the core needed no change when it was selected.
 
 ## 4. The layout-free layers
@@ -606,7 +608,7 @@ Definitions, all one line, all `@[inline]` (they are the bodies Std's `HashMap/B
 delegates to):
 
 ```lean
-namespace OAMap.Core.Table
+namespace SwissTable.Core.Table
 @[inline] def get? (t : Table α β) (a : α) : Option β := t.lookup a (fun _ v => some v) (fun _ => none)
 @[inline] def get (t : Table α β) (a : α) (h : t.contains a = true) : β := t.lookupMem a h (fun _ v => v)
 @[inline] def getD (t : Table α β) (a : α) (fallback : β) : β := t.lookup a (fun _ v => v) (fun _ => fallback)
@@ -646,7 +648,7 @@ equalities that are not about bulk operations: `containsThenInsert_fst/_snd`,
 capacity 8, the default behind `∅`) and `map_fst_toArray_eq_keysArray` (all U).
 
 Several derived names coincide with `Std.Internal.List` functions (`keys`, `values`,
-`getKey?`, …). Inside `namespace OAMap.Core.Table` the list versions are written qualified, as
+`getKey?`, …). Inside `namespace SwissTable.Core.Table` the list versions are written qualified, as
 `List.keys (toListModel t)` under `open Std.Internal`, which is how Std's `WF.lean` avoids the
 same ambiguity. A typical proof:
 
@@ -754,7 +756,7 @@ def beq {β : Type v} [BEq α] [BEq β] (m₁ m₂ : HashMap α β) : Bool := m�
 @[simp, grind =] theorem markLinear_eq {m : HashMap α β} : m.markLinear = m := rfl
 
 /-- The entries of a map in iteration order: the model all lemmas are proved against. -/
-def _root_.OAMap.Model.toListModel (m : HashMap α β) : List ((_ : α) × β) := m.inner.toListModel
+def _root_.SwissTable.Model.toListModel (m : HashMap α β) : List ((_ : α) × β) := m.inner.toListModel
 
 /-- … -/
 structure Equiv (m₁ m₂ : HashMap α β) : Prop where
@@ -767,17 +769,17 @@ Docstrings: Std writes `@[inherit_doc DHashMap.insert]`. We have no DHashMap to 
 so `tools/port.py` writes the inherited text (the `doc` field of `inventory.json`) as a literal
 docstring. `set_option linter.missingDocs true` as in Std.
 
-`Repr` prints `OAMap.HashMap.ofList …` (Q5). `Internal.numBuckets m := m.inner.numBuckets`.
+`Repr` prints `SwissTable.HashMap.ofList …` (Q5). `Internal.numBuckets m := m.inner.numBuckets`.
 `Array.groupByKey`/`List.groupByKey` stay Std's (Q8).
 
 ### 4.4 `HashMap/Model.lean`: the bridge `simp_to_model` rewrites with
 
-Namespace `OAMap.Model`, outside `OAMap.HashMap`, so that the user-facing namespace contains
-only Std's names (no `m.toListModel` in completion, a clean "extras" section in the parity
+Namespace `SwissTable.Model`, outside `SwissTable.HashMap`, so that the user-facing namespace
+contains only Std's names (no `m.toListModel` in completion, a clean "extras" section in the parity
 report). Each lemma is the HashMap-level form of a Table lemma, usually a one-line term:
 
 ```lean
-namespace OAMap.Model
+namespace SwissTable.Model
 open Std.Internal.List
 
 -- `toListModel (m : HashMap α β) := m.inner.toListModel` is defined in Basic.lean (section 2.3)
@@ -843,10 +845,10 @@ tables completed:
 
 ```lean
 module
-public import OAMap.HashMap.Model
+public import SwissTable.HashMap.Model
 public meta import Std.Data.HashMap.Basic
 public section
-namespace OAMap.HashMap
+namespace SwissTable.HashMap
 open Lean Std.Internal.List
 
 meta def queryMap : Std.HashMap Name (Name × Array (MacroM (TSyntax `term))) :=
@@ -975,7 +977,7 @@ entries), never in the generated file, and each file's module docstring lists it
 `tools/ci.sh` runs it. Statements always come from Std's text. The splitter (`tools/split.py`) cuts at the Std line
 numbers in section 2.2 and gives every file the preamble that is active at its cut point: module
 header, imports, `variable {α : Type u} {β : Type v} {γ : Type w} {δ : Type w'} {_ : BEq α}
-{_ : Hashable α}`, `namespace OAMap.HashMap`, the open `section`s with their `variable` lines
+{_ : Hashable α}`, `namespace SwissTable.HashMap`, the open `section`s with their `variable` lines
 (the first file pair cuts inside Std's first anonymous section, so `GetKey.lean` re-declares
 `variable {m : HashMap α β}`), and `open Std.Internal.List` for proofs. Std's three-line
 `private theorem ext {m m' : HashMap α β} : m.inner = m'.inner → m = m'` is copied, still
@@ -1053,13 +1055,13 @@ theorem insertMany_ind {ρ : Type w} [ForIn Id ρ (α × β)] {motive : HashMap 
 `union_insert_right_equiv_union_insert` (since 2025-11-03), and
 `attribute [simp] contains_eq_false_iff_not_mem` in the aggregator `Lemmas.lean`, after every
 lemma, as Std adds it at the very end. The `@[cbv_eval]` (58) and `@[cbv_opaque]` (10)
-attributes come with the copied text; `OAMapTest/Cbv.lean` checks that `by cbv` closes the same
+attributes come with the copied text; `SwissTableTest/Cbv.lean` checks that `by cbv` closes the same
 goals as on Std (for example `((∅ : HashMap Nat Nat).insert 1 2).contains 1 = true`, which
 `decide` and `rfl` cannot close on Std either, see `modtest/StdDecide.lean`).
 
 `DecidableEquiv.lean`: `instance [BEq α] [LawfulBEq α] [Hashable α] [BEq β] [LawfulBEq β]
 (m₁ m₂ : HashMap α β) : Decidable (m₁ ~m m₂) := decidable_of_iff _ …` from
-`m₁ == m₂` (`OAMap.Core.Table.beq`, Std's algorithm) and `Model.beq_iff_equiv`, which is
+`m₁ == m₂` (`SwissTable.Core.Table.beq`, Std's algorithm) and `Model.beq_iff_equiv`, which is
 proved from `Model.beq_of_perm` and `Model.perm_of_beq` under `LawfulBEq`.
 
 ## 7. HashSet
@@ -1068,12 +1070,12 @@ Exactly Std's design: `structure HashSet (α : Type u) [BEq α] [Hashable α] wh
 HashMap α Unit`, with every operation Std's one-line wrapper (`insert m a := ⟨m.inner.insertIfNew a ()⟩`,
 `get? := getKey?`, `toList := m.inner.keys`, `insertMany := insertManyIfNewUnit`,
 `ofList := unitOfList`, `Equiv` with field `m₁.1.Equiv m₂.1`). Unlike HashMap, the `inner`
-field and `Equiv.inner` are reproduced exactly, because their types are `OAMap.HashMap α Unit`
-and `OAMap.HashMap.Equiv`.
+field and `Equiv.inner` are reproduced exactly, because their types are `SwissTable.HashMap α Unit`
+and `SwissTable.HashMap.Equiv`.
 
-* `HashSet/Basic.lean` is Std's file with `namespace Std` → `namespace OAMap` and the imports
-  changed. Inside `namespace OAMap.HashSet`, Std's references `HashMap.foo` resolve to
-  `OAMap.HashMap.foo`, as long as no file does `open Std`.
+* `HashSet/Basic.lean` is Std's file with `namespace Std` → `namespace SwissTable` and the imports
+  changed. Inside `namespace SwissTable.HashSet`, Std's references `HashMap.foo` resolve to
+  `SwissTable.HashMap.foo`, as long as no file does `open Std`.
 * `HashSet/Lemmas.lean` is Std's file with the same rename and two edits:
   `DHashMap.mem_of_mem_insertIfNew'` → `Model.mem_of_mem_insertIfNew'`, and the public
   `Std.Internal.ForIn.toList_eq_of_forIn_eq` kept. 305 of its 320 proofs are a single HashMap
@@ -1115,20 +1117,21 @@ Std's `src_statement` from `inventory.json` after the namespace rename.
 
 ### 9.1 Running the parity checker
 
-`test/Parity.lean` is this directory's checker (since the Merge it also renames the `Name`
-literals of notation descriptions and has `failOnWarning`). Its defaults map
-`Std.HashMap ↦ OAMap.HashMap` and `Std.HashSet ↦ OAMap.HashSet` and skip `Raw` and `Internal`;
-the driver narrows `exclude` to the deferred `Raw` and turns on `checkStructureInternals`, so
-`Internal.numBuckets`, HashSet's `inner`/`Equiv.inner` and the other structure internals are
-checked too. The driver is a module of the test library, so a parity error fails `lake test`:
+`test/Parity.lean` is this directory's checker (since the Merge it also renames the `Name` literals
+of notation descriptions and has `failOnWarning`). Its defaults map
+`Std.HashMap ↦ SwissTable.HashMap` and `Std.HashSet ↦ SwissTable.HashSet` and skip `Raw` and
+`Internal`; the driver narrows `exclude` to the deferred `Raw` and turns on
+`checkStructureInternals`, so `Internal.numBuckets`, HashSet's `inner`/`Equiv.inner` and the other
+structure internals are checked too. The driver is a module of the test library, so a parity error
+fails `lake test`:
 
 ```lean
--- test/OAMapTest/ParityRun.lean   (plain file, not `module`)
+-- test/SwissTableTest/ParityRun.lean   (plain file, not `module`)
 import Std
-import OAMap
+import SwissTable
 import Parity
 
-/-! Statement parity of OAMap against Std.HashMap/Std.HashSet (v4.35.0). -/
+/-! Statement parity of SwissTable against Std.HashMap/Std.HashSet (v4.35.0). -/
 #eval Parity.run {
   ignore := #[
     -- elaborated iterator state types expose Std's AssocList; text-checked by tools/srccheck.py
@@ -1152,7 +1155,7 @@ import Parity
 
 (Keep every field of the `{ … }` at the indentation of the first field, or Lean fails with
 "expected '}'", `parity.md`.) Run it alone with
-`lake build OAMap Parity && lake env lean test/OAMapTest/ParityRun.lean`, or with
+`lake build SwissTable Parity && lake env lean test/SwissTableTest/ParityRun.lean`, or with
 `maxShow := 20, showMissingStatements := true, failOnError := false` as a to-do list during
 Waves 1–2 (it prints the translated Std statement of each missing declaration, and
 `checkAxioms` lists every theorem that still depends on `sorry`). A full run takes about 2 s.
@@ -1173,23 +1176,23 @@ the 16 iterator declarations that makes 30 ignored names; 1140 declarations are 
 
 Two known items to watch on the first real run. Std's `get.congr_simp`/`getKey.congr_simp` are
 reserved names realised on demand; if ours are reported missing, add
-`#check @OAMap.HashMap.get.congr_simp` (and the other two) before `#eval` so they are realised.
+`#check @SwissTable.HashMap.get.congr_simp` (and the other two) before `#eval` so they are realised.
 The auto-generated instance names must match; they do when Std's text is copied (section 4.3),
 and the checker falls back to matching by type otherwise.
 
-### 9.2 The test library `OAMapTest`
+### 9.2 The test library `SwissTableTest`
 
 | module | check | fails when |
 |---|---|---|
 | `CoreSpec` | the 45-name contract (section 3.4) | the selected core lacks a name or has a less general type |
 | `CoreSpecListRef` | the same text against the reference core (a second root of the library, §3.6) | ListRef stops satisfying the contract |
 | `AuditListRef` | `Audit`'s checks on the reference core (a third root, §3.6) | as `Audit`, for ListRef |
-| `Audit` | every constant of `OAMap`: only the three standard axioms; no axiom, `opaque`, `partial`, `unsafe`, `implemented_by`, `extern` (the compiler's `f._unsafe_rec` helper of a safe definition `f` by well-founded recursion, in the same module, is exempt from the `partial`/`unsafe` test); the checks are `AuditLib.lean`'s | anything else, or `sorry` |
+| `Audit` | every constant of `SwissTable`: only the three standard axioms; no axiom, `opaque`, `partial`, `unsafe`, `implemented_by`, `extern` (the compiler's `f._unsafe_rec` helper of a safe definition `f` by well-founded recursion, in the same module, is exempt from the `partial`/`unsafe` test); the checks are `AuditLib.lean`'s | anything else, or `sorry` |
 | `SwissGroupUse` | a lookup step and an erase step proved from another module with `Swiss.Group`'s exported lemmas only | the SWAR library's statements stop being usable without unfolding |
 | `SealCheck` | layers above the core use only contract names | a proof reaches into a layout module |
 | `ParityRun` | statement, attribute and axiom parity with Std | any parity error, or `sorry` |
 | `Cbv` | `by cbv` examples copied from Std usage | `cbv` behaves differently |
-| `Unverified` | `#guard` on `partition`, `values`, `valuesArray`, `Repr`, `Internal.numBuckets` (the SwissTable core's exact slot counts) | these unverified functions (no Std lemmas) misbehave |
+| `Unverified` | `#guard` on `partition`, `values`, `valuesArray`, `Repr`, `Internal.numBuckets` (the Swiss core's exact slot counts) | these unverified functions (no Std lemmas) misbehave |
 | `Semantics` | `#guard` on the kept key and value of `insert`, `modify`, `alter`, `union`, `inter`, `diff`, `ofList`, `insertMany`; one traversal order; `~m` scoping | a core reads the contract differently from Std (mostly also pinned by Std lemmas) |
 
 Correctness of everything with Std lemmas comes from the proofs and from parity (identical
@@ -1200,20 +1203,20 @@ statements), not from output tests.
 ```sh
 #!/bin/sh
 set -eu
-lake build OAMap                      # every proof, against the selected core
-lake test                             # OAMapTest (§9.2), CoreSpecListRef and AuditListRef included
-python3 -I tools/srccheck.py tools/inventory.json OAMap   # source text of the 16 ignored iterator decls
-python3 -I tools/audit.py OAMap OAMap.lean                # spec-integrity audit: no escape hatches
-python3 -I tools/port.py lemmas --check                   # the generated files are reproduced exactly
-# ... tools/gen_basic.py's output equals OAMap/HashMap/{Basic,AdditionalOperations}.lean,
+lake build SwissTable                     # every proof, against the selected core
+lake test                                 # SwissTableTest (§9.2), CoreSpecListRef and AuditListRef included
+python3 -I tools/srccheck.py tools/inventory.json SwissTable  # source text of the 16 ignored iterator decls
+python3 -I tools/audit.py SwissTable SwissTable.lean          # spec-integrity audit: no escape hatches
+python3 -I tools/port.py lemmas --check                       # the generated files are reproduced exactly
+# ... tools/gen_basic.py's output equals SwissTable/HashMap/{Basic,AdditionalOperations}.lean,
 # ... CoreSpecListRef.lean is CoreSpec.lean's text below its header,
-lake build oamap-bench Bench.CCheck   # the benchmark compiles (it is not run)
-python3 -I tools/check_c.py           # the generated C of the API (below)
+lake build swisstable-bench Bench.CCheck  # the benchmark compiles (it is not run)
+python3 -I tools/check_c.py               # the generated C of the API (below)
 ```
 
 The reference core keeps satisfying the contract through `CoreSpecListRef` (§3.6), so no second
 job with `tools/select-core.sh listref` is needed. (With it selected, everything passes but the
-SwissTable core's exact slot counts in `Unverified.lean`.)
+Swiss core's exact slot counts in `Unverified.lean`.)
 
 `tools/check_c.py` reads the C of `bench/Bench/CCheck.lean`, one monomorphic function per
 operation at `Nat` and `String` keys (`getD`, `get!`, `contains`, `getKeyD`, `HashSet.contains`,
@@ -1228,22 +1231,22 @@ its arrays are still updated in place.
 
 ### 9.4 Benchmarks (`bench/Main.lean`, not gating)
 
-Planned: OAMap against Std on: insert of fresh keys, insert of existing keys, lookup hit and miss
-(`get?`, `contains`, `getD`), erase, `alter`/`modify` counters, `fold`/`toList`/`for`,
-`ofList`, `union`/`inter`, and HashSet insert/contains; `Nat` and `String` keys; small (10²)
-and large (10⁶) maps. Rough timings are enough. The bake-off's own harness can be reused.
+Planned: SwissTable against Std on: insert of fresh keys, insert of existing keys, lookup hit and
+miss (`get?`, `contains`, `getD`), erase, `alter`/`modify` counters, `fold`/`toList`/`for`,
+`ofList`, `union`/`inter`, and HashSet insert/contains; `Nat` and `String` keys; small (10²) and
+large (10⁶) maps. Rough timings are enough. The bake-off's own harness can be reused.
 
-Built: the bake-off harness was reused. `bench/Bench/` holds its modules (keys, the `BenchMap`
-class and `bench_map` command, the `@[specialize]`d workload loops, timing and cells) without the
-hardware counters, and `bench/Main.lean` instantiates them at `Std.HashMap` and `OAMap.HashMap`:
-`lake exe oamap-bench` compares the two on 13 workloads (insert from empty and pre-sized, shuffled
-`getD` and `get?`, misses, reinsert, `getThenInsertIfNew?` hash-consing, `fold`, the four erase
-workloads) at `Nat` and `String` keys for n = 10³, 10⁵, 10⁶, one process per cell. `alter`,
+Built: the bake-off harness was reused. `bench/Bench/` holds its modules (keys, the `BenchMap` class
+and `bench_map` command, the `@[specialize]`d workload loops, timing and cells) without the hardware
+counters, and `bench/Main.lean` instantiates them at `Std.HashMap` and `SwissTable.HashMap`:
+`lake exe swisstable-bench` compares the two on 13 workloads (insert from empty and pre-sized,
+shuffled `getD` and `get?`, misses, reinsert, `getThenInsertIfNew?` hash-consing, `fold`, the four
+erase workloads) at `Nat` and `String` keys for n = 10³, 10⁵, 10⁶, one process per cell. `alter`,
 `modify`, the bulk operations and HashSet are not timed (HashSet is `HashMap α Unit`).
 
 Measured on the harness itself (`oabench2`, `docs/bakeoff/lib-results.csv`, README
 "Performance"): over its full matrix (16 workloads, 5 key types, 8 sizes from 10³ to 10⁷, 1480
-cells, 0 checksum mismatches) `OAMap.HashMap` takes 0.55 of `Std.HashMap`'s time per operation
+cells, 0 checksum mismatches) `SwissTable.HashMap` takes 0.55 of `Std.HashMap`'s time per operation
 (geometric mean over the 512 cells with non-dense keys; rand 0.49, flat 0.60, struct 0.54, string
 0.56; dense keys 1.00), with 23 cells above 1.10x and 3 above 1.5x (worst: rand 1000 in-order
 `getD` 1.65, rand 1536 erase-all 1.63). Memory per entry is 1.03x Std grown from empty and 0.63x
@@ -1261,8 +1264,8 @@ Effort is a rough guide in agent-days. "Owner" names a role; one agent can take 
 
 | owner | files | size | output |
 |---|---|---|---|
-| INFRA | `lakefile.toml`, `lean-toolchain`, all module stubs (`module` + imports), `test/Parity.lean` (copy), `test/OAMapTest/ParityRun.lean`, `tools/{select-core.sh, ci.sh}`, `tools/` copies of `port.py`, `chain.py`, `extract2.py` | 300 + copies | `lake build` green on stubs |
-| REF | `Core/ListRef.lean`, `Core/Table.lean` (selects ListRef), `test/OAMapTest/CoreSpec.lean` | 350 + 170 | `CoreSpec` green on ListRef |
+| INFRA | `lakefile.toml`, `lean-toolchain`, all module stubs (`module` + imports), `test/Parity.lean` (copy), `test/SwissTableTest/ParityRun.lean`, `tools/{select-core.sh, ci.sh}`, `tools/` copies of `port.py`, `chain.py`, `extract2.py` | 300 + copies | `lake build` green on stubs |
+| REF | `Core/ListRef.lean`, `Core/Table.lean` (selects ListRef), `test/SwissTableTest/CoreSpec.lean` | 350 + 170 | `CoreSpec` green on ListRef |
 
 **Wave 1: foundations (5 roles in parallel)**
 
@@ -1298,11 +1301,11 @@ and a green parity run, except the 16 ignored iterator declarations.
 | owner | files | depends on |
 |---|---|---|
 | INTEG | flip `Core/Table.lean` to the winner; full `tools/ci.sh` | CORE-1/2 pass `CoreSpec`; Wave 2 done |
-| ITER | `HashMap/{Iterator, IteratorLemmas}.lean`, `HashSet/{Iterator, IteratorLemmas}.lean` (12 theorems, 250 lines), `OAMapTest/{Cbv, Unverified}.lean`, `Repr` | Wave 2 |
+| ITER | `HashMap/{Iterator, IteratorLemmas}.lean`, `HashSet/{Iterator, IteratorLemmas}.lean` (12 theorems, 250 lines), `SwissTableTest/{Cbv, Unverified}.lean`, `Repr` | Wave 2 |
 | BENCH | `bench/Main.lean`, IR inspection of `lookup`/`insert` at `Nat` keys | INTEG |
 
 If the seal holds, INTEG has nothing to fix: every proof above the core is already checked
-against the contract. (So it went: selecting the SwissTable core changed no file above the
+against the contract. (So it went: selecting the Swiss core changed no file above the
 core. INTEG adjusted only tests: the `Unverified` slot-count guards, the second test root for
 ListRef, and an `Audit` exemption for the compiler's `_unsafe_rec` helpers of the core's
 well-founded loops. The review after it added the third root, `AuditListRef`.)
@@ -1366,9 +1369,9 @@ equalities (`proofs.md` §10).
 * **Parity does not compare definition bodies.** Semantics are pinned only as far as Std's
   lemmas pin them. Unverified functions (`partition`, `values` order, `valuesArray`, `Repr`,
   `Internal.numBuckets`) are covered by `#guard` tests only.
-* **Name clashes for users.** Code that does `open Std` and writes `HashMap` becomes ambiguous
-  if it also opens `OAMap`. Document the switch as "replace `Std.HashMap` by `OAMap.HashMap`" or
-  `open Std hiding HashMap HashSet` followed by `open OAMap`.
+* **Name clashes for users.** Code that does `open Std` and writes `HashMap` becomes ambiguous if it
+  also opens `SwissTable`. Document the switch as "replace `Std.HashMap` by `SwissTable.HashMap`" or
+  `open Std hiding HashMap HashSet` followed by `open SwissTable`.
 * **Unavoidable breaks:** `m.inner`, `m.1` and `⟨d⟩` on HashMap (Std's field is a `DHashMap`),
   `⟨h⟩ : Equiv` on HashMap, code that names the iterator state types, `#eval` output that shows
   the `Repr` prefix, and Std APIs that return Std's types (`List.groupByKey`,
@@ -1394,11 +1397,11 @@ equalities (`proofs.md` §10).
 * **Q4. Fused `union`/`inter`/`diff`.** Std's size-branched folds are kept. A fused version would
   move three lemmas into the contract.
 * **Q5. `Repr` prefix.** Std prints `Std.HashMap.ofList […]`. Recommendation:
-  `OAMap.HashMap.ofList […]`, which parses back to the same value. Printing Std's prefix would
+  `SwissTable.HashMap.ofList […]`, which parses back to the same value. Printing Std's prefix would
   produce code that builds a different type.
 * **Q6. Future DHashMap.** The contract is non-dependent (`β : Type v`). A later
-  `OAMap.DHashMap` needs dependent values, which slot arrays cannot type without storing sigmas.
-  The dense layout (an entries array of `(a : α) × β a`) extends naturally; the slot layouts
+  `SwissTable.DHashMap` needs dependent values, which slot arrays cannot type without storing
+  sigmas. The dense layout (an entries array of `(a : α) × β a`) extends naturally; the slot layouts
   would need a second core. This is a reason to weigh the dense layout in the bake-off.
 * **Q7. Future `Raw`.** Bundling the invariant is what removes Std's middle layers. A `Raw`
   variant later needs an unbundled core and a `WF` predicate. It can reuse the list lemmas but
@@ -1406,8 +1409,9 @@ equalities (`proofs.md` §10).
 * **Q8. Counterparts of Std's external API** (`List.groupByKey`, `Array.groupByKey`,
   `Iter.toHashSet`, `IterM.toHashSet`, `Iter.Total.toHashSet`, `IterM.Total.toHashSet`,
   `IterM.toHashSet_eq_fold`). They live in Std's `List`/`Array`/`Iter` namespaces, so dot notation
-  will always find Std's. Options: `OAMap.HashMap.groupByKey` and `OAMap.HashSet.ofIter`-style
-  functions, checked through parity's `extraDecls`. Not required for the drop-in claim.
+  will always find Std's. Options: `SwissTable.HashMap.groupByKey` and
+  `SwissTable.HashSet.ofIter`-style functions, checked through parity's `extraDecls`. Not required
+  for the drop-in claim.
 * **Q9. Docstrings.** Std inherits them from DHashMap and Raw; ours become literal copies. Keep
   them identical, or describe our layout (as Std's `HashMap` docstring describes separate
   chaining)? Recommendation: copy the operation docstrings and rewrite the type's docstring.

@@ -1,6 +1,6 @@
-"""Split Std's lemma files into commands and cut them into OAMap's module files.
+"""Split Std's lemma files into commands and cut them into SwissTable's module files.
 
-`docs/ARCHITECTURE.md` §2.2 and §6.2: `OAMap/HashMap/Lemmas/*.lean` are Std's
+`docs/ARCHITECTURE.md` §2.2 and §6.2: `SwissTable/HashMap/Lemmas/*.lean` are Std's
 `Std/Data/HashMap/Lemmas.lean`, cut at fixed Std line numbers into nine files that keep Std's order,
 each importing the previous one. Every file gets the preamble that is active at its cut point (the
 open `namespace`/`section`s and their `variable` lines, in Std's order), and closes the scopes that

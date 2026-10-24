@@ -8,7 +8,7 @@ public import Bench.Loops
 
 One process run measures one cell (map, key type, n, workload):
 
-    oamap-bench <std|oamap> <dense|rand|string|struct|flat> <n> <workload>
+    swisstable-bench <std|swisstable> <dense|rand|string|struct|flat> <n> <workload>
       [--reps R] [--min-ms T] [--iters I]
 
 All keys are built before the clock starts. A repetition runs `iters` passes of the workload
@@ -341,7 +341,7 @@ def report (c : Cell) (t : Timing) (extra : String) : IO Unit := do
   runCell M sink c (genInputs c mk)
 
 def usage (map : String) : String :=
-  s!"usage: oamap-bench {map} <dense|rand|string|struct|flat> <n> <workload> [--reps R] \
+  s!"usage: swisstable-bench {map} <dense|rand|string|struct|flat> <n> <workload> [--reps R] \
    [--min-ms T] [--iters I]\nworkloads: {" ".intercalate (Workload.table.map (·.1))}"
 
 structure Opts where

@@ -65270,7 +65270,7 @@
   },
   {
    "id": "external-api",
-   "text": "Some Std API outside the two namespaces returns or consumes Std.HashMap/HashSet: `Array.groupByKey` and `List.groupByKey` (Std.Data.HashMap.Basic, returning Std.HashMap α (Array β) or (List β)), `Std.Iter.toHashSet`, `Std.Iter.Total.toHashSet`, `Std.IterM.toHashSet`, `Std.IterM.Total.toHashSet` and the theorem `Std.IterM.toHashSet_eq_fold` (Std.Data.Iterators.Consumers.{Set,Monadic.Set} and Lemmas). Users who switch would need OAMap counterparts of these. The rest of Std that mentions HashMap (Std.Sat.AIG, BVDecide LRAT, Http, Async) is internal use, not API. No instance in Lean or Std outside the two namespaces mentions HashMap or HashSet (checked over all 207,958 constants of `import Lean, Std`).",
+   "text": "Some Std API outside the two namespaces returns or consumes Std.HashMap/HashSet: `Array.groupByKey` and `List.groupByKey` (Std.Data.HashMap.Basic, returning Std.HashMap α (Array β) or (List β)), `Std.Iter.toHashSet`, `Std.Iter.Total.toHashSet`, `Std.IterM.toHashSet`, `Std.IterM.Total.toHashSet` and the theorem `Std.IterM.toHashSet_eq_fold` (Std.Data.Iterators.Consumers.{Set,Monadic.Set} and Lemmas). Users who switch would need SwissTable counterparts of these. The rest of Std that mentions HashMap (Std.Sat.AIG, BVDecide LRAT, Http, Async) is internal use, not API. No instance in Lean or Std outside the two namespaces mentions HashMap or HashSet (checked over all 207,958 constants of `import Lean, Std`).",
    "decls": []
   },
   {

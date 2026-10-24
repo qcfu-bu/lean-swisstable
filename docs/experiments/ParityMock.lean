@@ -1,7 +1,7 @@
 /-!
 # Mock candidate library for the parity checker
 
-A few declarations of `Std.HashMap`, copied into namespace `OAMap.HashMap` over a mock
+A few declarations of `Std.HashMap`, copied into namespace `SwissTable.HashMap` over a mock
 structure whose model is a list of entries. Most copies are faithful; the ones marked
 DELIBERATE differ from Std in one way each, to show that the checker reports it.
 -/
@@ -13,7 +13,7 @@ universe u v w w'
 
 variable {α : Type u} {β : Type v} {_ : BEq α} {_ : Hashable α}
 
-namespace OAMap
+namespace SwissTable
 
 /-- Mock map: the list of entries, newest first (no open addressing at all). -/
 structure HashMap (α : Type u) (β : Type v) [BEq α] [Hashable α] where
@@ -125,4 +125,4 @@ theorem isEmpty_insert {α : Type u} {β : Type v} [BEq α] [Hashable α] {m : H
 
 end HashMap
 
-end OAMap
+end SwissTable

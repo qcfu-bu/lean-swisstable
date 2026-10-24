@@ -30,9 +30,9 @@ sys.path.insert(0, HERE)
 import port   # noqa: E402
 import split  # noqa: E402
 
-MODULES = ([f'OAMap.HashMap.Lemmas.{f}' for (f, *_rest) in split.HASHMAP_CUTS] +
-           ['OAMap.HashMap.Lemmas', 'OAMap.HashSet.Basic', 'OAMap.HashSet.DecidableEquiv',
-            'OAMap.HashSet.Lemmas'])
+MODULES = ([f'SwissTable.HashMap.Lemmas.{f}' for (f, *_rest) in split.HASHMAP_CUTS] +
+           ['SwissTable.HashMap.Lemmas', 'SwissTable.HashSet.Basic',
+            'SwissTable.HashSet.DecidableEquiv', 'SwissTable.HashSet.Lemmas'])
 
 ERR = re.compile(r'^error: (?P<file>[^:\n]+\.lean):(?P<line>\d+):(?P<col>\d+): (?P<msg>.*)$', re.M)
 
@@ -51,7 +51,7 @@ def theorem_spans(text, prefix):
         elif b.kind == 'end' and ns and b.name == ns[-1]:
             ns.pop()
         elif b.kind == 'theorem':
-            inner = [x for x in ns if x not in ('OAMap.HashMap', 'OAMap.HashSet')]
+            inner = [x for x in ns if x not in ('SwissTable.HashMap', 'SwissTable.HashSet')]
             full = '.'.join([prefix] + inner + [b.name])
             spans.append((b.start, b.end, full, '\n  sorry' in b.text and '-- REVIEW' in b.text))
     return spans

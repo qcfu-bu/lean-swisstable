@@ -4,7 +4,7 @@ import Parity
 /-!
 # More difference kinds, in one self-contained file
 
-A second mock `OAMap.HashMap` defined in this file, then checked in this file. Each
+A second mock `SwissTable.HashMap` defined in this file, then checked in this file. Each
 declaration differs from Std in the way its comment says (proofs are `sorry`; the axiom
 check is off).
 -/
@@ -17,7 +17,7 @@ universe w' w v u
 
 variable {α : Type u} {β : Type v} {_ : BEq α} {_ : Hashable α}
 
-namespace OAMap
+namespace SwissTable
 
 structure HashMap (α : Type u) (β : Type v) [BEq α] [Hashable α] where
   entries : List (α × β)
@@ -48,7 +48,7 @@ def filter (f : α → β → Bool) (m : HashMap α β) : HashMap α β :=
 def keys (m : HashMap α β) : List α := m.entries.map (·.1)
 
 -- a `match` of the same shape as the one in `keys_filter`, declared first, so that Lean reuses
--- its matcher `OAMap.HashMap.aux.match_1` there: matchers must be compared by definition
+-- its matcher `SwissTable.HashMap.aux.match_1` there: matchers must be compared by definition
 def aux (m : HashMap α β) (l : List {x // x ∈ m.keys}) : List {x // x ∈ m.keys} :=
   l.filter (fun ⟨x, h'⟩ => true)
 
@@ -87,7 +87,7 @@ theorem mem_insert_self [EquivBEq α] [LawfulHashable α] {k : α} {v : β} :
 
 end
 end HashMap
-end OAMap
+end SwissTable
 
 #eval Parity.run {
   only := #[`Std.HashMap.isEmpty, `Std.HashMap.fold, `Std.HashMap.contains_iff_mem,

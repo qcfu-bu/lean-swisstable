@@ -1,6 +1,6 @@
-"""Text-level spec-integrity audit of the OAMap library sources.
+"""Text-level spec-integrity audit of the SwissTable library sources.
 
-Usage: python3 -I tools/audit.py [DIR ...]      (default: OAMap OAMap.lean)
+Usage: python3 -I tools/audit.py [DIR ...]      (default: SwissTable SwissTable.lean)
 
 Fails (exit status 1) when a library source file
 
@@ -12,7 +12,7 @@ Fails (exit status 1) when a library source file
     `axiom`, `debug.skipKernelTC`, or `import all`.
 
 Comments (including doc comments) and strings are blanked first, so documentation may mention
-these words. The kernel-level counterpart is test/OAMapTest/Audit.lean.
+these words. The kernel-level counterpart is test/SwissTableTest/Audit.lean.
 """
 import os
 import re
@@ -110,7 +110,7 @@ def lean_files(paths):
 
 
 def main():
-    paths = sys.argv[1:] or ['OAMap', 'OAMap.lean']
+    paths = sys.argv[1:] or ['SwissTable', 'SwissTable.lean']
     findings = []
     nfiles = 0
     for path in lean_files(paths):

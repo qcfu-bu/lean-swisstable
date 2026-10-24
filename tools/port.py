@@ -1,4 +1,4 @@
-"""Port Std's HashMap and HashSet lemma files onto OAMap (`docs/ARCHITECTURE.md` §6.2).
+"""Port Std's HashMap and HashSet lemma files onto SwissTable (`docs/ARCHITECTURE.md` §6.2).
 
 Two modes.
 
@@ -7,13 +7,13 @@ Two modes.
 writes, from Std's sources (default: the toolchain's `src/lean/Std/Data`), the chain data in
 `tools/data/` and the hand proofs of `tools/data/hand.json`,
 
-  * `OAMap/HashMap/Lemmas/{Basic,GetKey,...,FilterMap}.lean`: Std's `HashMap/Lemmas.lean` cut by
-    `tools/split.py`, with Std's statements, attributes, comments and non-theorem commands kept
+  * `SwissTable/HashMap/Lemmas/{Basic,GetKey,...,FilterMap}.lean`: Std's `HashMap/Lemmas.lean` cut
+    by `tools/split.py`, with Std's statements, attributes, comments and non-theorem commands kept
     as text and every proof replaced by a generated one;
-  * `OAMap/HashMap/Lemmas.lean`: the aggregator, with Std's final
+  * `SwissTable/HashMap/Lemmas.lean`: the aggregator, with Std's final
     `attribute [simp] contains_eq_false_iff_not_mem`;
-  * `OAMap/HashSet/{Basic,Lemmas,DecidableEquiv}.lean`: Std's text with the namespace renamed and
-    the edits of ARCHITECTURE.md §7.
+  * `SwissTable/HashSet/{Basic,Lemmas,DecidableEquiv}.lean`: Std's text with the namespace renamed
+    and the edits of ARCHITECTURE.md §7.
 
     python3 -I port.py hmchain.json dhm.json raw0.json hm.json NAMES.json OUT.lean
 
@@ -28,8 +28,8 @@ every other theorem the script lists *candidate* proofs, built from Std's own pr
   0. hand-written proofs from `OVERRIDES` (the induction principles and their users, whose Std
      proofs thread the unbundled `WF` invariant);
   1. `ext DHashMap.X`, `ext DHashMap.Const.X` and `apply ext; apply DHashMap.Const.X` become the
-     same text with `Core.Table.X`, the Table-level twins in `OAMap.Core.Derived`/`Bulk` (§6.3);
-     a bare `DHashMap.Const.X` with a twin becomes `Core.Table.X`;
+     same text with `Core.Table.X`, the Table-level twins in `SwissTable.Core.Derived`/`Bulk`
+     (§6.3); a bare `DHashMap.Const.X` with a twin becomes `Core.Table.X`;
   2. a HashMap proof that does not mention `DHashMap` is copied (siblings, `rfl`, `by simp`);
   3. a DHashMap proof that does not mention `Raw₀` is copied with DHashMap names renamed to
      HashMap names;
@@ -211,8 +211,9 @@ def rename_queries(text):
 
 
 def fix_tactics(text):
-    """Std's RawLemmas tactics that OAMap does not provide, replaced by their expansion: `empty`
-    is `{ intros; simp_all [List.isEmpty_iff] }` (OAMap.HashMap.Tactic does not define it)."""
+    """Std's RawLemmas tactics that SwissTable does not provide, replaced by their expansion:
+    `empty` is `{ intros; simp_all [List.isEmpty_iff] }` (SwissTable.HashMap.Tactic does not
+    define it)."""
     return re.sub(r'(?<![\w.])empty\s*;?[ \t]*$', '{ intros; simp_all [List.isEmpty_iff] }', text,
                   flags=re.M)
 
@@ -291,15 +292,15 @@ def lean_names(path, kind='theorem'):
 
 
 def table_twins():
-    """Names of the Table-level lemmas in OAMap.Core.Derived/Bulk and the core contract."""
-    names = lean_names('OAMap/Core/Derived.lean') | lean_names('OAMap/Core/Bulk.lean')
+    """Names of the Table-level lemmas in SwissTable.Core.Derived/Bulk and the core contract."""
+    names = lean_names('SwissTable/Core/Derived.lean') | lean_names('SwissTable/Core/Bulk.lean')
     names |= {'erase_emptyWithCapacity', 'toListModel_emptyWithCapacity',
               'lookup_emptyWithCapacity'}
     return names
 
 
 # Names of Std's internal (`WF.lean`, `Raw`) lemmas used in RawLemmas proofs, and the
-# `OAMap.Model` lemma that states the same thing for a `HashMap` (explicit map argument).
+# `SwissTable.Model` lemma that states the same thing for a `HashMap` (explicit map argument).
 INTERNAL = {
     'Raw.isEmpty_eq_isEmpty': 'Model.isEmpty_eq_isEmpty',
     'Raw.size_eq_length': 'Model.size_eq_length',
@@ -395,7 +396,7 @@ class Porter:
         self.hm = {x['full']: x for x in load('hm.json')}
         self.dren, self.rren = build_rename(self.rows)
         self.twins = table_twins()
-        self.model = lean_names('OAMap/HashMap/Model.lean')
+        self.model = lean_names('SwissTable/HashMap/Model.lean')
 
     # the design-study rule set, for one theorem (the body of the original main loop)
     def legacy(self, n):
@@ -663,7 +664,7 @@ def hashmap_lemma_files(std, porter, review, choice_log, hand):
         # the scopes still open after the file's own blocks
         _, stack_after = split.walk_scopes(blocks, hi + 1)
         parts = []
-        ns = []          # current namespace path below OAMap.HashMap
+        ns = []          # current namespace path below SwissTable.HashMap
         hand_names = []
         n_sorry = 0
         for b in body_blocks:
@@ -685,19 +686,19 @@ def hashmap_lemma_files(std, porter, review, choice_log, hand):
             # Std's comment; Std's `attribute [simp]` command is in our aggregator
             body = replace_once(
                 body, '-- The following lemma becomes a simp lemma at the bottom of the file.',
-                '-- The following lemma becomes a simp lemma in `OAMap.HashMap.Lemmas`, after every '
-                'lemma.', 'simp-later comment')
+                '-- The following lemma becomes a simp lemma in `SwissTable.HashMap.Lemmas`, '
+                'after every lemma.', 'simp-later comment')
         if prev is None:
-            imports = ('public import OAMap.HashMap.Tactic\n'
-                       'public import OAMap.HashMap.AdditionalOperations\n'
+            imports = ('public import SwissTable.HashMap.Tactic\n'
+                       'public import SwissTable.HashMap.AdditionalOperations\n'
                        'public import Std.Internal.ForIn.Basic\n'
                        'import Init.Data.List.Pairwise')
         else:
-            imports = f'public import OAMap.HashMap.Lemmas.{prev}'
+            imports = f'public import SwissTable.HashMap.Lemmas.{prev}'
         pre = []
         for s in stack:
             if s.kind == 'namespace':
-                pre.append('namespace ' + s.name.replace('Std.HashMap', 'OAMap.HashMap'))
+                pre.append('namespace ' + s.name.replace('Std.HashMap', 'SwissTable.HashMap'))
                 if s.name == 'Std.HashMap':
                     pre.append('open Std.Internal.List Std.Internal')
             else:
@@ -715,7 +716,7 @@ def hashmap_lemma_files(std, porter, review, choice_log, hand):
         post = []
         for s in reversed(stack_after):
             if s.kind == 'namespace':
-                post.append('end ' + s.name.replace('Std.HashMap', 'OAMap.HashMap'))
+                post.append('end ' + s.name.replace('Std.HashMap', 'SwissTable.HashMap'))
             else:
                 post.append(('end ' + s.name).strip())
         intro = (f'Std\'s `Std/Data/HashMap/Lemmas.lean`, lines {lo}-{hi}, with Std\'s statements, '
@@ -729,22 +730,23 @@ def hashmap_lemma_files(std, porter, review, choice_log, hand):
                   'universe u v w w\'\n\n'
                   + '\n\n'.join(v.text for v in top_vars))
         text = header + '\n\n' + '\n\n'.join(pre) + '\n\n' + body + '\n\n' + '\n\n'.join(post) + '\n'
-        out[f'OAMap/HashMap/Lemmas/{fname}.lean'] = text
+        out[f'SwissTable/HashMap/Lemmas/{fname}.lean'] = text
         prev = fname
     # the aggregator, with Std's final attribute command
     last = next(b for b in blocks if b.kind == 'attribute')
-    out['OAMap/HashMap/Lemmas.lean'] = (
-        'module\n\npublic import OAMap.HashMap.Lemmas.FilterMap\n\n@[expose] public section\n\n'
+    out['SwissTable/HashMap/Lemmas.lean'] = (
+        'module\n\npublic import SwissTable.HashMap.Lemmas.FilterMap\n\n'
+        '@[expose] public section\n\n'
         '/-!\n# Hash map lemmas\n\n'
-        'This module contains lemmas about `OAMap.HashMap`. Most of the lemmas require\n'
+        'This module contains lemmas about `SwissTable.HashMap`. Most of the lemmas require\n'
         '`EquivBEq α` and `LawfulHashable α` for the key type `α`. The easiest way to obtain '
         'these instances\nis to provide an instance of `LawfulBEq α`.\n\n'
-        'Aggregator of the nine `OAMap.HashMap.Lemmas.*` files, which are Std\'s\n'
+        'Aggregator of the nine `SwissTable.HashMap.Lemmas.*` files, which are Std\'s\n'
         '`Std/Data/HashMap/Lemmas.lean` cut in Std\'s order, each importing the previous one. '
         'Std\'s last\ncommand, which makes `contains_eq_false_iff_not_mem` a simp lemma after '
         'every lemma has been\nproved, is here.\n\n'
         f'{GEN_NOTE}\n\nOwner: PORT (Wave 1).\n-/\n\n'
-        'namespace OAMap.HashMap\n\n' + last.text + '\n\nend OAMap.HashMap\n')
+        'namespace SwissTable.HashMap\n\n' + last.text + '\n\nend SwissTable.HashMap\n')
     return out
 
 
@@ -754,18 +756,18 @@ def hashmap_lemma_files(std, porter, review, choice_log, hand):
 HASHSET_BASIC_DOC = '''/-!
 # Hash sets
 
-This module develops the type `OAMap.HashSet` of hash sets, a drop-in replacement for
+This module develops the type `SwissTable.HashSet` of hash sets, a drop-in replacement for
 `Std.HashSet`.
 
-Lemmas about the operations on `OAMap.HashSet` are available in the
-module `OAMap.HashSet.Lemmas`.
+Lemmas about the operations on `SwissTable.HashSet` are available in the
+module `SwissTable.HashSet.Lemmas`.
 
 Implementation notes (`docs/ARCHITECTURE.md` §7). This file is Std's `Std/Data/HashSet/Basic.lean`
-with `namespace Std` renamed to `namespace OAMap`: a set wraps `OAMap.HashMap α Unit`, and every
-operation is Std's one-line wrapper. Changed from Std: the type's docstring (Std's describes
-separate chaining), the docstrings of `ofList` and `ofArray` (the first of several equal elements
-is kept, as the lemmas `ofList_eq_insertMany_empty` and `insert = insertIfNew` say), and the `Repr`
-prefix (`OAMap.HashSet.ofList`).
+with `namespace Std` renamed to `namespace SwissTable`: a set wraps `SwissTable.HashMap α Unit`, and
+every operation is Std's one-line wrapper. Changed from Std: the type's docstring (Std's describes
+separate chaining), the docstrings of `ofList` and `ofArray` (the first of several equal elements is
+kept, as the lemmas `ofList_eq_insertMany_empty` and `insert = insertIfNew` say), and the `Repr`
+prefix (`SwissTable.HashSet.ofList`).
 
 ''' + GEN_NOTE + '''
 
@@ -776,7 +778,7 @@ HASHSET_TYPE_DOC = '''/--
 Hash sets.
 
 This is a drop-in replacement for `Std.HashSet`, with the same operations, lemmas and semantics. A
-hash set is a hash map with values of type `Unit` (`OAMap.HashMap α Unit`), whose layout is an
+hash set is a hash map with values of type `Unit` (`SwissTable.HashMap α Unit`), whose layout is an
 implementation detail: no lemma depends on it.
 
 Users should make sure that the hash set is used linearly to avoid expensive copies.
@@ -802,12 +804,12 @@ def replace_once(text, old, new, what):
 def hashset_basic(std):
     t = open(os.path.join(std, 'HashSet', 'Basic.lean')).read()
     t = replace_once(t, 'prelude\npublic import Std.Data.HashMap.Basic\n',
-                     'public import OAMap.HashMap.Basic\n', 'imports')
+                     'public import SwissTable.HashMap.Basic\n', 'imports')
     t = re.sub(r'/-!\n# Hash sets\n.*?-/', lambda _: HASHSET_BASIC_DOC, t, count=1, flags=re.S)
     t = re.sub(r'/--\nHash sets\.\n.*?-/', lambda _: HASHSET_TYPE_DOC, t, count=1, flags=re.S)
-    t = replace_once(t, '\nnamespace Std\n', '\nnamespace OAMap\n', 'namespace Std')
-    t = replace_once(t, '\nend Std\n', '\nend OAMap\n', 'end Std')
-    t = replace_once(t, '"Std.HashSet.ofList "', '"OAMap.HashSet.ofList "', 'Repr prefix')
+    t = replace_once(t, '\nnamespace Std\n', '\nnamespace SwissTable\n', 'namespace Std')
+    t = replace_once(t, '\nend Std\n', '\nend SwissTable\n', 'end Std')
+    t = replace_once(t, '"Std.HashSet.ofList "', '"SwissTable.HashSet.ofList "', 'Repr prefix')
     # Std's docstrings say the last of several equal elements is kept; the lemmas
     # (`ofList_eq_insertMany_empty`, `insert` = `insertIfNew`) say the first (ARCHITECTURE.md §7)
     for what in ('list', 'array'):
@@ -827,14 +829,16 @@ def hashset_lemmas(std, review, choice_log, hand):
     t = open(os.path.join(std, 'HashSet', 'Lemmas.lean')).read()
     t = replace_once(
         t, 'prelude\npublic import Std.Data.HashMap.Lemmas\npublic import Std.Data.HashSet.Basic\n',
-        'public import OAMap.HashMap.Lemmas\npublic import OAMap.HashSet.Basic\n', 'imports')
+        'public import SwissTable.HashMap.Lemmas\n'
+        'public import SwissTable.HashSet.Basic\n', 'imports')
     t = replace_once(t, "DHashMap.mem_of_mem_insertIfNew'", "Model.mem_of_mem_insertIfNew'",
                      'mem_of_mem_insertIfNew\'')
     t = replace_once(
         t, 'This module contains lemmas about `Std.Data.HashSet`.',
-        'This module contains lemmas about `OAMap.HashSet`.', 'docstring')
-    t = replace_once(t, '\nnamespace Std.HashSet\n', '\nnamespace OAMap.HashSet\n', 'namespace')
-    t = replace_once(t, '\nend Std.HashSet', '\nend OAMap.HashSet', 'end')
+        'This module contains lemmas about `SwissTable.HashSet`.', 'docstring')
+    t = replace_once(t, '\nnamespace Std.HashSet\n', '\nnamespace SwissTable.HashSet\n',
+                     'namespace')
+    t = replace_once(t, '\nend Std.HashSet', '\nend SwissTable.HashSet', 'end')
     # per-theorem REVIEW marks
     blocks = split.parse(t)
     parts = []
@@ -852,7 +856,8 @@ def hashset_lemmas(std, review, choice_log, hand):
             ns.pop()
         text = b.text
         if b.kind == 'theorem':
-            full = '.'.join(['Std.HashSet'] + [x for x in ns if x != 'OAMap.HashSet'] + [b.name])
+            full = '.'.join(['Std.HashSet'] + [x for x in ns if x != 'SwissTable.HashSet'] +
+                            [b.name])
             header, prf = split.split_statement(b)
             rv = review.get(full, {})
             choice_log[full] = {'candidates': [('copy', prf)], 'choice': rv.get('choice', 0)}
@@ -886,15 +891,17 @@ def hashset_decidable(std):
     t = open(os.path.join(std, 'HashSet', 'DecidableEquiv.lean')).read()
     t = replace_once(
         t, 'prelude\npublic import Std.Data.HashMap.DecidableEquiv\npublic import Std.Data.HashSet.Basic\n',
-        'public import OAMap.HashMap.DecidableEquiv\npublic import OAMap.HashSet.Basic\n', 'imports')
+        'public import SwissTable.HashMap.DecidableEquiv\n'
+        'public import SwissTable.HashSet.Basic\n', 'imports')
     t = replace_once(
         t, '# Decidable equivalence for `HashSet`\n-/',
         '# Decidable equivalence for `HashSet`\n\n'
         'Std\'s `Std/Data/HashSet/DecidableEquiv.lean` with the namespace renamed: `m₁ ~m m₂` '
-        'is decided\nthrough the `HashMap` instance of `OAMap.HashMap.DecidableEquiv`.\n\n'
+        'is decided\nthrough the `HashMap` instance of `SwissTable.HashMap.DecidableEquiv`.\n\n'
         + GEN_NOTE + '\n\nOwner: SET, Wave 2.\n-/\n\nuniverse u', 'docstring')
-    t = replace_once(t, '\nnamespace Std.HashSet\n', '\nnamespace OAMap.HashSet\n', 'namespace')
-    t = replace_once(t, '\nend Std.HashSet', '\nend OAMap.HashSet', 'end')
+    t = replace_once(t, '\nnamespace Std.HashSet\n', '\nnamespace SwissTable.HashSet\n',
+                     'namespace')
+    t = replace_once(t, '\nend Std.HashSet', '\nend SwissTable.HashSet', 'end')
     return t
 
 
@@ -910,9 +917,9 @@ def generate(std, only=None, force=False, base=None, write=True):
     hand = load_hand()
     choice_log = {}
     files = hashmap_lemma_files(std, porter, review, choice_log, hand)
-    files['OAMap/HashSet/Basic.lean'] = hashset_basic(std)
-    files['OAMap/HashSet/Lemmas.lean'] = hashset_lemmas(std, review, choice_log, hand)
-    files['OAMap/HashSet/DecidableEquiv.lean'] = hashset_decidable(std)
+    files['SwissTable/HashSet/Basic.lean'] = hashset_basic(std)
+    files['SwissTable/HashSet/Lemmas.lean'] = hashset_lemmas(std, review, choice_log, hand)
+    files['SwissTable/HashSet/DecidableEquiv.lean'] = hashset_decidable(std)
     unused = sorted(set(hand) - {n for n, v in choice_log.items() if v['choice'] == 'hand'})
     if unused:
         raise SystemExit('port.py: hand.json has proofs for unknown theorems: ' + ', '.join(unused))
