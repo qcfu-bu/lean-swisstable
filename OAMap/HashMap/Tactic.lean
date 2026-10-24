@@ -23,8 +23,9 @@ Std's `simp_to_model` (`Std/Data/DHashMap/Internal/RawLemmas.lean`) with the cha
 Std's `beq` query (`m₁ == m₂` to `Const.beqModel`) has no row: there is no such bridge lemma
 (see `OAMap.HashMap.Model`), and `simp_to_model [beq]` ignores the name, as for any unknown name.
 
-Std's `empty` macro (`intros; simp_all [List.isEmpty_iff]`) is not provided: as a scoped token it
-would make `empty` a keyword wherever `OAMap.HashMap` is open. Write its expansion instead.
+Std's `empty` macro (`intros; simp_all [List.isEmpty_iff]`) is not provided: the ported proofs
+use its expansion `{ intros; simp_all [List.isEmpty_iff] }` instead, so nothing needs it. (A
+scoped tactic token would not reserve the identifier `empty`, so it could be added if wanted.)
 
 Usage (inside `namespace OAMap.HashMap`, where the syntax is active):
 

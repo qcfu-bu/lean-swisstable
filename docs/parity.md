@@ -60,7 +60,7 @@ the `#eval` line and indent all the fields equally, as in `ParityRunMock.lean`.
 | `nsMap` | `Std.HashMap ↦ OAMap.HashMap`, `Std.HashSet ↦ OAMap.HashSet` | prefix renaming applied to every constant (longest prefix wins) |
 | `constMap` | `#[]` | explicit renamings; they take precedence over `nsMap` |
 | `extraDecls` | `#[]` | Std declarations outside the namespaces to check as well, with their counterparts, e.g. `(`List.groupByKey, `OAMap.List.groupByKey)` |
-| `exclude` | `Std.HashMap.Raw`, `Std.HashSet.Raw`, `….Internal` | Std prefixes that are not checked (deferred APIs) |
+| `exclude` | `Std.HashMap.Raw`, `Std.HashSet.Raw`, `….Internal` | Std prefixes that are not checked (`Raw` is a deferred API; OAMap's `ParityRun` excludes only the two `Raw` prefixes, so `Internal` is checked) |
 | `ignore` | `#[]` | exact Std names that are not checked |
 | `only` | `#[]` | when nonempty, check only these Std names |
 | `checkTheorems` / `checkDefs` / `checkInstances` | `true` | the three sections |
@@ -141,7 +141,9 @@ has it and Std's does not.
 values are not compared, except for notation declarations (`ParserDescr`), whose parser
 description is compared, after renaming the `Name` literals in Std's (a notation's description
 names its own syntax kind, such as `` `Std.HashMap.«term_~m_» ``). Inductive types (`HashMap`, `HashSet`, `Equiv`) are checked by type.
-Their constructors and projections are internals and are skipped by default.
+Their constructors and projections are internals and are skipped by default
+(`checkStructureInternals := true` checks them; OAMap's `ParityRun` does, ignoring the 14
+HashMap internals that mention its `inner` field).
 
 **Root causes.** When a statement mentions a Std operation whose own signature differs (for
 example `ExtHashMap.insert` takes extra instance arguments), the entry gets a `root-cause` note

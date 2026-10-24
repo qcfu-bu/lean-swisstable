@@ -45,7 +45,8 @@ These come from the task and from the study (`inventory.md`, "Drop-in notes"):
 * **No extra typeclass requirements.** In particular no `Inhabited α` or `Inhabited β` on
   `emptyWithCapacity`, `insert`, `filter` and the rest.
 * **Std's semantics.** `insert` replaces the stored key and the value, `insertIfNew` and
-  `HashSet.insert` keep the old entry, `insertMany` and `ofList` are left folds of
+  `HashSet.insert` keep the old entry, `modify` and `alter` (when `f` returns `some`) replace
+  the stored key by the argument key, `insertMany` and `ofList` are left folds of
   `insert` (last occurrence wins), `HashSet.insertMany` and `HashSet.ofList` keep the first
   occurrence, `union` is right-biased, `inter` keeps the entries of `m₁`.
 * **The 45 structural equalities** (`ofList_nil`, `insertMany_cons`, `erase_emptyWithCapacity`,
@@ -249,8 +250,8 @@ Everything else is derived in `Derived.lean`/`Bulk.lean`.
 | 13 | `containsThenInsertIfNew` | `Table α β → α → β → Bool × Table α β` | one probe |
 | 14 | `getThenInsertIfNew?` | `Table α β → α → β → Option β × Table α β` | one probe |
 | 15 | `erase` | `Table α β → α → Table α β` | returns `t` itself on a miss |
-| 16 | `alter` | `Table α β → α → (Option β → Option β) → Table α β` | |
-| 17 | `modify` | `Table α β → α → (β → β) → Table α β` | keeps the stored key |
+| 16 | `alter` | `Table α β → α → (Option β → Option β) → Table α β` | a `some` result replaces the stored key by `a` (`insertEntry`) |
+| 17 | `modify` | `Table α β → α → (β → β) → Table α β` | replaces the stored key by `a` (`replaceEntry`) |
 | 18 | `filter` | `(α → β → Bool) → Table α β → Table α β` | |
 | 19 | `filterMap` | `{γ : Type w} → (α → β → Option γ) → Table α β → Table α γ` | |
 | 20 | `map` | `{γ : Type w} → (α → β → γ) → Table α β → Table α γ` | |
@@ -321,6 +322,8 @@ This file compiles exactly when the selected core provides every name above with
 is at least as general. It is the acceptance test for a bake-off winner.
 
 ```lean
+module
+
 import OAMap.Core.Table
 open OAMap.Core Std.Internal.List
 
@@ -336,6 +339,9 @@ example : Nat → Table α β := Table.emptyWithCapacity
 example : Table α β → Nat := Table.size
 example : Table α β → Nat := Table.numBuckets
 example : Table α β → Table α β := Table.markLinear
+-- row 6: exposed and definitionally the identity, seen from a module as `HashMap.markLinear_eq`
+-- sees it (a plain file would see through an unexposed definition)
+example (t : Table α β) : t.markLinear = t := rfl
 example {σ : Type w} : Table α β → α → (α → β → σ) → (Unit → σ) → σ := Table.lookup
 example : Table α β → α → Bool := Table.contains
 example {σ : Type w} : (t : Table α β) → (a : α) → t.contains a = true → (α → β → σ) → σ :=
@@ -486,10 +492,13 @@ first six repeat `proofs.md` §9 in contract terms.
 3. **Fused operations share the probe.** `containsThenInsert_eq` and its two siblings are U
    equalities of tables, so define `insert t a b := (t.containsThenInsert a b).2` (or the reverse,
    both from one probe-and-write function). Then they hold by `unfold`.
-4. **`insert` replaces the stored key.** In the linear-probing layout this is free: the probe
-   stops at a hit only when the slot's tag equals the new key's tag, so writing the new key keeps
-   the unconditional tag invariant (`TagInv`), and the probe invariant is unaffected under
-   lawfulness.
+4. **`insert`, `modify` and `alter` replace the stored key.** `Const.modifyKey` writes
+   `replaceEntry a (f v)` and `Const.alterKey` writes `insertEntry a v`, both with the argument
+   key `a`, so on a hit all three write `a` into the slot, not only the new value (Std's runtime
+   does the same). A `modify` that keeps the stored key cannot prove `toListModel_modify`. In the
+   linear-probing layout this is free: the probe stops at a hit only when the slot's tag equals
+   the new key's tag, so writing the new key keeps the unconditional tag invariant (`TagInv`),
+   and the probe invariant is unaffected under lawfulness.
 5. **No `Inhabited`.** Layouts with one key cell and one value cell per slot (linear, Swiss) have
    no placeholder for empty slots. The scheme: `emptyWithCapacity c` allocates nothing (all
    arrays empty, the capacity hint stored in a field), and the first insert allocates the slot
@@ -891,7 +900,13 @@ Wave-1 extensions, all found by the sample: the 13 `Equiv` constructions written
 `haveI … :=` (the `getElem_alter` family), where the statement/proof split is currently wrong;
 `insertMany_ind` uses, which take the bundled motive
 (`insertMany_ind (motive := fun m => k ∈ m) m h fun _ _ _ h => mem_insert.2 (Or.inr h)`);
-and the non-theorem commands (section 6.4). The splitter (`tools/split.py`) cuts at the Std line
+and the non-theorem commands (section 6.4).
+
+Since the Merge the generated files are reproduced exactly. A proof that no candidate supplies
+is written by hand in `tools/data/hand.json` (Std name ↦ the text after the statement; 56
+entries), never in the generated file, and each file's module docstring lists its hand proofs.
+`python3 -I tools/port.py lemmas --check` regenerates in memory and fails on any difference, and
+`tools/ci.sh` runs it. Statements always come from Std's text. The splitter (`tools/split.py`) cuts at the Std line
 numbers in section 2.2 and gives every file the preamble that is active at its cut point: module
 header, imports, `variable {α : Type u} {β : Type v} {γ : Type w} {δ : Type w'} {_ : BEq α}
 {_ : Hashable α}`, `namespace OAMap.HashMap`, the open `section`s with their `variable` lines
@@ -1034,9 +1049,12 @@ Std's `src_statement` from `inventory.json` after the namespace rename.
 
 ### 9.1 Running the parity checker
 
-`test/Parity.lean` is this directory's checker, unchanged. Its defaults already map
-`Std.HashMap ↦ OAMap.HashMap` and `Std.HashSet ↦ OAMap.HashSet` and skip `Raw` and `Internal`.
-The driver is a module of the test library, so a parity error fails `lake test`:
+`test/Parity.lean` is this directory's checker (since the Merge it also renames the `Name`
+literals of notation descriptions and has `failOnWarning`). Its defaults map
+`Std.HashMap ↦ OAMap.HashMap` and `Std.HashSet ↦ OAMap.HashSet` and skip `Raw` and `Internal`;
+the driver narrows `exclude` to the deferred `Raw` and turns on `checkStructureInternals`, so
+`Internal.numBuckets`, HashSet's `inner`/`Equiv.inner` and the other structure internals are
+checked too. The driver is a module of the test library, so a parity error fails `lake test`:
 
 ```lean
 -- test/OAMapTest/ParityRun.lean   (plain file, not `module`)
@@ -1053,8 +1071,17 @@ import Parity
     `Std.HashMap.toList_keysIter, `Std.HashMap.toListRev_keysIter, `Std.HashMap.toArray_keysIter,
     `Std.HashMap.toList_valuesIter_eq_toList_map_snd, `Std.HashMap.toListRev_valuesIter,
     `Std.HashMap.toArray_valuesIter,
-    `Std.HashSet.toList_iter, `Std.HashSet.toListRev_iter, `Std.HashSet.toArray_iter],
-  jsonOut := some ".lake/parity.json" }
+    `Std.HashSet.toList_iter, `Std.HashSet.toListRev_iter, `Std.HashSet.toArray_iter,
+    -- HashMap's `inner` field is a core table, not a `DHashMap` (ARCHITECTURE §1)
+    `Std.HashMap.inner, `Std.HashMap.mk, `Std.HashMap.rec, `Std.HashMap.recOn,
+    `Std.HashMap.casesOn, `Std.HashMap.mk.noConfusion, `Std.HashMap.mk.inj,
+    `Std.HashMap.mk.injEq, `Std.HashMap.mk.sizeOf_spec,
+    `Std.HashMap.Equiv.inner, `Std.HashMap.Equiv.mk, `Std.HashMap.Equiv.rec,
+    `Std.HashMap.Equiv.recOn, `Std.HashMap.Equiv.casesOn],
+  exclude := #[`Std.HashMap.Raw, `Std.HashSet.Raw],
+  checkStructureInternals := true,
+  jsonOut := some ".lake/parity.json",
+  failOnWarning := true }
 ```
 
 (Keep every field of the `{ … }` at the indentation of the first field, or Lean fails with
@@ -1073,7 +1100,10 @@ and `sorryAx` (error) or non-standard axioms (warning). The axiom check stays va
 library built with the module system: `Lean.collectAxioms` reports `sorryAx` for an imported
 module theorem even though its body is not part of the public view (`modtest/ModSUse.lean`).
 Structure internals (`mk`, `inner`, `rec`, `Equiv.mk`, `Equiv.inner`) are not checked by
-default, which covers the two unavoidable `inner` differences.
+default. The driver checks them and ignores exactly the 14 that necessarily differ because
+HashMap's `inner` is a core table: `HashMap.{inner, mk, rec, recOn, casesOn, mk.noConfusion,
+mk.inj, mk.injEq, mk.sizeOf_spec}` and `HashMap.Equiv.{inner, mk, rec, recOn, casesOn}`. With
+the 16 iterator declarations that makes 30 ignored names; 1140 declarations are checked.
 
 Two known items to watch on the first real run. Std's `get.congr_simp`/`getKey.congr_simp` are
 reserved names realised on demand; if ours are reported missing, add
@@ -1090,6 +1120,7 @@ and the checker falls back to matching by type otherwise.
 | `ParityRun` | statement, attribute and axiom parity with Std | any parity error, or `sorry` |
 | `Cbv` | `by cbv` examples copied from Std usage | `cbv` behaves differently |
 | `Unverified` | `#guard` on `partition`, `values`, `valuesArray`, `Repr`, `Internal.numBuckets` | these unverified functions (no Std lemmas) misbehave |
+| `Semantics` | `#guard` on the kept key and value of `insert`, `modify`, `alter`, `union`, `inter`, `diff`, `ofList`, `insertMany`; one traversal order; `~m` scoping | a core reads the contract differently from Std (mostly also pinned by Std lemmas) |
 
 Correctness of everything with Std lemmas comes from the proofs and from parity (identical
 statements), not from output tests.
@@ -1100,12 +1131,11 @@ statements), not from output tests.
 #!/bin/sh
 set -eu
 lake build OAMap                      # every proof, against the selected core
-lake test                             # builds OAMapTest: CoreSpec, SealCheck, ParityRun, Cbv, Unverified
+lake test                             # OAMapTest: CoreSpec, SealCheck, Audit, ParityRun, Cbv, Unverified, Semantics
 python3 -I tools/srccheck.py tools/inventory.json OAMap   # source text of the 16 ignored iterator decls
-# spec-integrity audit: no escape hatches in the library
-if grep -rnE '\bsorry\b|\badmit\b|implemented_by|@\[extern|\bunsafe\b|^axiom|import all' OAMap; then
-  echo "forbidden construct in OAMap/"; exit 1
-fi
+python3 -I tools/audit.py OAMap OAMap.lean                # spec-integrity audit: no escape hatches
+python3 -I tools/port.py lemmas --check                   # the generated files are reproduced exactly
+# ... and tools/gen_basic.py's output equals OAMap/HashMap/{Basic,AdditionalOperations}.lean
 ```
 
 A second job runs the same with `tools/select-core.sh listref` in a separate worktree, so the
@@ -1218,8 +1248,9 @@ equalities (`proofs.md` §10).
   layouts and a branch to the probe. The dense layout avoids this. Measure the branch.
 * **`Std.Internal.List` is internal** and carries no stability promise. It appears only in core,
   `Derived`, `Bulk`, `Model` and proofs, never in user statements. Pin v4.35.0; on upgrade, rerun
-  `tools/port.py` on the new sources (statements and `using` terms both come from there), rerun
-  `inventory` and parity.
+  `tools/port.py` on the new sources (statements and `using` terms both come from there; the
+  hand proofs of `tools/data/hand.json` are re-emitted and may need fixing), rerun `inventory`
+  and parity.
 * **Estimated, not measured:** 128 of the generated proofs are adapted RawLemmas text checked
   only by compiling (3 of 4 compiled in the sample). Budget about 50 hand fixes.
 * **simp normal forms.** Some `using` terms depend on `Bool.not_eq_true` and `ite` condition
@@ -1248,9 +1279,12 @@ equalities (`proofs.md` §10).
 * **Q2. Lazy iterator now or later?** Recommendation: array-backed in Wave 3, lazy in Wave 4 only
   if a benchmark uses iterators.
 * **Q3. `alter`/`modify` in the contract.** They are core primitives for single-probe speed.
-  If the core team is short of time, the first version can define them in the core as
-  `t.lookup a (fun k v => …insert k…/erase) (fun _ => …)` (two probes) and prove the two lemmas
-  from `lookup_eq` and `toListModel_insert`/`erase`; no change above the core.
+  If the core team is short of time, the first version can define them in the core with two
+  probes, writing the argument key `a` (not the stored key the continuation receives):
+  `modify t a f := t.lookup a (fun _ v => t.insert a (f v)) (fun _ => t)` and
+  `alter t a f := t.lookup a (fun _ v => match f (some v) with | none => t.erase a | some w =>
+  t.insert a w) (fun _ => match f none with | none => t | some w => t.insert a w)`, and prove the
+  two lemmas from `lookup_eq` and `toListModel_insert`/`erase`; no change above the core.
 * **Q4. Fused `union`/`inter`/`diff`.** Std's size-branched folds are kept. A fused version would
   move three lemmas into the contract.
 * **Q5. `Repr` prefix.** Std prints `Std.HashMap.ofList […]`. Recommendation:

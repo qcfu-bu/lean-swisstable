@@ -20,9 +20,9 @@ Table-level twins of Std's structural equalities (`docs/ARCHITECTURE.md` §4.2, 
   `beq` is Std's size check followed by `all`/`get?`; `partition` is Std's fold.
 
 Layout-free: uses only the contract names of `OAMap.Core.Table`, the definitions and lemmas of
-`OAMap.Core.Derived` and, in proofs, Std's own hash map internals. Not exposed. The twins of Std's `ext DHashMap.X` equalities take all their
-arguments implicitly (except where Std's take them explicitly), so that `ext Core.Table.X` and
-`apply Core.Table.X` elaborate as in Std.
+`OAMap.Core.Derived` and, in proofs, Std's own hash map internals. Not exposed. The twins of Std's
+`ext DHashMap.X` equalities take all their arguments implicitly (except where Std's take them
+explicitly), so that `ext Core.Table.X` and `apply Core.Table.X` elaborate as in Std.
 
 `insertListConst` is not `@[expose]`d, and the public lemmas of `Std.Internal.List` describe it
 only on lists with distinct keys. `toListModel_insertMany_list` therefore goes through Std's own

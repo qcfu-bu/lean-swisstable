@@ -114,11 +114,13 @@ def getThenInsertIfNew? (t : Table α β) (a : α) (b : β) : Option β × Table
 def erase (t : Table α β) (a : α) : Table α β :=
   ⟨eraseKey a t.impl, t.distinct.eraseKey⟩
 
-/-- Replaces the value `v?` stored for `a` (`none` if absent) by `f v?`; `none` removes it. -/
+/-- Replaces the value `v?` stored for `a` (`none` if absent) by `f v?`; `none` removes it. A
+`some` result also replaces the stored key by `a` (as `Const.alterKey`, through `insertEntry`). -/
 def alter (t : Table α β) (a : α) (f : Option β → Option β) : Table α β :=
   ⟨Const.alterKey a f t.impl, t.distinct.constAlterKey⟩
 
-/-- Applies `f` to the value stored for `a`, if any, keeping the stored key. -/
+/-- Applies `f` to the value stored for `a`, if any, replacing the stored key by `a` (as
+`Const.modifyKey`, through `replaceEntry`). -/
 def modify (t : Table α β) (a : α) (f : β → β) : Table α β :=
   ⟨Const.modifyKey a f t.impl, t.distinct.constModifyKey⟩
 

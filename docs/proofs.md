@@ -545,8 +545,9 @@ These follow from Std's statements, not from the proof technique:
    the second component of the fused operation, or derive both from one probe-and-write core.
 5. **`erase` of a missing key returns `m` itself**, so that `erase_emptyWithCapacity` is an
    equality. This is also the fast path.
-6. **`insert` replaces the stored key** (`replaceEntry`). `insertIfNew` and HashSet's `insert`
-   keep it.
+6. **`insert` replaces the stored key** (`replaceEntry`). So do `modify` (`Const.modifyKey` is
+   `replaceEntry a (f v)`) and `alter` when `f` returns `some` (`insertEntry`). `insertIfNew` and
+   HashSet's `insert` keep it.
 7. **No `Inhabited`.** `emptyWithCapacity` lemmas are unconditional and the API takes no
    `Inhabited`, so the layout must not need placeholder keys or values. That is a layout
    question, but Layer 0's invariant must accommodate it.

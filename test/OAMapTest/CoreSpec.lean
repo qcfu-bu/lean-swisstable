@@ -1,3 +1,5 @@
+module
+
 import OAMap.Core.Table
 
 /-!
@@ -6,7 +8,8 @@ import OAMap.Core.Table
 This file compiles exactly when the core selected by `OAMap.Core.Table` provides the 23
 definitions and 22 lemmas of `docs/ARCHITECTURE.md` §3, each with a type at least as general as
 the one below. It is the acceptance test for a core: run `lake build OAMapTest.CoreSpec` (or
-`lake test`). The text is §3.4 verbatim.
+`lake test`). The text is §3.4 verbatim. It is a module, like the layers above the core, so that
+it sees exactly what they see.
 -/
 
 open OAMap.Core Std.Internal.List
@@ -23,6 +26,9 @@ example : Nat → Table α β := Table.emptyWithCapacity
 example : Table α β → Nat := Table.size
 example : Table α β → Nat := Table.numBuckets
 example : Table α β → Table α β := Table.markLinear
+-- row 6: exposed and definitionally the identity, seen from a module as `HashMap.markLinear_eq`
+-- sees it (a plain file would see through an unexposed definition)
+example (t : Table α β) : t.markLinear = t := rfl
 example {σ : Type w} : Table α β → α → (α → β → σ) → (Unit → σ) → σ := Table.lookup
 example : Table α β → α → Bool := Table.contains
 example {σ : Type w} : (t : Table α β) → (a : α) → t.contains a = true → (α → β → σ) → σ :=

@@ -13,8 +13,9 @@ An error outside any theorem, or in a theorem that is already `sorry`, cannot be
 a proof: the script stops and prints it (that is a statement or command that does not elaborate,
 which must never be "fixed" by changing the statement).
 
-It refuses to touch a file that differs from the generated text (a proof fixed by hand in Wave 2)
-unless `--force` is given. Run one build at a time: the script calls `lake build` sequentially.
+Theorems with a hand proof in `tools/data/hand.json` are not given candidates: if one fails, the
+script stops and prints the error. It refuses to touch a file that differs from the generated text
+(a file edited by hand instead of through `hand.json`) unless `--force` is given. Run one build at a time: the script calls `lake build` sequentially.
 """
 import json
 import os
@@ -109,6 +110,10 @@ def check(mod, std, review):
                 sys.exit(1)
             failing.setdefault(span[2], msg)
         for full, msg in failing.items():
+            if log.get(full, {}).get('choice') == 'hand':
+                print(f'portcheck: {mod}: the hand proof of {full} (tools/data/hand.json) fails:')
+                print('  ' + msg.strip().replace('\n', '\n  ')[:2000])
+                sys.exit(1)
             rv = review.get(full, {})
             choice = rv.get('choice', 0)
             ncand = len(log.get(full, {}).get('candidates', []))

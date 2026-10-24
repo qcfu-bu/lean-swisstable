@@ -20,15 +20,15 @@ import subprocess
 import sys
 
 # Std/Data/HashMap/Lemmas.lean, cut as in ARCHITECTURE.md §2.2: (file, first Std line, last Std line,
-# title of the file's docstring, owner in Wave 2).
+# title of the file's docstring, owner in Wave 2: the prover who completed its proofs).
 HASHMAP_CUTS = [
     ('Basic', 34, 502, '`isEmpty` to `getD`', 'LEM-1'),
-    ('GetKey', 503, 859, '`getKey?` to `LawfulGetElem`', 'LEM-2'),
+    ('GetKey', 503, 859, '`getKey?` to `LawfulGetElem`', 'LEM-1'),
     ('Iterate', 860, 1192, '`keys`, `toList`, monadic traversals, `all`/`any`', 'LEM-3'),
     ('InsertMany', 1193, 1395, '`insertMany`', 'GEN'),
-    ('SetOps', 1396, 2069, '`BEq`, union, intersection, difference', 'LEM-5'),
+    ('SetOps', 1396, 2069, '`BEq`, union, intersection, difference', 'LEM-1'),
     ('UnitOf', 2070, 2527, '`insertManyIfNewUnit`, `ofList`, `unitOfList`', 'GEN'),
-    ('Alter', 2528, 2879, '`alter`, `modify`', 'LEM-6'),
+    ('Alter', 2528, 2879, '`alter`, `modify`', 'LEM-1'),
     ('Equiv', 2880, 3075, '`Equiv` (namespace `Equiv`, section `Equiv`)', 'LEM-6'),
     ('FilterMap', 3076, 3580, '`filterMap`, `filter`, `map`', 'LEM-7'),
 ]
