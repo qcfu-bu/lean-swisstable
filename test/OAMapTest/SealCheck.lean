@@ -98,7 +98,8 @@ def allowed (c : Name) : Bool :=
         let some mc := modOf c | continue
         unless isLayoutModule mc do continue
         if allowed c then
-          usedContract := usedContract.insert c
+          -- count only contract names (an allowed internal name such as `_sizeOf_inst` is not one)
+          if contract.contains c then usedContract := usedContract.insert c
         else
           bad := bad.push m!"{n} (in {m}) uses {c} (from {mc}), which is not a contract name"
   if bad.isEmpty then
