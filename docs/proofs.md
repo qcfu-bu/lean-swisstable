@@ -200,7 +200,7 @@ theorem toListModel_map (m) {f : α → β → γ} :
 ```
 
 `insertEntry` replaces the stored key and value of an existing key (`replaceEntry`). This is
-Std's semantics, and `getKey?_insert` says so (`… = if k == a then some k else …`). The existing
+Std's semantics, and `getKey?_insert` says so (`… = if k == a then some k else …`). The earlier
 `Wnetkat2/Data/OAMap` insert keeps the stored key, and it has to change.
 
 **Generic operations (Layer 1.5).** These are proved once from the Layer 1 lemmas and Std-shaped
@@ -635,5 +635,5 @@ is slower because each call also discharges WF side goals.
 * Layer 1 is the real work. About 25 layout-specific lemmas need actual proofs: insert with
   growth and key replacement, erase by backward shift, alter, modify, filter, filterMap and map
   without lawfulness, the 12 queries, the iteration equalities and the fused operations. The
-  existing `Wnetkat2/Data/OAMap` proofs cover the queries, insert (with the old keep-the-key
+  earlier `Wnetkat2/Data/OAMap` proofs (that map has since been deleted) cover the queries, insert (with the old keep-the-key
   semantics) and grow.

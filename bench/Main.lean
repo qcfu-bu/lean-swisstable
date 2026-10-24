@@ -128,7 +128,7 @@ def run (args : List String) : IO UInt32 := do
   IO.println s!"SwissTable.HashMap vs Std.HashMap: min ns per op over at least {o.reps} \
     repetitions of at least {o.minMs} ms in all, one process per cell (rough timings)"
   IO.println (padR "key" 8 ++ padL "n" 9 ++ "  " ++ padR "workload" 14 ++ padL "std" 10 ++
-    padL "swisstable" 10 ++ padL "swisstable/std" 11)
+    padL "swisstable" 12 ++ padL "swisstable/std" 16)
   let mut ratios : Array (String × Float) := #[]
   let mut mismatches : Array String := #[]
   let mut failures : Array String := #[]
@@ -151,7 +151,7 @@ def run (args : List String) : IO UInt32 := do
             mismatches := mismatches.push s!"{key} {n} {wl}: std {s.checksum}/{s.fin}, \
               swisstable {m.checksum}/{m.fin}"
           IO.println (padR key 8 ++ padL (toString n) 9 ++ "  " ++ padR wl 14 ++
-            padL (fmt s.ns 1) 10 ++ padL (fmt m.ns 1) 10 ++ padL (fmt q) 11)
+            padL (fmt s.ns 1) 10 ++ padL (fmt m.ns 1) 12 ++ padL (fmt q) 16)
         | _, _ => pure ()
   IO.println ""
   IO.println "geometric mean of swisstable/std"

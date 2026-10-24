@@ -539,7 +539,7 @@ first six repeat `proofs.md` §9 in contract terms.
    code at `Nat` keys (inspect with `set_option trace.compiler.ir.result true`). `Derived`'s
    one-line queries are only free if `lookup` inlines.
 
-The existing map in `Wnetkat2/Data/OAMap` (layout "three arrays, 62-bit tags, linear probing")
+The earlier map in `Wnetkat2/Data/OAMap` (since replaced by this library and deleted) (layout "three arrays, 62-bit tags, linear probing")
 already covers parts of lemmas 1, 2, 3, 7, 12, 13 and 20–22. Its `Slots.entries : List (α × β)`
 becomes `toListModel` by `map (fun p => ⟨p.1, p.2⟩)`, and `entries_pairwise`, `lookup_entries`,
 `entries_setNew_perm` and `entries_grow_perm` carry over. Missing: erase by backward shift
