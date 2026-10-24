@@ -1,0 +1,1003 @@
+{
+ "Std.HashMap.Equiv.alter": {
+  "error": "Invalid field `constAlter`: The environment does not contain `List.Perm.constAlter`, so it is not possible to project the field `constAlter` from an expression",
+  "errors": {
+   "0": "Invalid field `constAlter`: The environment does not contain `List.Perm.constAlter`, so it is not possible to project the field `constAlter` from an expression"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.Equiv.erase": {
+  "error": "failed to synthesize instance of type class",
+  "errors": {
+   "0": "failed to synthesize instance of type class"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.Equiv.filter": {
+  "error": "Application type mismatch: The argument",
+  "errors": {
+   "0": "Application type mismatch: The argument"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.Equiv.filterMap": {
+  "error": "Application type mismatch: The argument",
+  "errors": {
+   "0": "Application type mismatch: The argument"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.Equiv.getElem_eq": {
+  "error": "Invalid field `constGet_eq`: The environment does not contain `List.Perm.constGet_eq`, so it is not possible to project the field `constGet_eq` from an expression",
+  "errors": {
+   "0": "Invalid field `constGet_eq`: The environment does not contain `List.Perm.constGet_eq`, so it is not possible to project the field `constGet_eq` from an expression"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.Equiv.getKey_eq": {
+  "error": "Invalid field `getKey_eq`: The environment does not contain `List.Perm.getKey_eq`, so it is not possible to project the field `getKey_eq` from an expression",
+  "errors": {
+   "0": "Invalid field `getKey_eq`: The environment does not contain `List.Perm.getKey_eq`, so it is not possible to project the field `getKey_eq` from an expression"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.Equiv.insert": {
+  "error": "Invalid argument name `β` for function `List.Perm.insert`",
+  "errors": {
+   "0": "Invalid argument name `β` for function `List.Perm.insert`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.Equiv.insertIfNew": {
+  "error": "Invalid field `insertIfNew`: The environment does not contain `List.Perm.insertIfNew`, so it is not possible to project the field `insertIfNew` from an expression",
+  "errors": {
+   "0": "Invalid field `insertIfNew`: The environment does not contain `List.Perm.insertIfNew`, so it is not possible to project the field `insertIfNew` from an expression"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.Equiv.insertManyIfNewUnit_list": {
+  "error": "Invalid field `constInsertManyIfNewUnit_list`: The environment does not contain `List.Perm.constInsertManyIfNewUnit_list`, so it is not possible to project the field `constInsertManyIfNewUnit_list` from an expression",
+  "errors": {
+   "0": "Invalid field `constInsertManyIfNewUnit_list`: The environment does not contain `List.Perm.constInsertManyIfNewUnit_list`, so it is not possible to project the field `constInsertManyIfNewUnit_list` from an expression"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.Equiv.insertMany_list": {
+  "error": "Invalid field `constInsertMany_list`: The environment does not contain `List.Perm.constInsertMany_list`, so it is not possible to project the field `constInsertMany_list` from an expression",
+  "errors": {
+   "0": "Invalid field `constInsertMany_list`: The environment does not contain `List.Perm.constInsertMany_list`, so it is not possible to project the field `constInsertMany_list` from an expression",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `insertList_perm_of_perm_first h.inner`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `insertList_perm_of_perm_first h.inner`",
+   "3": "Invalid projection: Projections extract constructor fields for one-constructor inductive types. The expression"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.Equiv.map": {
+  "error": "Application type mismatch: The argument",
+  "errors": {
+   "0": "Application type mismatch: The argument"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.Equiv.modify": {
+  "error": "Invalid field `constModify`: The environment does not contain `List.Perm.constModify`, so it is not possible to project the field `constModify` from an expression",
+  "errors": {
+   "0": "Invalid field `constModify`: The environment does not contain `List.Perm.constModify`, so it is not possible to project the field `constModify` from an expression"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.Equiv.of_forall_contains_unit_eq": {
+  "error": "Unknown constant `List.Perm.of_forall_contains_unit_eq`",
+  "errors": {
+   "0": "Unknown constant `List.Perm.of_forall_contains_unit_eq`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.Equiv.of_forall_getElem?_eq": {
+  "error": "Unknown constant `List.Perm.of_forall_constGet?_eq`",
+  "errors": {
+   "0": "Unknown constant `List.Perm.of_forall_constGet?_eq`",
+   "1": "Unknown identifier `Const.get?_eq_get?`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.Equiv.of_forall_getKey?_unit_eq": {
+  "error": "Unknown constant `List.Perm.of_forall_getKey?_unit_eq`",
+  "errors": {
+   "0": "Unknown constant `List.Perm.of_forall_getKey?_unit_eq`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.Equiv.of_forall_getKey_eq_of_forall_getElem?_eq": {
+  "error": "Unknown constant `List.Perm.of_forall_getKey_eq_of_forall_constGet?_eq`",
+  "errors": {
+   "0": "Unknown constant `List.Perm.of_forall_getKey_eq_of_forall_constGet?_eq`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.Equiv.of_forall_mem_unit_iff": {
+  "error": "Unknown constant `List.Perm.of_forall_mem_unit_iff`",
+  "errors": {
+   "0": "Unknown constant `List.Perm.of_forall_mem_unit_iff`",
+   "1": "typeclass instance problem is stuck"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.Equiv.of_keys_unit_perm": {
+  "error": "Unknown constant `List.Perm.of_keys_unit_perm`",
+  "errors": {
+   "0": "Unknown constant `List.Perm.of_keys_unit_perm`",
+   "1": "`simp` made no progress"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.Equiv.of_toList_perm": {
+  "error": "Unknown constant `List.Perm.of_constToList_perm`",
+  "errors": {
+   "0": "Unknown constant `List.Perm.of_constToList_perm`",
+   "1": "Type mismatch"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.Equiv.toList_perm": {
+  "error": "`simp` made no progress",
+  "errors": {
+   "0": "`simp` made no progress",
+   "1": "Type mismatch"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.all_eq_not_any_not": {
+  "error": "Unknown identifier `all_toList`",
+  "errors": {
+   "0": "Unknown identifier `all_toList`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.all_keys": {
+  "error": "Unknown identifier `Raw.Const.toList`",
+  "errors": {
+   "0": "Unknown identifier `Raw.Const.toList`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.all_toList": {
+  "error": "Unknown identifier `Raw.all`",
+  "errors": {
+   "0": "Unknown identifier `Raw.all`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.any_eq_not_all_not": {
+  "error": "Unknown identifier `all_toList`",
+  "errors": {
+   "0": "Unknown identifier `all_toList`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.any_eq_true_iff_exists_mem_getKey_getElem": {
+  "error": "Unknown identifier `Const.get`",
+  "errors": {
+   "0": "Unknown identifier `Const.get`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.any_keys": {
+  "error": "Unknown identifier `Raw.Const.toList`",
+  "errors": {
+   "0": "Unknown identifier `Raw.Const.toList`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.any_toList": {
+  "error": "Unknown identifier `Raw.any`",
+  "errors": {
+   "0": "Unknown identifier `Raw.any`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.containsThenInsertIfNew_fst": {
+  "error": "Unknown identifier `containsThenInsertIfNew_eq_containsₘ`",
+  "errors": {
+   "0": "Unknown identifier `containsThenInsertIfNew_eq_containsₘ`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.containsThenInsert_fst": {
+  "error": "Unknown identifier `containsThenInsert_eq_containsₘ`",
+  "errors": {
+   "0": "Unknown identifier `containsThenInsert_eq_containsₘ`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.contains_emptyWithCapacity": {
+  "error": "unsolved goals",
+  "errors": {
+   "0": "unsolved goals",
+   "1": "Function expected at",
+   "2": "Function expected at"
+  },
+  "choice": 3
+ },
+ "Std.HashMap.contains_keysArray": {
+  "error": "Unknown identifier `h`",
+  "errors": {
+   "0": "Unknown identifier `h`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.contains_ofList": {
+  "error": "Function expected at",
+  "errors": {
+   "0": "Function expected at",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `@containsKey_insertListConst`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@containsKey_insertListConst`",
+   "3": "Tactic `apply` failed: could not unify the conclusion of `@containsKey_insertListConst`",
+   "4": "Tactic `apply` failed: could not unify the conclusion of `@containsKey_insertListConst`"
+  },
+  "choice": 5
+ },
+ "Std.HashMap.contains_unitOfList": {
+  "error": "Function expected at",
+  "errors": {
+   "0": "Function expected at",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `@containsKey_insertListIfNewUnit`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@containsKey_insertListIfNewUnit`",
+   "3": "Tactic `apply` failed: could not unify the conclusion of `@containsKey_insertListIfNewUnit`",
+   "4": "Tactic `apply` failed: could not unify the conclusion of `@containsKey_insertListIfNewUnit`"
+  },
+  "choice": 5
+ },
+ "Std.HashMap.distinct_keys": {
+  "error": "Unknown identifier `Raw.WF.out`",
+  "errors": {
+   "0": "Unknown identifier `Raw.WF.out`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.filterMap_equiv_filter": {
+  "error": "Unknown identifier `filterMap_eq_filter`",
+  "errors": {
+   "0": "Unknown identifier `filterMap_eq_filter`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.filterMap_equiv_map": {
+  "error": "Unknown identifier `filterMap_eq_map`",
+  "errors": {
+   "0": "Unknown identifier `filterMap_eq_map`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.find?_toArray_eq_none_iff_contains_eq_false": {
+  "error": "Unknown identifier `h`",
+  "errors": {
+   "0": "Unknown identifier `h`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.find?_toArray_eq_some_iff_getKey?_eq_some_and_getElem?_eq_some": {
+  "error": "Unknown identifier `h`",
+  "errors": {
+   "0": "Unknown identifier `h`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.forIn_eq_forIn_keys": {
+  "error": "Tactic `apply` failed: could not unify the conclusion of `@List.forIn_eq_forIn_keys`",
+  "errors": {
+   "0": "Tactic `apply` failed: could not unify the conclusion of `@List.forIn_eq_forIn_keys`",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `@List.forIn_eq_forIn_keys`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@List.forIn_eq_forIn_keys`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.forIn_eq_forIn_toList": {
+  "error": "Tactic `apply` failed: could not unify the conclusion of `@forIn_eq_forIn_toProd`",
+  "errors": {
+   "0": "Tactic `apply` failed: could not unify the conclusion of `@forIn_eq_forIn_toProd`",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `@forIn_eq_forIn_toProd`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@forIn_eq_forIn_toProd`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.forM_eq_forM_keys": {
+  "error": "Tactic `apply` failed: could not unify the conclusion of `@List.forM_eq_forM_keys`",
+  "errors": {
+   "0": "Tactic `apply` failed: could not unify the conclusion of `@List.forM_eq_forM_keys`",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `@List.forM_eq_forM_keys`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@List.forM_eq_forM_keys`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.forM_eq_forM_keysArray": {
+  "error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern",
+  "errors": {
+   "0": "Tactic `rewrite` failed: Did not find an occurrence of the pattern"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.forM_eq_forM_toArray": {
+  "error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern",
+  "errors": {
+   "0": "Tactic `rewrite` failed: Did not find an occurrence of the pattern"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.forM_eq_forM_toList": {
+  "error": "Tactic `apply` failed: could not unify the conclusion of `@forM_eq_forM_toProd`",
+  "errors": {
+   "0": "Tactic `apply` failed: could not unify the conclusion of `@forM_eq_forM_toProd`",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `@forM_eq_forM_toProd`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@forM_eq_forM_toProd`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.forall_mem_keysArray_iff_forall_mem_getKey": {
+  "error": "Unknown identifier `h`",
+  "errors": {
+   "0": "Unknown identifier `h`",
+   "1": "Unknown identifier `forall_mem_keys_iff_forall_contains_getKey`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getD_emptyWithCapacity": {
+  "error": "unsolved goals",
+  "errors": {
+   "0": "unsolved goals",
+   "1": "Function expected at",
+   "2": "Function expected at"
+  },
+  "choice": 3
+ },
+ "Std.HashMap.getD_map": {
+  "error": "Unknown identifier `getD_map'`",
+  "errors": {
+   "0": "Unknown identifier `getD_map'`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getD_ofList_of_contains_eq_false": {
+  "error": "Function expected at",
+  "errors": {
+   "0": "Function expected at"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.getD_ofList_of_mem": {
+  "error": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+  "errors": {
+   "0": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+   "1": "unsolved goals",
+   "2": "simp_all made no progress",
+   "3": "unsolved goals",
+   "4": "simp_all made no progress",
+   "5": "simp_all made no progress"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getD_of_isEmpty": {
+  "error": "unsolved goals",
+  "errors": {
+   "0": "unsolved goals"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.getElem!_emptyWithCapacity": {
+  "error": "unsolved goals",
+  "errors": {
+   "0": "unsolved goals",
+   "1": "Function expected at",
+   "2": "Function expected at"
+  },
+  "choice": 3
+ },
+ "Std.HashMap.getElem!_map": {
+  "error": "Unknown identifier `getElem!_map'`",
+  "errors": {
+   "0": "Unknown identifier `getElem!_map'`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getElem!_ofList_of_contains_eq_false": {
+  "error": "Function expected at",
+  "errors": {
+   "0": "Function expected at",
+   "1": "Function expected at"
+  },
+  "choice": 2
+ },
+ "Std.HashMap.getElem!_ofList_of_mem": {
+  "error": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+  "errors": {
+   "0": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+   "1": "unsolved goals",
+   "2": "simp_all made no progress",
+   "3": "unsolved goals",
+   "4": "simp_all made no progress",
+   "5": "simp_all made no progress"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getElem!_of_isEmpty": {
+  "error": "unsolved goals",
+  "errors": {
+   "0": "unsolved goals"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.getElem?_emptyWithCapacity": {
+  "error": "`simp` made no progress",
+  "errors": {
+   "0": "`simp` made no progress",
+   "1": "Function expected at",
+   "2": "Function expected at"
+  },
+  "choice": 3
+ },
+ "Std.HashMap.getElem?_eq_some_iff_exists_beq_and_mem_toArray": {
+  "error": "Unknown identifier `h`",
+  "errors": {
+   "0": "Unknown identifier `h`",
+   "1": "Tactic `simp` failed with a nested error:"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getElem?_map": {
+  "error": "Unknown identifier `getElem?_map'`",
+  "errors": {
+   "0": "Unknown identifier `getElem?_map'`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getElem?_ofList_of_contains_eq_false": {
+  "error": "Function expected at",
+  "errors": {
+   "0": "Function expected at",
+   "1": "Function expected at"
+  },
+  "choice": 2
+ },
+ "Std.HashMap.getElem?_ofList_of_mem": {
+  "error": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+  "errors": {
+   "0": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+   "1": "unsolved goals",
+   "2": "simp_all made no progress",
+   "3": "unsolved goals",
+   "4": "simp_all made no progress",
+   "5": "simp_all made no progress"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getElem?_of_isEmpty": {
+  "error": "unsolved goals",
+  "errors": {
+   "0": "unsolved goals"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.getElem?_unitOfList": {
+  "error": "Function expected at",
+  "errors": {
+   "0": "Function expected at",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `@getValue?_insertListIfNewUnit`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@getValue?_insertListIfNewUnit`",
+   "3": "Tactic `apply` failed: could not unify the conclusion of `@getValue?_insertListIfNewUnit`",
+   "4": "Tactic `apply` failed: could not unify the conclusion of `@getValue?_insertListIfNewUnit`"
+  },
+  "choice": 5
+ },
+ "Std.HashMap.getElem_alter_self": {
+  "error": "Unknown identifier `get_alter`",
+  "errors": {
+   "0": "Unknown identifier `get_alter`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getElem_map": {
+  "error": "Unknown identifier `getElem_map'`",
+  "errors": {
+   "0": "Unknown identifier `getElem_map'`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getElem_ofList_of_mem": {
+  "error": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+  "errors": {
+   "0": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+   "1": "unsolved goals",
+   "2": "unsolved goals",
+   "3": "unsolved goals",
+   "4": "unsolved goals",
+   "5": "Tactic `rewrite` failed: motive is not type correct:"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getElem_union_of_mem_right": {
+  "error": "Unknown identifier `h`",
+  "errors": {
+   "0": "Unknown identifier `h`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.getKey!_emptyWithCapacity": {
+  "error": "unsolved goals",
+  "errors": {
+   "0": "unsolved goals",
+   "1": "Function expected at",
+   "2": "Function expected at"
+  },
+  "choice": 3
+ },
+ "Std.HashMap.getKey!_ofList_of_contains_eq_false": {
+  "error": "Function expected at",
+  "errors": {
+   "0": "Function expected at",
+   "1": "Function expected at",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListConst_of_contains_eq_false`",
+   "3": "Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListConst_of_contains_eq_false`",
+   "4": "Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListConst_of_contains_eq_false`",
+   "5": "Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListConst_of_contains_eq_false`",
+   "6": "unsolved goals"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getKey!_ofList_of_mem": {
+  "error": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+  "errors": {
+   "0": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+   "1": "unsolved goals"
+  },
+  "choice": 2
+ },
+ "Std.HashMap.getKey!_unitOfList_of_contains_eq_false": {
+  "error": "Unknown identifier `getKey!_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false`",
+  "errors": {
+   "0": "Unknown identifier `getKey!_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false`",
+   "1": "Unknown identifier `getKey!_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getKey!_unitOfList_of_mem": {
+  "error": "Unknown identifier `getKey!_insertManyIfNewUnit_list_of_contains_eq_false_of_mem`",
+  "errors": {
+   "0": "Unknown identifier `getKey!_insertManyIfNewUnit_list_of_contains_eq_false_of_mem`",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListIfNewUnit_of_contains`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListIfNewUnit_of_contains`",
+   "3": "Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListIfNewUnit_of_contains`",
+   "4": "Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListIfNewUnit_of_contains`",
+   "5": "simp_all made no progress"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getKey?_emptyWithCapacity": {
+  "error": "unsolved goals",
+  "errors": {
+   "0": "unsolved goals",
+   "1": "Function expected at",
+   "2": "Function expected at"
+  },
+  "choice": 3
+ },
+ "Std.HashMap.getKey?_eq_some_of_contains": {
+  "error": "fail to show termination for",
+  "errors": {
+   "0": "fail to show termination for"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getKey?_ofList_of_contains_eq_false": {
+  "error": "Function expected at",
+  "errors": {
+   "0": "Function expected at",
+   "1": "Function expected at",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListConst_of_contains_eq_false`",
+   "3": "Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListConst_of_contains_eq_false`",
+   "4": "Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListConst_of_contains_eq_false`",
+   "5": "Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListConst_of_contains_eq_false`",
+   "6": "unsolved goals"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getKey?_ofList_of_mem": {
+  "error": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+  "errors": {
+   "0": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+   "1": "unsolved goals"
+  },
+  "choice": 2
+ },
+ "Std.HashMap.getKey?_union_of_not_mem_left": {
+  "error": "Tactic `apply` failed: could not unify the conclusion of `@Model.distinctKeys`",
+  "errors": {
+   "0": "Tactic `apply` failed: could not unify the conclusion of `@Model.distinctKeys`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.getKey?_union_of_not_mem_right": {
+  "error": "Type mismatch",
+  "errors": {
+   "0": "Type mismatch"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.getKey?_unitOfList_of_contains_eq_false": {
+  "error": "Unknown identifier `getKey?_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false`",
+  "errors": {
+   "0": "Unknown identifier `getKey?_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false`",
+   "1": "Unknown identifier `getKey?_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getKey?_unitOfList_of_mem": {
+  "error": "Unknown identifier `getKey?_insertManyIfNewUnit_list_of_contains_eq_false_of_mem`",
+  "errors": {
+   "0": "Unknown identifier `getKey?_insertManyIfNewUnit_list_of_contains_eq_false_of_mem`",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListIfNewUnit_of_contains`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListIfNewUnit_of_contains`",
+   "3": "Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListIfNewUnit_of_contains`",
+   "4": "Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListIfNewUnit_of_contains`",
+   "5": "simp_all made no progress"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getKeyD_emptyWithCapacity": {
+  "error": "unsolved goals",
+  "errors": {
+   "0": "unsolved goals",
+   "1": "Function expected at",
+   "2": "Function expected at"
+  },
+  "choice": 3
+ },
+ "Std.HashMap.getKeyD_ofList_of_contains_eq_false": {
+  "error": "Function expected at",
+  "errors": {
+   "0": "Function expected at",
+   "1": "Function expected at",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListConst_of_contains_eq_false`",
+   "3": "Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListConst_of_contains_eq_false`",
+   "4": "Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListConst_of_contains_eq_false`",
+   "5": "Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListConst_of_contains_eq_false`",
+   "6": "unsolved goals"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getKeyD_ofList_of_mem": {
+  "error": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+  "errors": {
+   "0": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+   "1": "unsolved goals"
+  },
+  "choice": 2
+ },
+ "Std.HashMap.getKeyD_union_of_not_mem_left": {
+  "error": "Unknown identifier `h'`",
+  "errors": {
+   "0": "Unknown identifier `h'`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.getKeyD_unitOfList_of_contains_eq_false": {
+  "error": "Unknown identifier `getKeyD_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false`",
+  "errors": {
+   "0": "Unknown identifier `getKeyD_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false`",
+   "1": "Unknown identifier `getKeyD_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getKeyD_unitOfList_of_mem": {
+  "error": "Unknown identifier `getKeyD_insertManyIfNewUnit_list_of_contains_eq_false_of_mem`",
+  "errors": {
+   "0": "Unknown identifier `getKeyD_insertManyIfNewUnit_list_of_contains_eq_false_of_mem`",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListIfNewUnit_of_contains`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListIfNewUnit_of_contains`",
+   "3": "Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListIfNewUnit_of_contains`",
+   "4": "Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListIfNewUnit_of_contains`",
+   "5": "simp_all made no progress"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getKey_ofList_of_mem": {
+  "error": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+  "errors": {
+   "0": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+   "1": "unsolved goals"
+  },
+  "choice": 2
+ },
+ "Std.HashMap.getKey_union_of_not_mem_right": {
+  "error": "Unknown identifier `contains_eq_false`",
+  "errors": {
+   "0": "Unknown identifier `contains_eq_false`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.getKey_unitOfList_of_mem": {
+  "error": "Unknown identifier `getKey_insertManyIfNewUnit_list_of_contains_eq_false_of_mem`",
+  "errors": {
+   "0": "Unknown identifier `getKey_insertManyIfNewUnit_list_of_contains_eq_false_of_mem`",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `@getKey_insertListIfNewUnit_of_contains`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@getKey_insertListIfNewUnit_of_contains`",
+   "3": "Tactic `apply` failed: could not unify the conclusion of `@getKey_insertListIfNewUnit_of_contains`",
+   "4": "Tactic `apply` failed: could not unify the conclusion of `@getKey_insertListIfNewUnit_of_contains`",
+   "5": "Tactic `rewrite` failed: motive is not type correct:"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.getThenInsertIfNew?_fst": {
+  "error": "Unknown identifier `getThenInsertIfNew?_eq_get?ₘ`",
+  "errors": {
+   "0": "Unknown identifier `getThenInsertIfNew?_eq_get?ₘ`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.isEmpty_emptyWithCapacity": {
+  "error": "Unknown identifier `Raw.isEmpty_eq_isEmpty`",
+  "errors": {
+   "0": "Unknown identifier `Raw.isEmpty_eq_isEmpty`",
+   "1": "Unknown identifier `wfImp_emptyWithCapacity`",
+   "2": "Function expected at",
+   "3": "Function expected at"
+  },
+  "choice": 4
+ },
+ "Std.HashMap.isEmpty_eq_size_eq_zero": {
+  "error": "Type mismatch",
+  "errors": {
+   "0": "Type mismatch"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.isEmpty_keysArray": {
+  "error": "Unknown identifier `h`",
+  "errors": {
+   "0": "Unknown identifier `h`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.isEmpty_ofList": {
+  "error": "Function expected at",
+  "errors": {
+   "0": "Function expected at"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.isEmpty_toArray": {
+  "error": "Unknown identifier `h`",
+  "errors": {
+   "0": "Unknown identifier `h`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.isEmpty_toList": {
+  "error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern",
+  "errors": {
+   "0": "Tactic `rewrite` failed: Did not find an occurrence of the pattern"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.isEmpty_unitOfList": {
+  "error": "Function expected at",
+  "errors": {
+   "0": "Function expected at"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.keys_emptyWithCapacity": {
+  "error": "Unknown identifier `Raw.keys_eq_keys_toListModel`",
+  "errors": {
+   "0": "Unknown identifier `Raw.keys_eq_keys_toListModel`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.keys_filter": {
+  "error": "Unknown identifier `Raw.keys_eq_keys_toListModel`",
+  "errors": {
+   "0": "Unknown identifier `Raw.keys_eq_keys_toListModel`",
+   "1": "Application type mismatch: The argument"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.keys_insertIfNew_perm": {
+  "error": "Unknown identifier `toListModel_insertIfNew`",
+  "errors": {
+   "0": "Unknown identifier `toListModel_insertIfNew`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.mem_keys": {
+  "error": "Tactic `rewrite` failed: Did not find an occurrence of the pattern",
+  "errors": {
+   "0": "Tactic `rewrite` failed: Did not find an occurrence of the pattern"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.mem_keysArray": {
+  "error": "Unknown identifier `h`",
+  "errors": {
+   "0": "Unknown identifier `h`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.mem_of_mem_keys": {
+  "error": "Unknown identifier `h'`",
+  "errors": {
+   "0": "Unknown identifier `h'`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.mem_toArray_iff_getElem?_eq_some": {
+  "error": "Unknown identifier `h`",
+  "errors": {
+   "0": "Unknown identifier `h`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.ofList_equiv_foldl": {
+  "error": "Type mismatch",
+  "errors": {
+   "0": "Type mismatch"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.size_alter": {
+  "error": "`simp` made no progress",
+  "errors": {
+   "0": "`simp` made no progress"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.size_alter_eq_add_one": {
+  "error": "Unknown identifier `h₁`",
+  "errors": {
+   "0": "Unknown identifier `h₁`",
+   "1": "unsolved goals"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.size_alter_eq_self_of_mem": {
+  "error": "Unknown identifier `h₁`",
+  "errors": {
+   "0": "Unknown identifier `h₁`",
+   "1": "unsolved goals"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.size_alter_eq_self_of_not_mem": {
+  "error": "Unknown identifier `h₁`",
+  "errors": {
+   "0": "Unknown identifier `h₁`",
+   "1": "Unknown identifier `h₂`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.size_alter_eq_sub_one": {
+  "error": "Unknown identifier `h₁`",
+  "errors": {
+   "0": "Unknown identifier `h₁`",
+   "1": "Unknown identifier `h₂`"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.size_alter_le_size": {
+  "error": "Unknown identifier `h`",
+  "errors": {
+   "0": "Unknown identifier `h`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.size_emptyWithCapacity": {
+  "error": "Type mismatch",
+  "errors": {
+   "0": "Type mismatch",
+   "1": "Function expected at",
+   "2": "Function expected at"
+  },
+  "choice": 3
+ },
+ "Std.HashMap.size_keysArray": {
+  "error": "Unknown identifier `h`",
+  "errors": {
+   "0": "Unknown identifier `h`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.size_le_size_alter": {
+  "error": "Unknown identifier `h`",
+  "errors": {
+   "0": "Unknown identifier `h`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.size_ofList": {
+  "error": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+  "errors": {
+   "0": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListConst`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListConst`",
+   "3": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListConst`",
+   "4": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListConst`"
+  },
+  "choice": 5
+ },
+ "Std.HashMap.size_ofList_le": {
+  "error": "Function expected at",
+  "errors": {
+   "0": "Function expected at",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListConst_le`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListConst_le`",
+   "3": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListConst_le`",
+   "4": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListConst_le`",
+   "5": "simp_all made no progress"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.size_toArray": {
+  "error": "Unknown identifier `h`",
+  "errors": {
+   "0": "Unknown identifier `h`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.size_unitOfList": {
+  "error": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+  "errors": {
+   "0": "Unknown identifier `Raw.WF.emptyWithCapacity₀`",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListIfNewUnit`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListIfNewUnit`",
+   "3": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListIfNewUnit`",
+   "4": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListIfNewUnit`"
+  },
+  "choice": 5
+ },
+ "Std.HashMap.size_unitOfList_le": {
+  "error": "Function expected at",
+  "errors": {
+   "0": "Function expected at",
+   "1": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListIfNewUnit_le`",
+   "2": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListIfNewUnit_le`",
+   "3": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListIfNewUnit_le`",
+   "4": "Tactic `apply` failed: could not unify the conclusion of `@length_insertListIfNewUnit_le`",
+   "5": "simp_all made no progress"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.toList_emptyWithCapacity": {
+  "error": "Unknown identifier `Raw.Const.toList_eq_toListModel_map`",
+  "errors": {
+   "0": "Unknown identifier `Raw.Const.toList_eq_toListModel_map`"
+  },
+  "choice": 1
+ },
+ "Std.HashMap.toList_insert_perm": {
+  "error": "Unknown identifier `toListModel_insert`",
+  "errors": {
+   "0": "Unknown identifier `toListModel_insert`",
+   "1": "unsolved goals"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.union_insert_right_equiv_insert_union": {
+  "error": "Function expected at",
+  "errors": {
+   "0": "Function expected at"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.unitOfList_equiv_foldl": {
+  "error": "Type mismatch",
+  "errors": {
+   "0": "Type mismatch"
+  },
+  "choice": "sorry"
+ },
+ "Std.HashMap.values_emptyWithCapacity": {
+  "error": "Unknown identifier `Raw.values_eq_values_toListModel`",
+  "errors": {
+   "0": "Unknown identifier `Raw.values_eq_values_toListModel`"
+  },
+  "choice": 1
+ }
+}

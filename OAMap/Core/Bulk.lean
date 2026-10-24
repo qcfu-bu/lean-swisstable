@@ -504,6 +504,9 @@ lemmas take from `Const.beqModel_eq_true_of_perm`, `Const.perm_of_beqModel` and
 `[EquivBEq α]` because the contract's `lookup_eq` does, and every user lemma about `==` has it. -/
 theorem beq_eq_beqModel [EquivBEq α] [LawfulHashable α] [BEq β] (t₁ t₂ : Table α β) :
     t₁.beq t₂ = Const.beqModel t₁.toListModel t₂.toListModel := by
+  -- REVIEW: decision pending (delete this lemma, restate it under `LawfulBEq`, or allow an
+  -- `import all` bridge for `Const.beqModel`; see the docstring). Only `Model.beq_eq_beqModel`
+  -- and the `beq` row of `simp_to_model`'s query table use it; no user lemma does.
   sorry
 
 theorem beq_of_perm [EquivBEq α] [LawfulHashable α] [BEq β] [ReflBEq β] {t₁ t₂ : Table α β}

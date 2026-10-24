@@ -12,8 +12,15 @@ were written in a separate design directory: where they say "this directory", re
 for the scripts (including `tools2/secdeps.py`, now `tools/secdeps.py`) and `tools/data/` for
 the JSON inputs.
 
-Status: Wave 0. The reference core `OAMap.Core.ListRef` implements the core contract and passes
-`test/OAMapTest/CoreSpec.lean`; every other library module is a stub.
+Status: Wave 1 merged, Wave 2 in progress. The reference core `OAMap.Core.ListRef` implements the
+core contract and passes `test/OAMapTest/CoreSpec.lean`. `Core/Derived.lean`, `Core/Bulk.lean`,
+the `HashMap` API (`Basic`, `AdditionalOperations`), the model bridge (`Model`), `simp_to_model`
+(`Tactic`) and `DecidableEquiv` are written. The nine `HashMap/Lemmas/*.lean` files and
+`HashSet/{Basic,Lemmas,DecidableEquiv}.lean` are generated from Std's text (below): every Std
+statement is present (parity reports no statement, binder or attribute difference), and the
+proofs that do not compile yet are `sorry` under a `-- REVIEW` comment carrying Std's proof chain
+and the candidates tried. The iterator files, `OAMapTest/Cbv.lean`, `Unverified.lean` and
+`bench/` are still stubs.
 
 ## Build and test
 
@@ -66,9 +73,26 @@ lake build OAMapTest.CoreSpec    # the acceptance test for the selected core
 * `tools/audit.py`: text-level audit of `OAMap/` (every file is a `module`; no `sorry`, `admit`,
   `native_decide`, `implemented_by`, `extern`, `unsafe`, `partial`, `opaque`, `axiom`,
   `import all` outside comments and strings).
-* `tools/port.py`, `chain.py`, `extract.py`, `extract2.py`, `classify.py`, `classify2.py`,
-  `secdeps.py`: the porting pipeline of `docs/proofs.md` §6 and ARCHITECTURE.md §6.2. Their
-  JSON inputs, extracted from Std's sources, are in `tools/data/`. For example, from `tools/data/`,
-  `python3 -I ../port.py hmchain.json dhm.json raw0.json hm.json all_hm.json OUT.lean` ports all
-  678 HashMap lemmas (the study's `auto_all.lean`).
+* `tools/port.py`, `split.py`, `portcheck.py`: the porting pipeline of `docs/proofs.md` §6 and
+  ARCHITECTURE.md §6.2.
+  * `python3 -I tools/port.py lemmas` regenerates `OAMap/HashMap/Lemmas/*.lean`,
+    `OAMap/HashMap/Lemmas.lean` and `OAMap/HashSet/{Basic,Lemmas,DecidableEquiv}.lean` from Std's
+    sources (the toolchain's `src/lean/Std/Data`). `split.py` cuts Std's `HashMap/Lemmas.lean` at
+    the line numbers of ARCHITECTURE.md §2.2 and gives every file the scopes and `variable`s
+    active at its cut; `port.py` keeps Std's statements and commands as text and lists candidate
+    proofs for every theorem from Std's proof chain.
+  * `python3 -I tools/portcheck.py [MODULE ...]` builds the generated modules in order and, for each
+    theorem whose proof fails, moves to its next candidate or to a `-- REVIEW` `sorry`. Its choices
+    are recorded in `tools/data/review.json`, which `port.py lemmas` reads, so the generated files
+    are reproducible. A proof fixed by hand in Wave 2 replaces the generated text in the file;
+    after that, do not regenerate that file (or add the proof to `OVERRIDES` in `port.py`).
+  * The original study scripts (`chain.py`, `extract.py`, `extract2.py`, `classify.py`,
+    `classify2.py`, `secdeps.py`) and their JSON inputs (`tools/data/`) are kept; from
+    `tools/data/`, `python3 -I ../port.py hmchain.json dhm.json raw0.json hm.json all_hm.json
+    OUT.lean` still reproduces the study's `auto_all.lean` exactly.
+* `tools/gen_basic.py`: generates `OAMap/HashMap/Basic.lean` and `AdditionalOperations.lean`
+  from Std's text (`python3 -I tools/gen_basic.py STD_DATA_DIR tools/inventory.json
+  OAMap/HashMap`; it reproduces the committed files exactly).
+* `tools/srccheck.py`: checks the source text and attributes of the 16 iterator declarations that
+  parity ignores against `inventory.json` (fails until the iterator files are written).
 * `tools/inventory.json`: the API to reproduce, with Std's exact signatures and attributes.

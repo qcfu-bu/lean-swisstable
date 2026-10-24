@@ -22,11 +22,12 @@ Rules:
 * **U** lemmas take no hypotheses on `BEq`/`Hashable`, **L** lemmas take
   `[EquivBEq α] [LawfulHashable α]`, exactly as the Table lemma they come from. The map is
   explicit, the keys, values and functions are implicit (`proofs.md` §4).
-* Two Table lemmas are still `sorry` in `OAMap.Core.Bulk` (`toListModel_insertMany_list` and
-  `beq_eq_beqModel`, which need definitions of `Std.Internal.List` that are not exposed); their
-  bridges here are the same one-line applications, and so are `toListModel_ofList` (through
-  `toListModel_insertMany_list`). `beq_of_perm`, `perm_of_beq`, `beq_congr` and
-  `beq_iff_equiv` do not depend on them.
+* One Table lemma is still `sorry` in `OAMap.Core.Bulk`: `beq_eq_beqModel`, whose statement
+  cannot be derived from the public lemmas about `Const.beqModel` (see its docstring there). Its
+  bridge `beq_eq_beqModel` here is the same one-line application, and nothing else uses it:
+  `beq_of_perm`, `perm_of_beq`, `beq_congr` and `beq_iff_equiv` do not depend on it, and the
+  user lemmas about `==` (`Equiv.beq`, `equiv_of_beq`, `beq_iff_equiv`, `Equiv.beq_congr`) are
+  proved from those four.
 
 Owner: API, Wave 1.
 -/
@@ -266,7 +267,6 @@ theorem mem_of_mem_insertIfNew' [EquivBEq α] [LawfulHashable α] {m : HashMap �
 
 /-! ## Bulk operations (`OAMap.Core.Bulk`) -/
 
-/-- **Depends on a `sorry`** of `OAMap.Core.Bulk` (`Core.Table.toListModel_insertMany_list`). -/
 theorem toListModel_insertMany_list [EquivBEq α] [LawfulHashable α] (m : HashMap α β)
     {l : List (α × β)} :
     (toListModel (m.insertMany l)).Perm (insertListConst (toListModel m) l) :=
@@ -277,7 +277,6 @@ theorem toListModel_insertManyIfNewUnit_list [EquivBEq α] [LawfulHashable α]
     (toListModel (m.insertManyIfNewUnit l)).Perm (insertListIfNewUnit (toListModel m) l) :=
   m.inner.toListModel_insertManyIfNewUnit_list l
 
-/-- **Depends on a `sorry`** of `OAMap.Core.Bulk` (`Core.Table.toListModel_insertMany_list`). -/
 theorem toListModel_ofList [EquivBEq α] [LawfulHashable α] {l : List (α × β)} :
     (toListModel (HashMap.ofList l : HashMap α β)).Perm (insertListConst [] l) := by
   have h := (Core.Table.emptyWithCapacity 8 : Core.Table α β).toListModel_insertMany_list l
