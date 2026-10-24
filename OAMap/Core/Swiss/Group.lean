@@ -17,7 +17,9 @@ byte `k < cap` is the control byte of slot `k`, and bytes `cap .. cap + 7` repea
 ## Contents
 
 * `ctrlWord c i h`: the 8 bytes from `i`, little-endian, read by 8 `ByteArray.uget`s that clang
-  combines into one unaligned 64-bit load. `byte_ctrlWord`: byte `j` of it is `c[i + j]`.
+  combines into one unaligned 64-bit load. `byte_ctrlWord`: byte `j` of it is
+  `c[(i + j) % USize.size]`, the index computed in `USize`; `byte_ctrlWord'`: it is `c[i + j]`
+  when `i + 8` does not wrap.
 * Match masks. A *mask* (`IsMask`) has its set bits among the flag bits `8 * j + 7`; `flag m j` is
   bit `8 * j + 7`. For a group word `g`:
   * `matchTag g (repTag t)`: flag `j` iff byte `j` of `g` is `t`, for every byte `t` (the exact
@@ -26,18 +28,52 @@ byte `k < cap` is the control byte of slot `k`, and bytes `cap .. cap + 7` repea
   * `matchFree g`: flag `j` iff byte `j` has its top bit set (EMPTY or DELETED);
   * `matchFull g`: flag `j` iff byte `j` is below `0x80` (FULL).
 * `lowestLane m`: the lane of the lowest flag of a nonzero mask, without a loop
-  (`lowestLane_spec`); `clearLowest m` removes exactly that flag (`flag_clearLowest`).
+  (`lowestLane_spec`); a lane below 8 for every mask, `0` for the zero mask (`lowestLane_lt`,
+  `lowestLane_zero`). `clearLowest m` removes exactly that flag (`flag_clearLowest`).
 * `Mirrored c cap`, `slotByte c cap k = c[k % cap]`, and `setCtrl`, which writes slot `i` and its
   mirror branch-free; `setCtrl` keeps `Mirrored` and changes exactly slot `i`
   (`mirrored_setCtrl`, `slotByte_setCtrl`). Under `Mirrored`, byte `j` of the group word at
   `p < cap` is the control byte of slot `(p + j) % cap` (`byte_ctrlWord_of_mirrored`).
+* `Geom cap mask`: the table geometry a core keeps in its invariant (`mask + 1 = cap`, a power of
+  two, `8 ≤ cap < USize.size`), with the slot-index lemmas restated over it (`Geom.*`).
+* The erase rule (hashbrown's): `needsTombstone ea eb`, for the EMPTY masks of the groups at `i`
+  and at `i - 8`, decides whether erasing slot `i` must write DELETED. When it is `false`, every
+  8-slot window containing slot `i` already has an EMPTY slot
+  (`exists_empty_of_needsTombstone_eq_false`), so writing EMPTY cannot cut a probe short; on
+  masks, `needsTombstone_eq_false_iff` says it is `false` exactly then.
 * Triangular probing over groups, as both prototypes do it: the `k`-th group starts at
   `probePos cap p₀ k = (p₀ + 8 * (k * (k + 1) / 2)) % cap`, which the loop computes as
   `pos ← (pos + stride) &&& mask` after `stride ← stride + 8` (`probe_step`). The first
   `cap / 8` groups cover every slot (`probe_cover`), each exactly once (`probe_unique`).
+  `probe_index` is the in-place rehash's group index `((s - p₀) &&& mask) / 8`.
 
 The lemmas about `setCtrl` assume `cap < USize.size`, so that slot `i + cap` of the mirror is an
-index that does not wrap; a core keeps it as part of its invariant (no array that large exists).
+index that does not wrap. Core Lean bounds no array size by `USize.size`, so a core must get it
+from its allocation (`lg < System.Platform.numBits`) and keep it in its invariant (`Geom`).
+Swiss's unallocated empty map (8 control bytes, `mask = 0`) is not `Mirrored`: a core either
+allocates 8 slots for `∅` (as SwissH does) or proves that case with `byte_ctrlWord` directly.
+
+## Use from other modules
+
+The section is `public` but not `@[expose]`d: importing modules see the statements but cannot
+unfold the definitions (`unfold`, `decide` and `rfl` through them fail). Every definition a core
+reasons about therefore has an exported characterisation: `EMPTY_eq`, `DELETED_eq`,
+`isCtrl_iff`, `lsbs_eq`, `msbs_eq`, `lows_eq`, `byte_def`, `flag_def`, `isMask_iff`,
+`repTag_eq`, `slotByte_def`, `needsTombstone_eq`, `tri_def`, `probePos_def`. The `Decidable`
+instances of `IsCtrl` and `IsMask` are stated on literals, so that `decide` works on them there.
+`test/OAMapTest/SwissGroupUse.lean` proves a lookup step and an erase step from another module
+with these lemmas only.
+
+## Design choices
+
+* The tag match is the exact form, not hashbrown's borrow form `(x - lsbs) &&& ~~~x &&& msbs`
+  that both prototypes use. It costs one instruction more per group (5 against 4 on arm64), and
+  the Swiss prototype measured it within ±2% of the borrow form (its "Measured alternatives"
+  notes). It never flags a byte other than the tag, so a core needs no case for false positives
+  and never compares a key for one.
+* Only the Swiss prototype's comparison form of the erase rule is specified. SwissH's smear and
+  `countLanes` formula takes the same decision on all 65536 pairs of masks (checked by a script,
+  not proved), but costs more instructions and has no lemma here.
 
 ## Proof method
 
@@ -59,6 +95,8 @@ namespace Lane
 
 /-- Byte `j` of a natural number. -/
 def lane (x j : Nat) : Nat := x / 256 ^ j % 256
+
+theorem lane_def (x j : Nat) : lane x j = x / 256 ^ j % 256 := by unfold lane; rfl
 
 theorem pow256 (j : Nat) : (256 : Nat) ^ j = 2 ^ (8 * j) := by
   rw [Nat.pow_mul]
@@ -125,7 +163,7 @@ theorem lane_add (a b j : Nat) (h : ∀ k ≤ j, lane a k + lane b k < 256) :
   rw [e, Nat.add_mul_div_left _ _ hP, Nat.div_eq_of_lt hlow, Nat.zero_add, Nat.add_mod,
     Nat.mod_eq_of_lt hj]
 
-theorem xor_eq_zero_iff (a b : Nat) : a ^^^ b = 0 ↔ a = b := by
+private theorem xor_eq_zero_iff (a b : Nat) : a ^^^ b = 0 ↔ a = b := by
   constructor
   · intro h
     apply Nat.eq_of_testBit_eq; intro i
@@ -160,6 +198,15 @@ theorem EMPTY_eq : EMPTY = 0xFF := by unfold EMPTY; rfl
 
 theorem DELETED_eq : DELETED = 0x80 := by unfold DELETED; rfl
 
+theorem isCtrl_iff {b : UInt8} : IsCtrl b ↔ b = EMPTY ∨ b = DELETED ∨ b < 0x80 := by
+  unfold IsCtrl; exact Iff.rfl
+
+/-- Stated on literals (instances are exposed), so that importing modules can `decide` `IsCtrl`. -/
+instance instDecidableIsCtrl (b : UInt8) : Decidable (IsCtrl b) :=
+  decidable_of_iff (b = 0xFF ∨ b = 0x80 ∨ b < 0x80) (by rw [isCtrl_iff, EMPTY_eq, DELETED_eq])
+
+theorem DELETED_ne_EMPTY : DELETED ≠ EMPTY := by rw [DELETED_eq, EMPTY_eq]; decide
+
 theorem isCtrl_EMPTY : IsCtrl EMPTY := Or.inl rfl
 
 theorem isCtrl_DELETED : IsCtrl DELETED := Or.inr (Or.inl rfl)
@@ -186,7 +233,29 @@ def flag (m : UInt64) (j : Nat) : Bool := m.toNat.testBit (8 * j + 7)
 /-- A mask: every set bit is a flag bit `8 * j + 7`. -/
 def IsMask (m : UInt64) : Prop := m &&& lows = 0
 
-instance (m : UInt64) : Decidable (IsMask m) := inferInstanceAs (Decidable (m &&& lows = 0))
+theorem lsbs_eq : lsbs = 0x0101010101010101 := by unfold lsbs; rfl
+
+theorem msbs_eq : msbs = 0x8080808080808080 := by unfold msbs; rfl
+
+theorem lows_eq : lows = 0x7F7F7F7F7F7F7F7F := by unfold lows; rfl
+
+theorem byte_def (w : UInt64) (j : Nat) : byte w j = (w >>> (8 * j).toUInt64).toUInt8 := by
+  unfold byte; rfl
+
+theorem flag_def (m : UInt64) (j : Nat) : flag m j = m.toNat.testBit (8 * j + 7) := by
+  unfold flag; rfl
+
+theorem isMask_iff {m : UInt64} : IsMask m ↔ m &&& 0x7F7F7F7F7F7F7F7F = 0 := by
+  unfold IsMask; rw [lows_eq]
+
+/-- Stated on literals (instances are exposed), so that importing modules can `decide` `IsMask`. -/
+instance instDecidableIsMask (m : UInt64) : Decidable (IsMask m) :=
+  decidable_of_iff (m &&& 0x7F7F7F7F7F7F7F7F = 0) isMask_iff.symm
+
+theorem isMask_zero : IsMask 0 := by rw [isMask_iff]; decide
+
+theorem flag_zero (j : Nat) : flag 0 j = false := by
+  rw [flag_def, UInt64.toNat_zero, Nat.zero_testBit]
 
 theorem toNat_byte (w : UInt64) {j : Nat} (hj : j < 8) : (byte w j).toNat = lane w.toNat j := by
   have h64 : 8 * j % 2 ^ 64 % 64 = 8 * j := by omega
@@ -275,7 +344,7 @@ theorem byte_or8 (b₀ b₁ b₂ b₃ b₄ b₅ b₆ b₇ : UInt8) {j : Nat} (hj
   rcases j with _ | _ | _ | _ | _ | _ | _ | _ | j <;> simp
   omega
 
-theorem uget_eq_getElem (c : ByteArray) (i : USize) (h : i.toNat < c.size) :
+private theorem uget_eq_getElem (c : ByteArray) (i : USize) (h : i.toNat < c.size) :
     c.uget i h = c[i.toNat] := by
   cases c; rfl
 
@@ -342,6 +411,27 @@ theorem testBit_msbs : ∀ j < 8, msbs.toNat.testBit (8 * j + 7) = true := by de
 theorem testBit_lows : ∀ i < 64, i % 8 ≠ 7 → lows.toNat.testBit i = true := by decide +kernel
 
 theorem msbs_and_lows : msbs &&& lows = 0 := by decide
+
+theorem repTag_eq (t : UInt8) : repTag t = t.toUInt64 * 0x0101010101010101 := by
+  unfold repTag; rw [lsbs_eq]
+
+/-- The prototypes' replicated tag `x * lsbs`, for `x < 256`, is `repTag x.toUInt8`. -/
+theorem repTag_toUInt8 {x : UInt64} (hx : x < 256) :
+    repTag x.toUInt8 = x * 0x0101010101010101 := by
+  have hx' : x.toNat < 256 := UInt64.lt_iff_toNat_lt.mp hx
+  have e : x.toUInt8.toUInt64 = x := by
+    apply UInt64.toNat_inj.mp
+    rw [UInt8.toNat_toUInt64, UInt64.toNat_toUInt8, Nat.mod_eq_of_lt hx']
+  rw [repTag_eq, e]
+
+theorem and_7F_lt (x : UInt64) : x &&& 0x7F < 256 := by
+  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_and]
+  exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
+
+/-- The tag `h2 = (q &&& 0x7F).toUInt8` of both prototypes is FULL. -/
+theorem toUInt8_and_7F_lt (x : UInt64) : (x &&& 0x7F).toUInt8 < 0x80 := by
+  rw [UInt8.lt_iff_toNat_lt, UInt64.toNat_toUInt8, UInt64.toNat_and]
+  exact Nat.lt_of_le_of_lt (Nat.mod_le _ _) (Nat.lt_of_le_of_lt Nat.and_le_right (by decide))
 
 theorem lane_repTag (t : UInt8) {j : Nat} (hj : j < 8) : lane (repTag t).toNat j = t.toNat := by
   have key : ∀ t < 256, ∀ j < 8, lane (t * lsbs.toNat % 2 ^ 64) j = t := by decide +kernel
@@ -532,7 +622,8 @@ theorem eq_spread {m : UInt64} (hm : IsMask m) :
   simp only [Nat.reducePow]
   omega
 
-/-- To prove a property of every mask, check its 256 flag patterns. -/
+/-- To prove a property of every mask, check its 256 flag patterns (with `decide +kernel`, which
+only works in this module: elsewhere the definitions are sealed). -/
 theorem forall_mask (P : UInt64 → Prop)
     (h : ∀ f₀ f₁ f₂ f₃ f₄ f₅ f₆ f₇ : Bool,
       P (UInt64.ofNat (spread f₀ f₁ f₂ f₃ f₄ f₅ f₆ f₇)))
@@ -588,9 +679,37 @@ theorem clearLowest_lt {m : UInt64} (hm : IsMask m) (h0 : m ≠ 0) :
   forall_mask (fun m => m ≠ 0 → (clearLowest m).toNat < m.toNat)
     (by decide +kernel) hm h0
 
+/-- `lowestLane` is a lane of the group for every mask, `0` included (SwissH's `insertNew` takes
+`lowestLane (matchFree g)` without testing the mask). -/
+theorem lowestLane_lt {m : UInt64} (hm : IsMask m) : (lowestLane m).toNat < 8 := by
+  have h8 := forall_mask (fun m => (lowestLane64 m).toNat < 8) (by decide +kernel) hm
+  rw [toNat_lowestLane h8]; exact h8
+
+/-- The lane of the zero mask is `0`. -/
+theorem lowestLane_zero : lowestLane 0 = 0 := by
+  have h : (lowestLane64 0).toNat = 0 := by decide +kernel
+  apply USize.toNat_inj.mp
+  rw [toNat_lowestLane (by omega), h, USize.toNat_zero]
+
+/-- The first step of `lowestLane`: `(m &&& (0 - m)) >>> 7`, the lowest flag of a nonzero mask
+moved to the bottom of its lane, is `256 ^ lowestLane m`. -/
+theorem isolate_shift {m : UInt64} (hm : IsMask m) (h0 : m ≠ 0) :
+    ((m &&& (0 - m)) >>> 7).toNat = 256 ^ (lowestLane m).toNat := by
+  have := forall_mask (fun m => m ≠ 0 → (lowestLane64 m).toNat < 8 ∧
+      ((m &&& (0 - m)) >>> 7).toNat = 256 ^ (lowestLane64 m).toNat) (by decide +kernel) hm h0
+  rw [toNat_lowestLane this.1]; exact this.2
+
+/-- A mask is below `256 ^ j` iff it has no flag in lane `j` or above. -/
+theorem mask_lt_pow_iff {m : UInt64} (hm : IsMask m) {j : Nat} (hj : j ≤ 8) :
+    m.toNat < 256 ^ j ↔ ∀ l < 8, j ≤ l → flag m l = false := by
+  have := forall_mask
+    (fun m => ∀ j < 9, (m.toNat < 256 ^ j ↔ ∀ l < 8, j ≤ l → flag m l = false))
+    (by decide +kernel) hm
+  exact this j (by omega)
+
 /-! ## Slot indices in `USize` -/
 
-theorem toNat_eight : (8 : USize).toNat = 8 := by simp
+private theorem toNat_eight : (8 : USize).toNat = 8 := by simp
 
 /-- A power of two `cap ≤ USize.size` divides `USize.size`. -/
 theorem dvd_usize_size {cap n : Nat} (hcap : cap = 2 ^ n) (h : cap ≤ USize.size) :
@@ -607,6 +726,23 @@ theorem toNat_add_and_mask {a b mask : USize} {cap n : Nat} (hcap : cap = 2 ^ n)
     (hmask : mask.toNat + 1 = cap) : ((a + b) &&& mask).toNat = (a.toNat + b.toNat) % cap := by
   have : cap ≤ USize.size := by have := USize.toNat_lt_size mask; omega
   rw [toNat_and_mask hcap hmask, USize.toNat_add, Nat.mod_mod_of_dvd _ (dvd_usize_size hcap this)]
+
+/-- The slot `(a - b) &&& mask`, for `b ≤ cap`: `a - b` modulo `cap`. -/
+theorem toNat_sub_and_mask {a b mask : USize} {cap n : Nat} (hcap : cap = 2 ^ n)
+    (hmask : mask.toNat + 1 = cap) (hb : b.toNat ≤ cap) :
+    ((a - b) &&& mask).toNat = (a.toNat + (cap - b.toNat)) % cap := by
+  have hle : cap ≤ USize.size := by have := USize.toNat_lt_size mask; omega
+  have hdvd := dvd_usize_size hcap hle
+  obtain ⟨K, hK⟩ := hdvd
+  have hK1 : cap ≤ cap * K := by
+    rcases K with _ | K
+    · rw [Nat.mul_zero] at hK; have := USize.le_size; omega
+    · exact Nat.le_mul_of_pos_right _ (by omega)
+  have hsub : cap * (K - 1) = cap * K - cap := Nat.mul_sub_one cap K
+  have hS : 2 ^ System.Platform.numBits = USize.size := rfl
+  rw [toNat_and_mask hcap hmask, USize.toNat_sub, hS, Nat.mod_mod_of_dvd _ ⟨K, hK⟩, hK,
+    show cap * K - b.toNat + a.toNat = (a.toNat + (cap - b.toNat)) + cap * (K - 1) by omega,
+    Nat.add_mul_mod_self_left]
 
 /-- The index `((i - 8) &&& mask) + 8` that `setCtrl` writes besides `i`: `i + cap` for the first
 8 slots (their mirror), `i` itself for the others. -/
@@ -649,6 +785,9 @@ structure Mirrored (c : ByteArray) (cap : Nat) : Prop where
 /-- The control byte of slot `k % cap`. -/
 def slotByte (c : ByteArray) (cap k : Nat) : UInt8 := c[k % cap]!
 
+theorem slotByte_def (c : ByteArray) (cap k : Nat) : slotByte c cap k = c[k % cap]! := by
+  unfold slotByte; rfl
+
 theorem slotByte_mod (c : ByteArray) (cap k : Nat) :
     slotByte c cap (k % cap) = slotByte c cap k := by
   simp [slotByte]
@@ -681,11 +820,11 @@ theorem Mirrored.slotByte_eq {c : ByteArray} {cap : Nat} (h : Mirrored c cap) {k
     (hk : k < cap) : slotByte c cap k = c[k]'(by have := h.size_eq; omega) :=
   (h.getElem_eq k _).symm
 
-theorem size_uset (c : ByteArray) (i : USize) (b : UInt8) (h : i.toNat < c.size) :
+private theorem size_uset (c : ByteArray) (i : USize) (b : UInt8) (h : i.toNat < c.size) :
     (c.uset i b h).size = c.size := by
   cases c; simp [ByteArray.uset, ByteArray.size]
 
-theorem getElem_uset (c : ByteArray) (i : USize) (b : UInt8) (h : i.toNat < c.size) (k : Nat)
+private theorem getElem_uset (c : ByteArray) (i : USize) (b : UInt8) (h : i.toNat < c.size) (k : Nat)
     (hk : k < c.size) :
     (c.uset i b h)[k]'(by rw [size_uset]; exact hk) = if i.toNat = k then b else c[k] := by
   cases c; simp [ByteArray.uset, ByteArray.getElem_eq_getElem_data, Array.getElem_set]
@@ -788,10 +927,219 @@ theorem flag_matchFree_ctrlWord {c : ByteArray} {cap : Nat} (h : Mirrored c cap)
   have h8 := h.le_cap
   rw [flag_matchFree_ctrl _ hj (by rw [hb]; exact hctrl _ (Nat.mod_lt _ (by omega))), hb]
 
+/-- Full match of the group at `p`: flag `j` iff slot `(p + j) % cap` is below `0x80`. -/
+theorem flag_matchFull_ctrlWord {c : ByteArray} {cap : Nat} (h : Mirrored c cap)
+    (hcap : cap ≤ USize.size) {p : USize} (hw : p.toNat + 8 ≤ c.size) {j : Nat} (hj : j < 8) :
+    flag (matchFull (ctrlWord c p hw)) j =
+      decide (slotByte c cap ((p.toNat + j) % cap) < 0x80) := by
+  rw [flag_matchFull _ hj, byte_ctrlWord_of_mirrored h hcap hw hj]
+
+/-- No slot of the group at `p` holds `t` iff its tag mask is zero. -/
+theorem matchTag_ctrlWord_eq_zero_iff {c : ByteArray} {cap : Nat} (h : Mirrored c cap)
+    (hcap : cap ≤ USize.size) {p : USize} (hw : p.toNat + 8 ≤ c.size) (t : UInt8) :
+    matchTag (ctrlWord c p hw) (repTag t) = 0 ↔
+      ∀ j < 8, slotByte c cap ((p.toNat + j) % cap) ≠ t := by
+  rw [isMask_eq_zero_iff (isMask_matchTag _ _)]
+  constructor
+  · intro H j hj
+    have := H j hj
+    rwa [flag_matchTag_ctrlWord h hcap hw t hj, beq_eq_false_iff_ne] at this
+  · intro H j hj
+    rw [flag_matchTag_ctrlWord h hcap hw t hj, beq_eq_false_iff_ne]
+    exact H j hj
+
+/-- No slot of the group at `p` is EMPTY iff its empty mask is zero. -/
+theorem matchEmpty_ctrlWord_eq_zero_iff {c : ByteArray} {cap : Nat} (h : Mirrored c cap)
+    (hcap : cap ≤ USize.size) (hctrl : ∀ k < cap, IsCtrl (slotByte c cap k)) {p : USize}
+    (hw : p.toNat + 8 ≤ c.size) :
+    matchEmpty (ctrlWord c p hw) = 0 ↔
+      ∀ j < 8, slotByte c cap ((p.toNat + j) % cap) ≠ EMPTY := by
+  rw [isMask_eq_zero_iff (isMask_matchEmpty _)]
+  constructor
+  · intro H j hj
+    have := H j hj
+    rwa [flag_matchEmpty_ctrlWord h hcap hctrl hw hj, beq_eq_false_iff_ne] at this
+  · intro H j hj
+    rw [flag_matchEmpty_ctrlWord h hcap hctrl hw hj, beq_eq_false_iff_ne]
+    exact H j hj
+
+/-- No slot of the group at `p` is EMPTY or DELETED iff its free mask is zero. -/
+theorem matchFree_ctrlWord_eq_zero_iff {c : ByteArray} {cap : Nat} (h : Mirrored c cap)
+    (hcap : cap ≤ USize.size) (hctrl : ∀ k < cap, IsCtrl (slotByte c cap k)) {p : USize}
+    (hw : p.toNat + 8 ≤ c.size) :
+    matchFree (ctrlWord c p hw) = 0 ↔
+      ∀ j < 8, slotByte c cap ((p.toNat + j) % cap) ≠ EMPTY ∧
+        slotByte c cap ((p.toNat + j) % cap) ≠ DELETED := by
+  rw [isMask_eq_zero_iff (isMask_matchFree _)]
+  constructor
+  · intro H j hj
+    have := H j hj
+    rwa [flag_matchFree_ctrlWord h hcap hctrl hw hj, Bool.or_eq_false_iff, beq_eq_false_iff_ne,
+      beq_eq_false_iff_ne] at this
+  · intro H j hj
+    rw [flag_matchFree_ctrlWord h hcap hctrl hw hj, Bool.or_eq_false_iff, beq_eq_false_iff_ne,
+      beq_eq_false_iff_ne]
+    exact H j hj
+
+/-- No slot of the group at `p` is FULL (below `0x80`) iff its full mask is zero. -/
+theorem matchFull_ctrlWord_eq_zero_iff {c : ByteArray} {cap : Nat} (h : Mirrored c cap)
+    (hcap : cap ≤ USize.size) {p : USize} (hw : p.toNat + 8 ≤ c.size) :
+    matchFull (ctrlWord c p hw) = 0 ↔
+      ∀ j < 8, ¬ slotByte c cap ((p.toNat + j) % cap) < 0x80 := by
+  rw [isMask_eq_zero_iff (isMask_matchFull _)]
+  constructor
+  · intro H j hj
+    have := H j hj
+    rwa [flag_matchFull_ctrlWord h hcap hw hj, decide_eq_false_iff_not] at this
+  · intro H j hj
+    rw [flag_matchFull_ctrlWord h hcap hw hj, decide_eq_false_iff_not]
+    exact H j hj
+
+/-! ## The table geometry -/
+
+/-- The geometry of a table, as a core keeps it in its invariant: `cap = mask + 1` slots, a power
+of two, at least 8 and below `USize.size`. The last bound makes the mirror index of `setCtrl` and
+`i + 8` free of wrapping; it must come from the core's allocation (core Lean bounds no array size
+by `USize.size`). -/
+structure Geom (cap : Nat) (mask : USize) : Prop where
+  mask_add_one : mask.toNat + 1 = cap
+  pow_two : ∃ n, cap = 2 ^ n
+  le_cap : 8 ≤ cap
+  lt_size : cap < USize.size
+
+theorem Geom.cap_le_size {cap : Nat} {mask : USize} (hg : Geom cap mask) : cap ≤ USize.size :=
+  Nat.le_of_lt hg.lt_size
+
+theorem Geom.toNat_and_mask {cap : Nat} {mask : USize} (hg : Geom cap mask) (x : USize) :
+    (x &&& mask).toNat = x.toNat % cap :=
+  let ⟨_, hcap⟩ := hg.pow_two
+  OAMap.Core.Swiss.toNat_and_mask hcap hg.mask_add_one
+
+theorem Geom.and_mask_lt {cap : Nat} {mask : USize} (hg : Geom cap mask) (x : USize) :
+    (x &&& mask).toNat < cap := by
+  rw [hg.toNat_and_mask]; exact Nat.mod_lt _ (by have := hg.le_cap; omega)
+
+theorem Geom.toNat_add_and_mask {cap : Nat} {mask : USize} (hg : Geom cap mask) (a b : USize) :
+    ((a + b) &&& mask).toNat = (a.toNat + b.toNat) % cap :=
+  let ⟨_, hcap⟩ := hg.pow_two
+  OAMap.Core.Swiss.toNat_add_and_mask hcap hg.mask_add_one
+
+theorem Geom.toNat_sub_and_mask {cap : Nat} {mask : USize} (hg : Geom cap mask) (a : USize)
+    {b : USize} (hb : b.toNat ≤ cap) :
+    ((a - b) &&& mask).toNat = (a.toNat + (cap - b.toNat)) % cap :=
+  let ⟨_, hcap⟩ := hg.pow_two
+  OAMap.Core.Swiss.toNat_sub_and_mask hcap hg.mask_add_one hb
+
+/-- The group before slot `i`, as the erase rule reads it: `(i - 8) &&& mask` is
+`(i + cap - 8) % cap`. -/
+theorem Geom.toNat_sub_eight_and_mask {cap : Nat} {mask : USize} (hg : Geom cap mask)
+    (i : USize) : ((i - 8) &&& mask).toNat = (i.toNat + (cap - 8)) % cap := by
+  rw [hg.toNat_sub_and_mask i (by rw [toNat_eight]; exact hg.le_cap), toNat_eight]
+
+theorem Geom.mirrored_setCtrl {c : ByteArray} {cap : Nat} {mask i : USize} (hg : Geom cap mask)
+    (h : Mirrored c cap) (b : UInt8) (hi : i.toNat < c.size) (hm : mask.toNat + 8 < c.size)
+    (hic : i.toNat < cap) : Mirrored (setCtrl c mask i b hi hm) cap :=
+  OAMap.Core.Swiss.mirrored_setCtrl h b hi hm hg.mask_add_one hg.lt_size hic
+
+theorem Geom.slotByte_setCtrl {c : ByteArray} {cap : Nat} {mask i : USize} (hg : Geom cap mask)
+    (h : Mirrored c cap) (b : UInt8) (hi : i.toNat < c.size) (hm : mask.toNat + 8 < c.size)
+    (hic : i.toNat < cap) (k : Nat) :
+    slotByte (setCtrl c mask i b hi hm) cap k =
+      if k % cap = i.toNat then b else slotByte c cap k :=
+  OAMap.Core.Swiss.slotByte_setCtrl h b hi hm hg.mask_add_one hg.lt_size hic k
+
+/-! ## The erase rule -/
+
+/-- **The erase rule** (hashbrown's): whether erasing the full slot `i` must write DELETED rather
+than EMPTY, from `ea` and `eb`, the EMPTY masks of the groups at `i` (slots `i … i + 7`) and at
+`(i - 8) &&& mask` (slots `i - 8 … i - 1`). A probe passes over an 8-slot window only when the
+window has no EMPTY slot, so EMPTY is safe exactly when every window containing `i` already has
+one. hashbrown tests `leading_zeros eb + trailing_zeros ea ≥ 8` (in lanes); this is the same test
+without counting: `ea` has no flag, or every flag of `eb` is in a lane below the lowest flag of
+`ea` (`needsTombstone_eq_false_iff`). -/
+@[inline] def needsTombstone (ea eb : UInt64) : Bool := ea == 0 || eb < (ea &&& (0 - ea)) >>> 7
+
+theorem needsTombstone_eq (ea eb : UInt64) :
+    needsTombstone ea eb = (ea == 0 || eb < (ea &&& (0 - ea)) >>> 7) := by
+  unfold needsTombstone; rfl
+
+/-- **The erase rule, on masks.** When `needsTombstone ea eb = false`, every window `d < 8`
+(lanes `8 - d … 7` of `eb`, then lanes `0 … 7 - d` of `ea`) has a flag (no bound on `d` is
+needed). -/
+theorem window_of_needsTombstone_eq_false {ea eb : UInt64} (hea : IsMask ea) (heb : IsMask eb)
+    (h : needsTombstone ea eb = false) (d : Nat) :
+    (∃ l < 8, 8 ≤ l + d ∧ flag eb l = true) ∨ (∃ l < 8, l + d < 8 ∧ flag ea l = true) := by
+  rw [needsTombstone_eq, Bool.or_eq_false_iff, beq_eq_false_iff_ne, decide_eq_false_iff_not] at h
+  obtain ⟨h0, hlt⟩ := h
+  obtain ⟨ha8, haf, -⟩ := lowestLane_spec hea h0
+  have hb : ¬ ∀ l < 8, (lowestLane ea).toNat ≤ l → flag eb l = false := by
+    rw [← mask_lt_pow_iff heb (by omega), ← isolate_shift hea h0]
+    exact fun h' => hlt (UInt64.lt_iff_toNat_lt.mpr h')
+  by_cases had : (lowestLane ea).toNat + d < 8
+  · exact Or.inr ⟨_, ha8, had, haf⟩
+  · refine Or.inl (Classical.byContradiction fun hne => hb fun l hl hal => ?_)
+    cases hf : flag eb l
+    · rfl
+    · exact absurd ⟨l, hl, by omega, hf⟩ hne
+
+/-- **The erase rule is hashbrown's**: when lane 0 of `ea` (slot `i` itself, which is full) has no
+flag, `needsTombstone ea eb = false` iff every window `d < 8` has a flag. -/
+theorem needsTombstone_eq_false_iff {ea eb : UInt64} (hea : IsMask ea) (heb : IsMask eb)
+    (h0 : flag ea 0 = false) :
+    needsTombstone ea eb = false ↔ ∀ d < 8,
+      (∃ l < 8, 8 ≤ l + d ∧ flag eb l = true) ∨ (∃ l < 8, l + d < 8 ∧ flag ea l = true) := by
+  refine ⟨fun h d _ => window_of_needsTombstone_eq_false hea heb h d, fun hw => ?_⟩
+  rw [needsTombstone_eq, Bool.or_eq_false_iff, beq_eq_false_iff_ne, decide_eq_false_iff_not]
+  have hne : ea ≠ 0 := by
+    rintro rfl
+    rcases hw 0 (by decide) with ⟨l, hl, h8, -⟩ | ⟨l, -, -, hf⟩
+    · omega
+    · rw [flag_zero] at hf; exact Bool.false_ne_true hf
+  refine ⟨hne, fun hlt => ?_⟩
+  obtain ⟨ha8, haf, hmin⟩ := lowestLane_spec hea hne
+  have ha1 : 1 ≤ (lowestLane ea).toNat := by
+    refine Nat.pos_of_ne_zero fun h => ?_
+    rw [h, h0] at haf; exact Bool.false_ne_true haf
+  have hall := (mask_lt_pow_iff heb (Nat.le_of_lt ha8)).mp
+    (by rw [← isolate_shift hea hne]; exact UInt64.lt_iff_toNat_lt.mp hlt)
+  rcases hw (8 - (lowestLane ea).toNat) (by omega) with ⟨l, hl, h8, hf⟩ | ⟨l, hl, h8, hf⟩
+  · rw [hall l hl (by omega)] at hf; exact Bool.false_ne_true hf
+  · rw [hmin l (by omega)] at hf; exact Bool.false_ne_true hf
+
+/-- **The erase rule, on slots.** When `needsTombstone` is `false` for the EMPTY masks of the
+groups at `i` and at `(i - 8) &&& mask`, every 8-slot window containing slot `i` (the group at any
+`p` with `(p + l₀) % cap = i`, `l₀ < 8`) already has an EMPTY slot. So writing EMPTY at `i`
+cannot stop a probe early: a window that a probe passed before the erase had no EMPTY slot, so it
+does not contain `i`. -/
+theorem exists_empty_of_needsTombstone_eq_false {c : ByteArray} {cap : Nat} {mask i : USize}
+    (h : Mirrored c cap) (hg : Geom cap mask) (hctrl : ∀ k < cap, IsCtrl (slotByte c cap k))
+    (hw : i.toNat + 8 ≤ c.size) (hw' : ((i - 8) &&& mask).toNat + 8 ≤ c.size)
+    (hrule : needsTombstone (matchEmpty (ctrlWord c i hw))
+      (matchEmpty (ctrlWord c ((i - 8) &&& mask) hw')) = false)
+    {p l₀ : Nat} (hl₀ : l₀ < 8) (hp : (p + l₀) % cap = i.toNat) :
+    ∃ l < 8, slotByte c cap ((p + l) % cap) = EMPTY := by
+  have h8 := hg.le_cap
+  have hcs := hg.cap_le_size
+  rcases window_of_needsTombstone_eq_false (isMask_matchEmpty _) (isMask_matchEmpty _) hrule l₀
+    with ⟨l, hl, hle, hf⟩ | ⟨l, hl, hlt, hf⟩
+  · refine ⟨l + l₀ - 8, by omega, ?_⟩
+    rw [flag_matchEmpty_ctrlWord h hcs hctrl hw' hl, beq_iff_eq, hg.toNat_sub_eight_and_mask,
+      Nat.mod_add_mod] at hf
+    rw [← Nat.add_mod_right (p + (l + l₀ - 8)) cap,
+      show p + (l + l₀ - 8) + cap = (p + l₀) + (cap - 8 + l) by omega,
+      ← Nat.mod_add_mod (p + l₀) cap (cap - 8 + l), hp, ← Nat.add_assoc]
+    exact hf
+  · refine ⟨l + l₀, by omega, ?_⟩
+    rw [flag_matchEmpty_ctrlWord h hcs hctrl hw hl, beq_iff_eq] at hf
+    rw [show p + (l + l₀) = (p + l₀) + l by omega, ← Nat.mod_add_mod (p + l₀) cap l, hp]
+    exact hf
+
 /-! ## Triangular probing over groups -/
 
 /-- `0 + 1 + ⋯ + k`. -/
 def tri (k : Nat) : Nat := k * (k + 1) / 2
+
+theorem tri_def (k : Nat) : tri k = k * (k + 1) / 2 := by unfold tri; rfl
 
 theorem tri_zero : tri 0 = 0 := by simp [tri]
 
@@ -808,6 +1156,9 @@ theorem two_mul_tri (k : Nat) : 2 * tri k = k * (k + 1) := by
 /-- The start of group `k` of the triangular probe from slot `p₀`: `p₀ + 8 * (0 + 1 + ⋯ + k)`
 modulo `cap`. -/
 def probePos (cap p₀ k : Nat) : Nat := (p₀ + 8 * tri k) % cap
+
+theorem probePos_def (cap p₀ k : Nat) : probePos cap p₀ k = (p₀ + 8 * tri k) % cap := by
+  unfold probePos; rfl
 
 theorem probePos_zero (cap p₀ : Nat) : probePos cap p₀ 0 = p₀ % cap := by
   simp [probePos, tri_zero]
@@ -833,8 +1184,17 @@ theorem probe_step {pos stride mask : USize} {cap n p₀ k : Nat} (hcap : cap = 
   refine ⟨hs, ?_⟩
   rw [toNat_add_and_mask hcap hmask, hpos, hs, probePos_succ]
 
+/-- `probe_step` over the table geometry. -/
+theorem Geom.probe_step {cap : Nat} {mask pos stride : USize} {p₀ k : Nat} (hg : Geom cap mask)
+    (hpos : pos.toNat = probePos cap p₀ k) (hstride : stride.toNat = 8 * k)
+    (hk : 8 * (k + 1) < USize.size) :
+    (stride + 8).toNat = 8 * (k + 1) ∧
+      ((pos + (stride + 8)) &&& mask).toNat = probePos cap p₀ (k + 1) :=
+  let ⟨_, hcap⟩ := hg.pow_two
+  OAMap.Core.Swiss.probe_step hcap hg.mask_add_one hpos hstride hk
+
 /-- An odd factor does not help divide by a power of two. -/
-theorem pow_two_dvd_of_odd_mul {u : Nat} (hu : u % 2 = 1) :
+private theorem pow_two_dvd_of_odd_mul {u : Nat} (hu : u % 2 = 1) :
     ∀ {n v : Nat}, 2 ^ n ∣ u * v → 2 ^ n ∣ v
   | 0, v, _ => by simp
   | n + 1, v, h => by
@@ -904,13 +1264,29 @@ theorem probe_slot_eq {cap n : Nat} (hcap : cap = 2 ^ n) (h8 : 8 ≤ cap) (p₀ 
     omega
   rw [e, Nat.add_mul_mod_self_left]
 
-theorem mod_two_cases {x cap : Nat} (hx : x < 2 * cap) :
+/-- **The probe index of a slot** (hashbrown's `probe_index`, used by the in-place rehash to test
+whether a slot is in the same group of a probe as another): for lane `j` of group `k` of the
+probe from `p₀ < cap`, `((s + (cap - p₀)) % cap) / 8` is `tri k % (cap / 8)`, the same for the
+8 lanes of a group and, by `tri_mod_inj`, different for the first `cap / 8` groups. With
+`toNat_sub_and_mask`, it is `((s - p₀) &&& mask) >>> 3` in `USize`. -/
+theorem probe_index {cap n p₀ : Nat} (hcap : cap = 2 ^ n) (h8 : 8 ≤ cap) (hp : p₀ < cap)
+    (k : Nat) {j : Nat} (hj : j < 8) :
+    ((probePos cap p₀ k + j) % cap + (cap - p₀)) % cap / 8 = tri k % (cap / 8) := by
+  obtain ⟨h8G, -⟩ := cap_facts hcap h8
+  have hr := Nat.mod_lt (tri k) (show 0 < cap / 8 by omega)
+  rw [probe_slot_eq hcap h8, Nat.mod_add_mod,
+    show p₀ + (8 * (tri k % (cap / 8)) + j) + (cap - p₀) = 8 * (tri k % (cap / 8)) + j + cap
+      by omega,
+    Nat.add_mod_right, Nat.mod_eq_of_lt (by omega)]
+  omega
+
+private theorem mod_two_cases {x cap : Nat} (hx : x < 2 * cap) :
     x % cap = if x < cap then x else x - cap := by
   split
   · exact Nat.mod_eq_of_lt ‹_›
   · rw [Nat.mod_eq_sub_mod (by omega), Nat.mod_eq_of_lt (by omega)]
 
-theorem add_mod_inj {cap p o₁ o₂ : Nat} (h₁ : o₁ < cap) (h₂ : o₂ < cap)
+private theorem add_mod_inj {cap p o₁ o₂ : Nat} (h₁ : o₁ < cap) (h₂ : o₂ < cap)
     (h : (p + o₁) % cap = (p + o₂) % cap) : o₁ = o₂ := by
   have hc : 0 < cap := by omega
   have e : ∀ o < cap, (p + o) % cap = (p % cap + o) % cap := fun o ho => by
@@ -938,7 +1314,7 @@ theorem probe_unique {cap n p₀ k₁ k₂ j₁ j₂ : Nat} (hcap : cap = 2 ^ n)
   exact ⟨tri_mod_inj hk₁ hk₂ ht, hj⟩
 
 /-- An injective map of `[0, n)` into itself is onto. -/
-theorem exists_eq_of_injOn {n : Nat} (f : Nat → Nat) (hf : ∀ x < n, f x < n)
+private theorem exists_eq_of_injOn {n : Nat} (f : Nat → Nat) (hf : ∀ x < n, f x < n)
     (hinj : ∀ x < n, ∀ y < n, f x = f y → x = y) {s : Nat} (hs : s < n) :
     ∃ x < n, f x = s := by
   refine Classical.byContradiction fun hne => ?_
