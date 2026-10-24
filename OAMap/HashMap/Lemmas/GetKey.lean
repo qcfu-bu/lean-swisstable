@@ -104,15 +104,8 @@ theorem getKey?_congr [EquivBEq α] [LawfulHashable α] {k k' : α} (h : k == k'
   simp_to_model [getKey?] at * using List.getKey?_congr
 
 theorem getKey?_eq_some_of_contains [LawfulBEq α] {k : α} (h : m.contains k) :
-    m.getKey? k = some k :=
-  -- REVIEW: no generated proof compiles.
-  -- error: fail to show termination for
-  -- Std (HashMap): DHashMap.getKey?_eq_some h
-  -- Std (DHashMap.getKey?_eq_some): by
-  --   simpa only [mem_iff_contains] using getKey?_eq_some_of_contains h
-  -- tried 0 (copy-DHashMap-renamed): by
-  --   simpa only [mem_iff_contains] using getKey?_eq_some_of_contains h
-  sorry
+    m.getKey? k = some k := by
+  simp_to_model [getKey?, contains] using List.getKey?_eq_some
 
 theorem getKey?_eq_some [LawfulBEq α] {k : α} (h : k ∈ m) : m.getKey? k = some k := by
   simpa only [mem_iff_contains] using getKey?_eq_some_of_contains h
