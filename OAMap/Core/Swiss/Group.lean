@@ -685,6 +685,15 @@ theorem lowestLane_lt {m : UInt64} (hm : IsMask m) : (lowestLane m).toNat < 8 :=
   have h8 := forall_mask (fun m => (lowestLane64 m).toNat < 8) (by decide +kernel) hm
   rw [toNat_lowestLane h8]; exact h8
 
+/-- `lowestLane64` is a lane of the group for every mask (the `Nat`-index loops read it). -/
+theorem lowestLane64_lt {m : UInt64} (hm : IsMask m) : (lowestLane64 m).toNat < 8 :=
+  forall_mask (fun m => (lowestLane64 m).toNat < 8) (by decide +kernel) hm
+
+/-- On masks, `lowestLane` and `lowestLane64` are the same lane. -/
+theorem toNat_lowestLane_of_isMask {m : UInt64} (hm : IsMask m) :
+    (lowestLane m).toNat = (lowestLane64 m).toNat :=
+  toNat_lowestLane (lowestLane64_lt hm)
+
 /-- The lane of the zero mask is `0`. -/
 theorem lowestLane_zero : lowestLane 0 = 0 := by
   have h : (lowestLane64 0).toNat = 0 := by decide +kernel

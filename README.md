@@ -73,16 +73,30 @@ lake build OAMapTest.CoreSpec    # the acceptance test for the selected core
 
 ### The SwissTable core (branch `core/swiss`, in progress)
 
-The bake-off winner (`docs/bakeoff/decision.md`) is being built in `OAMap/Core/Swiss/`:
+The bake-off winner (`docs/bakeoff/decision.md`) is being built in `OAMap/Core/Swiss/`. The code is
+complete and frozen; the proof skeleton is in place: every lemma is stated, and the proofs are
+`sorry`.
 
-* `Group.lean`: the verified SWAR groups of control bytes (no `sorry`).
-* `Table.lean`: the frozen executable code of the 23 contract definitions. Its array bounds are
-  `by sorry` and its loops' `decreasing_by` are `sorry` until the proofs land; nothing else is
-  missing.
-* `OAMap/Core/Swiss.lean` (what `tools/select-core.sh swiss` selects): the 22 contract lemmas,
-  stated and `sorry`. `lake build OAMapTest.CoreSpec`, `SealCheck`, `Unverified`, `Semantics` and
-  `Cbv` pass with it selected; `Audit` and `tools/audit.py` reject it until the proofs are done,
-  so `OAMap/Core/Table.lean` keeps selecting `ListRef` until then.
+* Code, with no `sorry` (every array bound and termination measure is a stated lemma, every table
+  carries its invariant `Swiss.WF` as the erased field `Table.wf`):
+  * `Group.lean`: the verified SWAR groups of control bytes (proved);
+  * `Defs.lean`: hashing, control arrays, the model (`Slots.entries`, which `toListModel` is), the
+    invariant `WF` and the loops' erased hypotheses;
+  * `Loops.lean`: the probes, the rebuild's move loops, the traversals and the bulk passes, on raw
+    arrays, machine-word and `Nat` versions;
+  * `Build.lean`: `Table`, the empty table, `rebuild`, `reserveTable`;
+  * `Table.lean`: the operations and the 23 contract definitions; its docstring records the
+    layout, the algorithms, the code shape, the measurements and the proof structure.
+* Proofs, eight files under `Proofs/` with `sorry` bodies, one agent each: `Bounds`, `Probe`,
+  `Rebuild`, `Write`, `Bulk` (the lemmas the code uses), and `Query`, `Update`, `Traverse` (the 22
+  contract lemmas, with the suggested helpers).
+* `OAMap/Core/Swiss.lean` (what `tools/select-core.sh swiss` selects) imports the contract files.
+  `lake build OAMapTest.CoreSpec`, `SealCheck`, `Unverified`, `Semantics` and `Cbv` pass with it
+  selected; `Audit` and `tools/audit.py` reject it until the proofs are done, so
+  `OAMap/Core/Table.lean` keeps selecting `ListRef` until then.
+* The proofs add only erased arguments, `if h :`/`match h :` and the `wf` field: the generated C
+  of the hot paths is the frozen version's (instructions per op within 0.01% on six cells of the
+  bake-off harness).
 
 ## Tools
 
