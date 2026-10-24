@@ -1,5 +1,7 @@
 import Lean
 import OAMap
+-- The Swiss bake-off core's modules are not imported by `OAMap` yet; audit them too.
+import OAMap.Core.Swiss.Group
 
 /-!
 # Kernel-level audit of the library

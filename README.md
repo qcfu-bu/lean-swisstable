@@ -37,11 +37,12 @@ their check fails:
 |---|---|
 | `CoreSpec` | the selected core provides the 23 definitions and 22 lemmas of the contract (§3.4) |
 | `SealCheck` | modules above the core use only the 45 contract names, import no core directly, and never `import all` |
-| `Audit` | every constant of `OAMap` uses only `propext`, `Classical.choice`, `Quot.sound`; no axiom, `opaque`, `partial`, `unsafe`, `implemented_by`, `extern` |
+| `Audit` | every constant of `OAMap` (and of `OAMap.Core.Swiss.Group`, not imported by `OAMap` yet) uses only `propext`, `Classical.choice`, `Quot.sound`; no axiom, `opaque`, `partial`, `unsafe`, `implemented_by`, `extern` |
 | `ParityRun` | statement, attribute and axiom parity with `Std.HashMap`/`Std.HashSet` |
 | `Cbv` | `by cbv` closes the same goals as on Std |
 | `Unverified` | `#guard` tests for the functions without Std lemmas |
 | `Semantics` | `#guard` tests of the key and value each operation keeps, one traversal order, and the scoping of `~m` |
+| `SwissGroupUse` | a lookup step and an erase step proved from another module with the exported lemmas of `OAMap.Core.Swiss.Group` only |
 
 **Gates (on since the Merge).** `ParityRun` fails on any difference from Std outside its `ignore`
 list: errors, warnings and extras (`failOnWarning := true`). The list has 30 names: the 16 iterator
