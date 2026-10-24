@@ -16,7 +16,7 @@ to make it provable (then re-measuring it against this version).
 
 The code carries no `sorry`: every array bound and every termination measure is a lemma, and every
 table it builds carries its invariant `Swiss.WF` (`Defs.lean`; the field `Table.wf`, erased at
-runtime), also by a lemma. The lemmas are stated, with `sorry` proofs, in eight proof files under
+runtime), also by a lemma. The lemmas are proved in eight proof files under
 `OAMap/Core/Swiss/Proofs/`, interleaved with the code files so that each proof needs only what is
 stated before it (the code files are `Defs`, `Loops`, `Build` and this one):
 
@@ -39,8 +39,8 @@ stated before it (the code files are `Defs`, `Loops`, `Build` and this one):
 * `Bulk`: `firstFull`, `firstSome` and `filterMap`'s in-place pass;
 * `Query`, `Update`, `Traverse`: the 22 contract lemmas (`OAMap/Core/Swiss.lean` collects them).
 
-Each proof file is meant for one agent, who edits only that file; the statements other files use
-are fixed, the ones marked *suggested route* are not.
+The statements that other files use are fixed. The ones marked *suggested route* are used only
+in their own file.
 
 The contract definitions (namespace `Table`) are not exposed, as the contract requires (only
 `markLinear` is); their bodies are the exposed `Swiss.*Impl` definitions below, and each has an
