@@ -172,7 +172,7 @@ def ss : Std.HashSet Nat := .ofList [1, 2, 3, 4, 5, 8, 2]
 
 `numBuckets` is the core's own count. For the SwissTable core (`OAMap.Core.Swiss`) it is the
 number of slots, a power of two of at least 8, filled to at most 7/8 (`capacity = cap / 8 * 7`).
-The empty map allocates nothing and reports the slots its first insert allocates: the least such
+The empty map allocates no array and reports the slots its first insert allocates: the least such
 table holding `capacity` entries, `16` for `∅` (as Std's `16` buckets) and `8` for
 `emptyWithCapacity 0`. The table doubles when an insert finds no room: `16` slots hold 14 entries,
 `32` hold 28. Erasing never shrinks it, as in Std. (Std counts buckets at load 3/4: `256` for

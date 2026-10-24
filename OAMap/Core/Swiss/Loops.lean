@@ -17,6 +17,9 @@ Every array bound and every termination measure is discharged by a lemma of
 on `Nat` indices, for tables beyond `2 ^ 31` slots (and for the bulk passes at every size).
 -/
 
+-- Elaborated `let`s stay `let`s instead of becoming `have`s, the setting of the SwissF prototype
+-- and of the bake-off harness that measured the frozen code. It changes no generated C in this
+-- file today, but it does in `Table.lean`, and every code file is compiled under the same setting.
 set_option cleanup.letToHave false
 -- Some erased hypotheses (`if h : …`) are used only by the termination proofs, which the linter
 -- does not count as uses.
@@ -56,7 +59,7 @@ termination_by (mask.toNat + 8 - stride.toNat, m.toNat)
 decreasing_by
   all_goals first
     | exact lex_lane hm h
-    | exact lex_group hA.small hs hgt
+    | exact lex_group hA.small hs
 
 /-- The slot of a key `== a`, or `mask + 1`. -/
 @[inline] def findU [BEq α] [Hashable α] (ctrl : ByteArray) (keys : Array α) (mask : USize)
@@ -97,7 +100,7 @@ termination_by (mask.toNat + 8 - stride.toNat, m.toNat)
 decreasing_by
   all_goals first
     | exact lex_lane hm h
-    | exact lex_group hA.small hs hgt
+    | exact lex_group hA.small hs
 
 /-- The first EMPTY or DELETED slot of the probe from the group at `pos` (step `stride`), or
 `mask + 1` when the probe ends without one. -/
@@ -111,7 +114,7 @@ def findFree (ctrl : @& ByteArray) (mask pos stride : USize) (hA : ArrU ctrl mas
     else findFree ctrl mask ((pos + stride) &&& mask) stride hA (and_mask_le _ _)
       (le_of_not_gt' hgt)
 termination_by mask.toNat + 8 - stride.toNat
-decreasing_by exact sub_group hA.small hs hgt
+decreasing_by exact sub_group hA.small hs
 
 /-- `findFree` ends at a slot or at `mask + 1` (a fact the rebuild's loop takes as an erased
 argument, `freeBound`). -/
@@ -292,14 +295,14 @@ termination_by ocap - i
   else
     let p := p + 8
     if hlt : p < cap then
-      foldMLoop f ctrl keys vals cap p (matchFull (ctrlWord ctrl p (hF.next_word hp hlt))) acc hF
+      foldMLoop f ctrl keys vals cap p (matchFull (ctrlWord ctrl p (hF.next_word hlt))) acc hF
         (hF.next_group hp hlt) (isMask_matchFull _)
     else pure acc
 termination_by (cap.toNat + 8 - p.toNat, fm.toNat)
 decreasing_by
   all_goals first
     | exact lex_lane hm h
-    | exact lex_fold hF.small hp hlt
+    | exact lex_fold hF.small hp
 
 /-- `forIn` from the full lanes `fm` of the group at `p` on, slot order, with early exit. -/
 @[specialize] def forInLoop {ε : Type w} {m : Type w → Type w'} [Monad m]
@@ -316,14 +319,14 @@ decreasing_by
   else
     let p := p + 8
     if hlt : p < cap then
-      forInLoop f ctrl keys vals cap p (matchFull (ctrlWord ctrl p (hF.next_word hp hlt))) acc hF
+      forInLoop f ctrl keys vals cap p (matchFull (ctrlWord ctrl p (hF.next_word hlt))) acc hF
         (hF.next_group hp hlt) (isMask_matchFull _)
     else pure acc
 termination_by (cap.toNat + 8 - p.toNat, fm.toNat)
 decreasing_by
   all_goals first
     | exact lex_lane hm h
-    | exact lex_fold hF.small hp hlt
+    | exact lex_fold hF.small hp
 
 /-- Fold over the full lanes `fm` of the group at `p`, highest lane first. -/
 @[specialize] def foldRevGroup {ε : Type w} (f : ε → α → β → ε) (keys : @& Array α)

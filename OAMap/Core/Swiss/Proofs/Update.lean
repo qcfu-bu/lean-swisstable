@@ -5,22 +5,23 @@ public import OAMap.Core.Swiss.Proofs.Query
 /-!
 # Swiss core proofs, part 7: insert, insertIfNew, erase, alter, modify (contract 12–16)
 
-A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure"). Its
-owner edits only this file: the proofs, and any private helper lemmas or definitions. The
-contract lemmas (`docs/ARCHITECTURE.md` §3.3) are fixed word for word; the helpers below are the
-suggested route and may be changed or dropped (no other file uses them).
+A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure"): the
+contract lemmas 12–16 (`docs/ARCHITECTURE.md` §3.3).
 
-Every operation takes one of two paths (machine words below `2 ^ 31` slots, `Nat` indices beyond),
-and on each path ends in one of the writes of `Proofs/Write.lean`, whose entries are known:
+Every operation takes one of two paths (machine words on tables of at most `2 ^ 31` slots, `Nat`
+indices beyond), and on each path ends in one of the writes of `Proofs/Write.lean`, whose entries
+are known. The private lemmas state each write as a list operation, and each contract lemma is a
+case split over the paths and the probe's result:
 
 * a hit (`WF.insProbeU_hit`, `WF.insSlotN_hit`, ...): the key and value of the slot replaced,
   `replaceEntry` (`WF.entries_kvN_replace`), which is `insertEntry` since the key is present;
   `modify` and `alter` write the placeholder value first (`Array.set_set`/`Array.uset_eq_set`
-  make it one write); an erasure is `eraseKey` (`WF.entries_eraseN_eraseKey`);
+  make it one write); an erasure is `eraseKey` (`WF.entries_eraseN_eraseKey`, as
+  `eraseAtU_eraseKey` and `eraseAtN_eraseKey`);
 * a new key (`WF.insProbeU_new`, `WF.fast_new`, `WF.insSlotN_new`, ...): a `NewSlot`, absent for
-  lawful instances, so `insertEntry` is a cons; the write adds the entry
-  (`WF.entries_newN_perm`), directly or after `reserveInsert` rebuilt the table
-  (`reserveTable_perm`, then `insertFresh` with `WF.findFree_slot`).
+  lawful instances, so `insertEntry` is a cons; the write adds the entry (`entries_newN_perm`, as
+  `insertNewU_perm` and `insertNewN_perm`), directly or after `reserveInsert` rebuilt the table
+  (`reserveInsert_perm`: `reserveTable_perm`, then `insertFresh_perm` with `WF.findFree_slot`).
 
 The machine-word writes are the `Nat` ones through `setCtrl_eq_setCtrlN`, `Array.uset_eq_set`,
 `WF.geom` and `homeU_toNat`. The values the list operations read (`getValue?`) come from the hit
@@ -115,18 +116,12 @@ private theorem setCtrl_eqN {ctrl : ByteArray} {keys : Array α} {vals : Array �
     setCtrl ctrl mask i b h1 h2 =
       setCtrlN ctrl (ctrl.size - 8) i.toNat b h1 wf.cap_word (by omega) := by
   have hcap : 0 < Slots.cap ⟨ctrl, keys, vals⟩ := by simp only [Slots.cap]; omega
-  exact setCtrl_eq_setCtrlN (wf.geom hs hcap)
-    (by have := wf.ctrl_size_ge; simp only [Slots.cap] at this ⊢; omega) hi
+  exact setCtrl_eq_setCtrlN (wf.geom hs hcap) hi
 
 /-- Two writes to the same cell are the last one. -/
 private theorem uset_uset {γ : Type w} {xs : Array γ} {i : USize} (x y : γ) (h : i.toNat < xs.size)
     {h' : i.toNat < (xs.uset i x h).size} : (xs.uset i x h).uset i y h' = xs.uset i y h :=
   Array.set_set x h
-
-/-- The group word on `Nat` indices depends on the index only. -/
-private theorem ctrlWordN_congr {c : ByteArray} {i j : Nat} (hij : i = j) {h : i + 8 ≤ c.size}
-    {h' : j + 8 ≤ c.size} : ctrlWordN c i h = ctrlWordN c j h' := by
-  subst hij; rfl
 
 /-- The value list operations read at a hit for `a`. -/
 private theorem getValue?_hit {s : Slots α β} {size gl : Nat} {mask : USize} {shift : UInt64}
@@ -223,8 +218,9 @@ private theorem eraseU_entries {ctrl : ByteArray} {keys : Array α} {vals : Arra
   exact wf.entries_eraseN_eraseKey hit (sz := size) (g := gl) (hic := hic) (hc := wf.cap_word)
     (Prod.eta _).symm
 
-/-- *Suggested route.* `insertFresh` adds its entry. -/
-theorem insertFresh_perm (t : Table α β) (a : α) (b : β) (h : FreshPre t.slots t.growthLeft a) :
+/-- `insertFresh` adds its entry. -/
+private theorem insertFresh_perm (t : Table α β) (a : α) (b : β)
+    (h : FreshPre t.slots t.growthLeft a) :
     (insertFresh t a b h).slots.entries.Perm (⟨a, b⟩ :: t.slots.entries) := by
   obtain ⟨ctrl, keys, vals, size, gl, mask, shift, req, wf⟩ := t
   unfold insertFresh
@@ -233,19 +229,19 @@ theorem insertFresh_perm (t : Table α β) (a : α) (b : β) (h : FreshPre t.slo
   · rename_i hs
     have slot := wf.findFree_slot hs h
     rw [setCtrl_eqN wf hs slot.lt, Array.uset_eq_set, Array.uset_eq_set]
-    exact wf.entries_newN_perm slot (tagOf_lt _) a b
+    exact entries_newN_perm slot (tagOf_lt _) a b
   · rename_i hs
-    exact wf.entries_newN_perm (wf.findFreeN_slot hs h) (tagOf_lt _) a b
+    exact entries_newN_perm (wf.findFreeN_slot hs h) (tagOf_lt _) a b
 
-/-- *Suggested route.* `reserveInsert` adds its entry. -/
-theorem reserveInsert_perm (t : Table α β) (a : α) (b : β)
+/-- `reserveInsert` adds its entry. -/
+private theorem reserveInsert_perm (t : Table α β) (a : α) (b : β)
     (h : ∀ [EquivBEq α] [LawfulHashable α], t.slots.Absent a) :
     (reserveInsert t a b h).slots.entries.Perm (⟨a, b⟩ :: t.slots.entries) := by
   unfold reserveInsert
   exact (insertFresh_perm _ a b _).trans ((reserveTable_perm t a b).cons _)
 
-/-- *Suggested route.* A new key written on machine words adds its entry. -/
-theorem insertNewU_perm (t : Table α β) (a : α) (b : β) (q : UInt64) (i : USize)
+/-- A new key written on machine words adds its entry. -/
+private theorem insertNewU_perm (t : Table α β) (a : α) (b : β) (q : UInt64) (i : USize)
     (hs : smallMask t.mask = true) (h : NewSlot t.slots t.shift a q i.toNat) :
     (insertNewU t a b q i hs h).slots.entries.Perm (⟨a, b⟩ :: t.slots.entries) := by
   obtain ⟨ctrl, keys, vals, size, gl, mask, shift, req, wf⟩ := t
@@ -259,16 +255,16 @@ theorem insertNewU_perm (t : Table α β) (a : α) (b : β) (q : UInt64) (i : US
       have hc := wf.new_alloc_gl h hgl
       have slot := h.slot.resolve_right (fun h0 => Nat.pos_iff_ne_zero.mp hc h0.1)
       rw [setCtrl_eqN wf hs slot.lt, Array.uset_eq_set, Array.uset_eq_set]
-      exact wf.entries_newN_perm slot (tagOf_lt _) a b
+      exact entries_newN_perm slot (tagOf_lt _) a b
   · rename_i hold
     rw [slots_mk, slots_mk]
     have hc := wf.new_alloc_old h hold
     have slot := h.slot.resolve_right (fun h0 => Nat.pos_iff_ne_zero.mp hc h0.1)
     rw [setCtrl_eqN wf hs slot.lt, Array.uset_eq_set, Array.uset_eq_set]
-    exact wf.entries_newN_perm slot (tagOf_lt _) a b
+    exact entries_newN_perm slot (tagOf_lt _) a b
 
-/-- *Suggested route.* A new key written on `Nat` indices adds its entry. -/
-theorem insertNewN_perm (t : Table α β) (a : α) (b : β) (q : UInt64) (i : Nat)
+/-- A new key written on `Nat` indices adds its entry. -/
+private theorem insertNewN_perm (t : Table α β) (a : α) (b : β) (q : UInt64) (i : Nat)
     (h : NewSlot t.slots t.shift a q i) :
     (insertNewN t a b q i h).slots.entries.Perm (⟨a, b⟩ :: t.slots.entries) := by
   obtain ⟨ctrl, keys, vals, size, gl, mask, shift, req, wf⟩ := t
@@ -281,15 +277,15 @@ theorem insertNewN_perm (t : Table α β) (a : α) (b : β) (q : UInt64) (i : Na
       rw [slots_mk, slots_mk]
       have hc := wf.new_alloc_gl h hgl
       have slot := h.slot.resolve_right (fun h0 => Nat.pos_iff_ne_zero.mp hc h0.1)
-      exact wf.entries_newN_perm slot (tagOf_lt _) a b
+      exact entries_newN_perm slot (tagOf_lt _) a b
   · rename_i hold
     rw [slots_mk, slots_mk]
     have hc := wf.new_alloc_oldN h hold
     have slot := h.slot.resolve_right (fun h0 => Nat.pos_iff_ne_zero.mp hc h0.1)
-    exact wf.entries_newN_perm slot (tagOf_lt _) a b
+    exact entries_newN_perm slot (tagOf_lt _) a b
 
-/-- *Suggested route.* Erasing the hit for `a` on machine words is `eraseKey`. -/
-theorem eraseAtU_eraseKey (t : Table α β) (i : USize) (hs : smallMask t.mask = true)
+/-- Erasing the hit for `a` on machine words is `eraseKey`. -/
+private theorem eraseAtU_eraseKey (t : Table α β) (i : USize) (hs : smallMask t.mask = true)
     (hi : t.slots.IsFull i.toNat) {a : α} (hit : t.slots.Hit t.shift a i.toNat) [EquivBEq α]
     [LawfulHashable α] : (eraseAtU t i hs hi).slots.entries = eraseKey a t.slots.entries := by
   obtain ⟨ctrl, keys, vals, size, gl, mask, shift, req, wf⟩ := t
@@ -298,8 +294,8 @@ theorem eraseAtU_eraseKey (t : Table α β) (i : USize) (hs : smallMask t.mask =
   rw [slots_mk, slots_mk]
   exact eraseU_entries wf hs hit
 
-/-- *Suggested route.* Erasing the hit for `a` on `Nat` indices is `eraseKey`. -/
-theorem eraseAtN_eraseKey (t : Table α β) (i : Nat) (hi : t.slots.IsFull i) {a : α}
+/-- Erasing the hit for `a` on `Nat` indices is `eraseKey`. -/
+private theorem eraseAtN_eraseKey (t : Table α β) (i : Nat) (hi : t.slots.IsFull i) {a : α}
     (hit : t.slots.Hit t.shift a i) [EquivBEq α] [LawfulHashable α] :
     (eraseAtN t i hi).slots.entries = eraseKey a t.slots.entries := by
   obtain ⟨ctrl, keys, vals, size, gl, mask, shift, req, wf⟩ := t
@@ -308,9 +304,9 @@ theorem eraseAtN_eraseKey (t : Table α β) (i : Nat) (hi : t.slots.IsFull i) {a
   rw [slots_mk, slots_mk]
   exact wf.entries_eraseN_eraseKey hit (Prod.eta _).symm
 
-/-- *Suggested route.* `modifyAtU` is `Const.modifyKey`, up to order (Std states `Const.modifyKey`
+/-- `modifyAtU` is `Const.modifyKey`, up to order (Std states `Const.modifyKey`
 only up to order: its definition is not exposed). -/
-theorem modifyAtU_modifyKey (t : Table α β) (i : USize) (a : α) (f : β → β)
+private theorem modifyAtU_modifyKey (t : Table α β) (i : USize) (a : α) (f : β → β)
     (hs : smallMask t.mask = true) (hit : t.slots.Hit t.shift a i.toNat) [EquivBEq α]
     [LawfulHashable α] :
     (modifyAtU t i a f hs hit).slots.entries.Perm (Const.modifyKey a f t.slots.entries) := by
@@ -321,8 +317,8 @@ theorem modifyAtU_modifyKey (t : Table α β) (i : USize) (a : α) (f : β → �
     wf.entries_kvN_replace hit]
   exact (modifyKey_of_hit wf hit (Array.getElem?_eq_getElem _)).symm
 
-/-- *Suggested route.* `modifyAtN` is `Const.modifyKey`, up to order. -/
-theorem modifyAtN_modifyKey (t : Table α β) (i : Nat) (a : α) (f : β → β)
+/-- `modifyAtN` is `Const.modifyKey`, up to order. -/
+private theorem modifyAtN_modifyKey (t : Table α β) (i : Nat) (a : α) (f : β → β)
     (hit : t.slots.Hit t.shift a i) [EquivBEq α] [LawfulHashable α] :
     (modifyAtN t i a f hit).slots.entries.Perm (Const.modifyKey a f t.slots.entries) := by
   obtain ⟨ctrl, keys, vals, size, gl, mask, shift, req, wf⟩ := t

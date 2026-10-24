@@ -20,13 +20,14 @@ name = "Parity"
 srcDir = "test"
 roots = ["Parity"]
 
-# Conformance, seal, axiom, parity, cbv and #guard tests (run by `lake test`). The second root
-# checks the reference core OAMap.Core.ListRef against the contract; it is a separate root
-# because ListRef and the selected core define the same names and cannot be imported together.
+# Conformance, seal, axiom, parity, cbv and #guard tests (run by `lake test`). The second and
+# third roots check the reference core OAMap.Core.ListRef against the contract and audit its
+# axioms; they are separate roots because ListRef and the selected core define the same names and
+# cannot be imported together.
 [[lean_lib]]
 name = "OAMapTest"
 srcDir = "test"
-roots = ["OAMapTest", "OAMapTest.CoreSpecListRef"]
+roots = ["OAMapTest", "OAMapTest.CoreSpecListRef", "OAMapTest.AuditListRef"]
 
 # The benchmark (bench/Main.lean, `lake exe oamap-bench`): the bake-off harness's workloads for
 # OAMap.HashMap and Std.HashMap, compiled with the harness's flags. Not built by `lake build`.

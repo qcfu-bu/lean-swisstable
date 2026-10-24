@@ -14,7 +14,7 @@ the JSON inputs.
 
 Status: complete. The library runs on the SwissTable core `OAMap.Core.Swiss`, the winner of the
 benchmark bake-off (`docs/bakeoff/decision.md`, below), selected by `OAMap/Core/Table.lean`. Every
-proof is complete: no `sorry`, and every constant of the library (4248, core included) depends only
+proof is complete: no `sorry`, and every constant of the library (4187, core included) depends only
 on `propext`, `Classical.choice` and `Quot.sound`. Parity with Std reports 1140 of 1140 Std
 declarations ok, 0 missing and 0 extras (structure internals and `Internal` included; 30 names
 ignored, see below). The layers above the core were developed and proved against the list-backed
@@ -41,8 +41,9 @@ their check fails:
 |---|---|
 | `CoreSpec` | the selected core provides the 23 definitions and 22 lemmas of the contract (§3.4) |
 | `CoreSpecListRef` | the same text against the reference core `OAMap.Core.ListRef` (a separate root of the test library: the two cores define the same names) |
+| `AuditListRef` | `Audit`'s checks on the reference core, which the library no longer imports (a third root, for the same reason) |
 | `SealCheck` | modules above the core use only the 45 contract names, import no core directly, and never `import all` |
-| `Audit` | every constant of `OAMap` uses only `propext`, `Classical.choice`, `Quot.sound`; no axiom, `opaque`, `partial`, `unsafe`, `implemented_by`, `extern` (the compiler's `f._unsafe_rec` helper of a safe definition `f` by well-founded recursion is exempt from the `partial`/`unsafe` test only) |
+| `Audit` | every constant of `OAMap` uses only `propext`, `Classical.choice`, `Quot.sound`; no axiom, `opaque`, `partial`, `unsafe`, `implemented_by`, `extern` (the compiler's `f._unsafe_rec` helper of a safe definition `f` by well-founded recursion, in the same module, is exempt from the `partial`/`unsafe` test only; the checks are `AuditLib.lean`'s) |
 | `ParityRun` | statement, attribute and axiom parity with `Std.HashMap`/`Std.HashSet` |
 | `Cbv` | `by cbv` closes the same goals as on Std |
 | `Unverified` | `#guard` tests for the functions without Std lemmas, and the exact slot counts (`Internal.numBuckets`) of the SwissTable core |
@@ -149,24 +150,25 @@ With `listref` selected everything builds and passes except the exact slot count
 
 ### The SwissTable core
 
-`OAMap/Core/Swiss/` (10,125 lines: 1,766 of code, the 1,364-line control-byte library `Group.lean`,
-6,977 of proofs) is hashbrown's generic (non-SIMD) layout, as `docs/bakeoff/decision.md` fixes it:
+`OAMap/Core/Swiss/` (9,756 lines: 1,779 of code, the 1,349-line control-byte library `Group.lean`,
+6,610 of proofs) is hashbrown's generic (non-SIMD) layout, as `docs/bakeoff/decision.md` fixes it:
 a control byte per slot (EMPTY, DELETED, or FULL with a 7-bit tag of the hash) in groups of 8 read
 as one word, keys and values in two arrays, load 7/8, triangular probing over groups, insertion
 fast path at the home slot, tombstones by hashbrown's window rule, every rebuild into a fresh table
-with no key comparison, an empty map that allocates nothing, and at most one erased pair kept alive
+with no key comparison, an empty map that allocates no array, and at most one erased pair kept alive
 (the placeholder of free cells) until the next rebuild. `Table.lean`'s docstring records the
 layout, the algorithms, the code shape chosen by measurement and the proof structure.
 
 * Code (`Defs`, `Loops`, `Build`, `Table`), with no `sorry`: every array bound and termination
   measure is a lemma, and every table carries its invariant `Swiss.WF` as the erased field
-  `Table.wf`. Every operation runs on `USize` indices on tables of fewer than `2 ^ 31` slots and on
+  `Table.wf`. Every operation runs on `USize` indices on tables of at most `2 ^ 31` slots and on
   `Nat` indices beyond (the same algorithms, executable too).
 * `Group.lean`: the SWAR groups (word read through the mirrored tail, the exact per-lane tag match,
   `matchEmpty`/`matchFree`/`matchFull`, lowest lane, the triangular probe's coverage, the erase
   rule), proved without `bv_decide`.
 * Proofs, eight files under `Proofs/`: `Bounds`, `Probe`, `Rebuild`, `Write`, `Bulk` (the lemmas the
-  code uses), and `Query`, `Update`, `Traverse` (the 22 contract lemmas).
+  code and the contract proofs build on), and `Query`, `Update`, `Traverse` (the 22 contract
+  lemmas). Each file's header describes its proof.
 * The proofs ride along as erased arguments, so the generated code is the frozen version's: on the
   bake-off harness `OAMap.HashMap` executes the same instructions per operation as the frozen core
   (ratio 1.0002 over 36 cells, at most 1.0028), and `tools/check_c.py` checks the C of the API at
@@ -176,7 +178,7 @@ layout, the algorithms, the code shape chosen by measurement and the proof struc
 
 * `tools/ci.sh`, `tools/select-core.sh`: above.
 * `tools/audit.py`: text-level audit of `OAMap/` (every file is a `module`; no `sorry`, `admit`,
-  `native_decide`, `implemented_by`, `extern`, `unsafe`, `partial`, `opaque`, `axiom`,
+  `native_decide`, `bv_decide`, `implemented_by`, `extern`, `unsafe`, `partial`, `opaque`, `axiom`,
   `import all` outside comments and strings).
 * `tools/port.py`, `split.py`, `portcheck.py`: the porting pipeline of `docs/proofs.md` §6 and
   ARCHITECTURE.md §6.2.
@@ -208,6 +210,6 @@ layout, the algorithms, the code shape chosen by measurement and the proof struc
   (`bench/Bench/CCheck.lean`, one monomorphic function per operation; `lake build Bench.CCheck`
   first). From each function it follows the direct calls and fails on a closure call
   (`lean_apply_*`), on an allocation in a lookup (outside the `Nat`-indexed probes of tables of
-  `2 ^ 31` slots or more), on an array shared right before its in-place update (the bake-off's
+  more than `2 ^ 31` slots), on an array shared right before its in-place update (the bake-off's
   "bug A"), and on an update that does not reuse its unshared table cell.
 * `tools/inventory.json`: the API to reproduce, with Std's exact signatures and attributes.

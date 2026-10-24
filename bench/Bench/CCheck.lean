@@ -13,8 +13,8 @@ built by `lake build Bench.CCheck`). Each definition below is one operation of t
 
 * no closure is called (`lean_apply_*`) by any of them or anything they call: `hash`, `==` and
   the loops are specialised;
-* the lookups allocate nothing on the machine-word path (tables below `2 ^ 31` slots): only the
-  `Nat`-indexed probes of larger tables (`findN`, which returns an `Option`) may allocate;
+* the lookups allocate nothing on the machine-word path (tables of at most `2 ^ 31` slots): only
+  the `Nat`-indexed probes of larger tables (`findN`, which returns an `Option`) may allocate;
 * the updates write their arrays in place: no array is shared (`lean_inc`) right before it is
   updated (the bug-A pattern of the bake-off), and the updated table reuses its argument's cell
   when that is unshared.

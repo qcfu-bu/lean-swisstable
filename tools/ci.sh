@@ -3,7 +3,8 @@
 #
 #   1. lake build OAMap   every proof, against the core selected by OAMap/Core/Table.lean
 #   2. lake test          OAMapTest: CoreSpec, SealCheck, Audit, ParityRun, Cbv, Unverified,
-#                         Semantics, SwissGroupUse, and CoreSpecListRef (the reference core)
+#                         Semantics, SwissGroupUse, and CoreSpecListRef and AuditListRef (the
+#                         reference core)
 #   3. srccheck.py        source text of the 16 iterator declarations parity ignores
 #   4. audit.py           text-level spec-integrity audit of OAMap/ (no sorry, axiom, unsafe, ...)
 #   5. regenerate         port.py and gen_basic.py reproduce the generated files exactly (hand

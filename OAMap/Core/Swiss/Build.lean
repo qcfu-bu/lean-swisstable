@@ -14,6 +14,9 @@ Their invariants come from `Proofs/Rebuild.lean`; what `reserveInsert` needs to 
 measurements: `OAMap/Core/Swiss/Table.lean`.
 -/
 
+-- Elaborated `let`s stay `let`s instead of becoming `have`s, the setting of the SwissF prototype
+-- and of the bake-off harness that measured the frozen code. It changes no generated C in this
+-- file today, but it does in `Table.lean`, and every code file is compiled under the same setting.
 set_option cleanup.letToHave false
 
 @[expose] public section
@@ -90,7 +93,7 @@ unallocated table allocated, or the table rebuilt at the same capacity (when
   else
     let full := capacityOf (t.ctrl.size - 8)
     if hh : t.size + 1 ≤ full / 2 then rebuild t (lgFor full) a b (t.wf.rebuildPre_same hz hh)
-    else rebuild t (lgFor (max (t.size + 1) (full + 1))) a b (t.wf.rebuildPre_grow hz hh)
+    else rebuild t (lgFor (max (t.size + 1) (full + 1))) a b (t.wf.rebuildPre_grow hz)
 
 end Swiss
 

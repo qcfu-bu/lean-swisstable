@@ -5,10 +5,7 @@ public import OAMap.Core.Swiss.Loops
 /-!
 # Swiss core proofs, part 3: the empty table, `findFree`, and the rebuild's move loops
 
-A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure"). Its
-owner edits only this file: the proofs, and any private helper lemmas or definitions. The
-statements are fixed (later files use them), except those marked *suggested route*, which no
-other file uses and which may be changed or dropped.
+A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure").
 
 * **The empty table** (`Build.lean`: `emptyTable`, `rebuild`): `emptyCtrl (2 ^ lg)` is `2 ^ lg + 8`
   EMPTY bytes (`dblTo` doubles `emptyGroup` exactly up to `2 ^ lg`), so the fresh arrays are a
@@ -22,20 +19,21 @@ other file uses and which may be changed or dropped.
   loops build a well-formed table (`WF.rebuild`) with the same entries up to order
   (`rebuild_perm_raw`), with no key comparison and no lawfulness.
 
-Suggested route (the earlier linear-probing map's `Grow.lean`: `ReinsertInv`, `reinsertN_inv`,
-`entries_grow_perm`): first `moveLoop_eq_moveLoopN` and `findFree_toNat` (the machine-word loops
-are the `Nat` ones, through `setCtrl_eq_setCtrlN`, `ctrlWord_eq_ctrlWordN`, `homeU_toNat` and
-`Array.uset_eq_set`), then an invariant of `moveLoopN` after the old slots below `i` are moved:
-the new arrays are mirrored, of the right sizes, hold only EMPTY and FULL bytes, carry the tags of
-the new shift, satisfy `Distinct`/`ProbeInv` under lawfulness (a moved key is not `==` to any key
-moved before it, by the old table's `Distinct`), have no tombstones, and hold the entries of the
-old slots below `i` up to order. The probe of a moved key passes only groups without a free byte
-(`findFree`), hence without an EMPTY byte.
--/
+The rebuild's proof first reduces the machine-word loops to the `Nat` ones (`findFree_toNat`,
+`moveLoop_eq_moveLoopN`, through `setCtrl_eq_setCtrlN`, `ctrlWord_eq_ctrlWordN`, `homeU_toNat` and
+`Array.uset_eq_set`). Then `moveLoopN` keeps an invariant over the old slots below `i`
+(`MoveInv`): the new arrays are mirrored, of the right sizes, hold only EMPTY and FULL bytes, carry
+the tags of the new shift, satisfy `ProbeInv` and, under lawfulness, `Distinct` (a moved key is
+not `==` to any key moved before it, by the old table's `Distinct`), and hold the entries of the
+old slots below `i` up to order. A moved key goes to the first free slot of its probe
+(`findFreeN_spec`), so its probe passes only groups without a free byte, hence without an EMPTY
+byte (`MoveInv.write`).
 
--- Some fixed statements take hypotheses that their proofs do not need (`findFree_toNat`'s size
--- fact, the guards of `WF.fresh_*`).
-set_option linter.unusedVariables false
+The guard `_hs` of `WF.fresh_ctrl` and `WF.freshN_*`, and the room `_h` of `WF.freshN_ctrl`, are
+not needed by their proofs, but `insertFresh` (`Table.lean`) passes them: removing them there
+changes only erased arguments, but it reorders the parameters of a join point in `Table.lean`'s
+generated C, and the code is frozen.
+-/
 
 @[expose] public section
 
@@ -46,31 +44,6 @@ namespace OAMap.Core.Swiss
 variable {α : Type u} {β : Type v}
 
 /-! ## Private helpers: the guard, control bytes, slots -/
-
-/-- The machine-word guard on `(2 ^ lg - 1).toUSize` says `lg ≤ 31`. -/
-private theorem lg_le_of_smallMask {lg : Nat}
-    (h : smallMask (((2 : Nat) ^ lg - 1).toUSize) = true) : lg ≤ 31 := by
-  refine Nat.le_of_not_lt fun hlt => ?_
-  unfold smallMask at h
-  have h0 : ((2 : Nat) ^ lg - 1).toUSize &&& 0x80000000 = 0 := by simpa using h
-  have := congrArg (fun x : USize => x.toNat.testBit 31) h0
-  have hb : System.Platform.numBits = 32 ∨ System.Platform.numBits = 64 :=
-    System.Platform.numBits_eq
-  have hl : (0x80000000 : USize).toNat = 2 ^ 31 :=
-    USize.toNat_ofNat_of_lt (Nat.lt_of_lt_of_le (by decide) USize.le_size)
-  simp only [USize.toNat_and, Nat.testBit_and, hl, Nat.toUSize, USize.toNat_ofNat',
-    Nat.testBit_mod_two_pow, Nat.testBit_two_pow_sub_one, USize.toNat_zero, Nat.zero_testBit,
-    Nat.testBit_two_pow_self] at this
-  rcases hb with hb | hb <;> simp [hb, hlt] at this <;> omega
-
-/-- Below `2 ^ 31` slots the mask does not wrap. -/
-private theorem toNat_mask_of_le {lg : Nat} (h : lg ≤ 31) :
-    (((2 : Nat) ^ lg - 1).toUSize).toNat = 2 ^ lg - 1 := by
-  simp only [Nat.toUSize, USize.toNat_ofNat']
-  apply Nat.mod_eq_of_lt
-  have h1 : 2 ^ lg ≤ 2 ^ 31 := Nat.pow_le_pow_right (by decide) h
-  have h2 : 2 ^ 32 ≤ 2 ^ System.Platform.numBits := USize.le_size
-  omega
 
 /-- The geometry of the new table of a machine-word rebuild. -/
 private theorem geom_of_le {lg : Nat} (h3 : 3 ≤ lg) (h : lg ≤ 31) :
@@ -88,29 +61,6 @@ private theorem and80_eq_zero (b : UInt8) : (b &&& 0x80 == 0) = decide (b < 0x80
     UInt8.lt_iff_toNat_lt]
   simp only [UInt8.toNat_ofNat]
   rw [key _ b.toNat_lt]
-
-private theorem not_lt_EMPTY : ¬EMPTY < 0x80 := by rw [EMPTY_eq]; decide
-
-private theorem DELETED_not_lt : ¬DELETED < 0x80 := by rw [DELETED_eq]; decide
-
-/-- A slot whose control byte is not FULL has no entry. -/
-private theorem entryAt_none {s : Slots α β} {i : Nat} (h : ¬s.ctrl[i]! < 0x80) :
-    s.entryAt i = none := by
-  unfold Slots.entryAt
-  by_cases hi : i < s.ctrl.size
-  · rw [getElem?_pos s.ctrl i hi]
-    rw [getElem!_pos s.ctrl i hi] at h
-    simp only [h, ite_false]
-  · rw [getElem?_neg s.ctrl i hi]
-
-/-- The entry of a FULL slot with its cells. -/
-private theorem entryAt_some {s : Slots α β} {i : Nat} (hc : i < s.ctrl.size)
-    (h : s.ctrl[i] < 0x80) (hk : i < s.keys.size) (hv : i < s.vals.size) :
-    s.entryAt i = some ⟨s.keys[i], s.vals[i]⟩ := by
-  unfold Slots.entryAt
-  rw [getElem?_pos s.ctrl i hc]
-  simp only [h, ite_true, getElem?_pos s.keys i hk, getElem?_pos s.vals i hv, Option.bind_some,
-    Option.map_some]
 
 /-! ## The empty table -/
 
@@ -173,14 +123,14 @@ theorem WF.empty [BEq α] [Hashable α] {lg : Nat} (k0 : α) (v0 : β) (h : 3 �
       (Array.replicate ((2 : Nat) ^ lg + 1) v0)).IsFull i := by
     rintro i ⟨hi, hf⟩
     rw [hcap] at hi
-    exact not_lt_EMPTY (hE i hi ▸ hf)
+    exact EMPTY_not_lt (hE i hi ▸ hf)
   have hen : (Slots.mk (emptyCtrl ((2 : Nat) ^ lg)) (Array.replicate ((2 : Nat) ^ lg + 1) k0)
       (Array.replicate ((2 : Nat) ^ lg + 1) v0)).entries = [] := by
     unfold Slots.entries
     rw [List.filterMap_eq_nil_iff]
     intro i hi
     rw [List.mem_range, hcap] at hi
-    exact entryAt_none (by rw [hE i hi]; exact not_lt_EMPTY)
+    exact entryAt_eq_none (by rw [hE i hi]; exact EMPTY_not_lt)
   have hnd : (Slots.mk (emptyCtrl ((2 : Nat) ^ lg)) (Array.replicate ((2 : Nat) ^ lg + 1) k0)
       (Array.replicate ((2 : Nat) ^ lg + 1) v0)).numDeleted = 0 := by
     unfold Slots.numDeleted
@@ -206,7 +156,7 @@ theorem moveDstU {lg : Nat} (h3 : 3 ≤ lg) (hs : smallMask (((2 : Nat) ^ lg - 1
       (k.propagateMark (Array.replicate ((2 : Nat) ^ lg + 1) k0))
       (v.propagateMark (Array.replicate ((2 : Nat) ^ lg + 1) v0))
       (((2 : Nat) ^ lg - 1).toUSize) := by
-  have hl := lg_le_of_smallMask hs
+  have hl := (smallMask_pow_iff lg).mp hs
   have hm := toNat_mask_of_le hl
   have h1 : 2 ^ lg ≤ 2 ^ 31 := Nat.pow_le_pow_right (by decide) hl
   have hp : 0 < 2 ^ lg := Nat.two_pow_pos lg
@@ -226,19 +176,6 @@ theorem moveDstN {lg : Nat} (h3 : 3 ≤ lg) {c : ByteArray} {k : Array α} {v : 
 
 /-! ## `findFree` -/
 
-/-- Below `2 ^ 31`, adding a small literal does not wrap. -/
-private theorem toNat_add_one' {a : USize} (ha : a.toNat < 2 ^ 31) :
-    (a + 1).toNat = a.toNat + 1 := by
-  have h2 : 2 ^ 32 ≤ 2 ^ System.Platform.numBits := USize.le_size
-  rw [USize.toNat_add, USize.toNat_one, Nat.mod_eq_of_lt (by omega)]
-
-/-- The probe step `stride + 8` does not wrap below `2 ^ 31`. -/
-private theorem toNat_add_eight {a : USize} (ha : a.toNat < 2 ^ 31) :
-    (a + 8).toNat = a.toNat + 8 := by
-  have h2 : 2 ^ 32 ≤ 2 ^ System.Platform.numBits := USize.le_size
-  have h8 : (8 : USize).toNat = 8 := USize.toNat_ofNat_of_lt (Nat.lt_of_lt_of_le (by decide) h2)
-  rw [USize.toNat_add, h8, Nat.mod_eq_of_lt (by omega)]
-
 private theorem findFreeN_congr {c : ByteArray} {cap p p' st st' : Nat} {hA : CtrlN c cap}
     {hp : p < cap} {hp' : p' < cap} (h1 : p = p') (h2 : st = st') :
     findFreeN c cap p st hA hp = findFreeN c cap p' st' hA hp' := by
@@ -255,9 +192,9 @@ theorem freeBound {mask : USize} : FreeBound mask := by
     split
     · exact Nat.le_succ_of_le (and_mask_le _ _)
     · split
-      · rw [toNat_add_one' hA.small]
+      · rw [toNat_add_one hA.small]
         exact Nat.le_refl _
-      · exact ih _ (h ▸ sub_group hA.small hs ‹_›) _ _ _ _ rfl
+      · exact ih _ (h ▸ sub_group hA.small hs) _ _ _ _ rfl
 
 /-- `findFreeN` ends at a slot or at `cap`. -/
 theorem freeBoundN {cap : Nat} : FreeBoundN cap := by
@@ -272,9 +209,9 @@ theorem freeBoundN {cap : Nat} : FreeBoundN cap := by
       · exact Nat.le_refl _
       · exact ih _ (h ▸ sub_groupN ‹_›) _ _ _ rfl
 
-/-- `findFree` is `findFreeN` (suggested route; not used outside this file). -/
-theorem findFree_toNat {c : ByteArray} {cap : Nat} {mask : USize} (hg : Geom cap mask)
-    (hsz : c.size = cap + 8) {pos stride : USize} {hA : ArrU c mask} {hp : pos.toNat ≤ mask.toNat}
+/-- `findFree` is `findFreeN`. -/
+private theorem findFree_toNat {c : ByteArray} {cap : Nat} {mask : USize} (hg : Geom cap mask)
+    {pos stride : USize} {hA : ArrU c mask} {hp : pos.toNat ≤ mask.toNat}
     {hs : stride.toNat ≤ mask.toNat} {hA' : CtrlN c cap} {hp' : pos.toNat < cap} :
     (findFree c mask pos stride hA hp hs).toNat =
       findFreeN c cap pos.toNat stride.toNat hA' hp' := by
@@ -296,11 +233,11 @@ theorem findFree_toNat {c : ByteArray} {cap : Nat} {mask : USize} (hg : Geom cap
       by_cases hgt : stride + 8 > mask
       · have hle : cap ≤ stride.toNat + 8 := by
           rw [GT.gt, USize.lt_iff_toNat_lt, e8] at hgt; omega
-        rw [dite_eq_left hgt, dite_eq_left hle, toNat_add_one' hsm, hmc]
+        rw [dite_eq_left hgt, dite_eq_left hle, toNat_add_one hsm, hmc]
       · have hle : ¬cap ≤ stride.toNat + 8 := by
           rw [GT.gt, USize.lt_iff_toNat_lt, e8] at hgt; omega
         rw [dite_eq_right hgt, dite_eq_right hle]
-        rw [ih _ (h ▸ sub_group hsm hs hgt) (pos := (pos + (stride + 8)) &&& mask)
+        rw [ih _ (h ▸ sub_group hsm hs) (pos := (pos + (stride + 8)) &&& mask)
           (stride := stride + 8) (hp' := hg.and_mask_lt _) rfl]
         exact findFreeN_congr (by rw [hg.toNat_add_and_mask, e8]) e8
 
@@ -331,7 +268,7 @@ private theorem findFreeN_spec {c : ByteArray} {cap : Nat} (hm : Mirrored c cap)
   -- byte `j` of the group at `pos`
   have hbyte : ∀ {pos : Nat} (hp : pos < cap) {hw : pos + 8 ≤ c.size} {j : Nat}, j < 8 →
       byte (ctrlWordN c pos hw) j = c[(pos + j) % cap]! := fun hp hw j hj => by
-    rw [byte_ctrlWordN_of_mirrored hm hp hj, slotByte_def, Nat.mod_mod]
+    rw [byte_ctrlWordN_of_mirrored hm hj, slotByte_def, Nat.mod_mod]
   intro d
   induction d with
   | zero =>
@@ -392,7 +329,7 @@ private theorem entries_length_of_full {s : Slots α β} (hk : s.cap ≤ s.keys.
   have hc : i < s.ctrl.size := by unfold Slots.cap at hi; omega
   have hf := h i hi
   rw [getElem!_pos s.ctrl i hc] at hf
-  rw [entryAt_some hc hf (by omega) (by omega)]
+  rw [entryAt_of_full hc hf (by omega) (by omega)]
   rfl
 
 /-- A mirrored table with fewer entries than slots has a free slot. -/
@@ -448,7 +385,7 @@ theorem WF.findFree_slot [BEq α] [Hashable α] {s : Slots α β} {size gl : Nat
   have e : (findFree s.ctrl mask (homeU (hashBits shift a) mask) 0 (wf.loopU' hs).arr
       (and_mask_le _ _) stride_zero).toNat =
       findFreeN s.ctrl s.cap (homeN (hashBits shift a) s.cap) 0 hA (Nat.mod_lt _ hc) :=
-    (findFree_toNat hg hm.size_eq (hA' := hA) (hp' := hp)).trans
+    (findFree_toNat hg (hA' := hA) (hp' := hp)).trans
       (findFreeN_congr (homeU_toNat hg) USize.toNat_zero)
   rw [e]
   exact wf.findFreeN_home h.room _
@@ -469,7 +406,7 @@ variable [BEq α] [Hashable α] {s : Slots α β} {size gl : Nat} {mask : USize}
 /-! Bounds of `insertFresh`'s writes (`findFree` ends at most at `mask + 1`, a cell of an
 allocated table). -/
 
-theorem WF.fresh_ctrl (wf : WF s size gl mask shift) (hs : smallMask mask = true) {a : α}
+theorem WF.fresh_ctrl (wf : WF s size gl mask shift) (_hs : smallMask mask = true) {a : α}
     (h : FreshPre s gl a) {pos stride : USize} {hA : ArrU s.ctrl mask}
     {hp : pos.toNat ≤ mask.toNat} {hs' : stride.toNat ≤ mask.toNat} :
     (findFree s.ctrl mask pos stride hA hp hs').toNat < s.ctrl.size := by
@@ -497,15 +434,15 @@ theorem WF.fresh_vals (wf : WF s size gl mask shift) (hs : smallMask mask = true
   have := wf.vals_size hc
   omega
 
-theorem WF.freshN_ctrl (wf : WF s size gl mask shift) (hs : ¬smallMask mask = true) {a : α}
-    (h : FreshPre s gl a) {pos stride : Nat} {hA : CtrlN s.ctrl (s.ctrl.size - 8)}
+theorem WF.freshN_ctrl (wf : WF s size gl mask shift) (_hs : ¬smallMask mask = true) {a : α}
+    (_h : FreshPre s gl a) {pos stride : Nat} {hA : CtrlN s.ctrl (s.ctrl.size - 8)}
     {hp : pos < s.ctrl.size - 8} :
     findFreeN s.ctrl (s.ctrl.size - 8) pos stride hA hp < s.ctrl.size := by
   have := freeBoundN s.ctrl pos stride hA hp
   have := wf.ctrl_size_ge
   omega
 
-theorem WF.freshN_keys (wf : WF s size gl mask shift) (hs : ¬smallMask mask = true) {a : α}
+theorem WF.freshN_keys (wf : WF s size gl mask shift) (_hs : ¬smallMask mask = true) {a : α}
     (h : FreshPre s gl a) {pos stride : Nat} {hA : CtrlN s.ctrl (s.ctrl.size - 8)}
     {hp : pos < s.ctrl.size - 8} :
     findFreeN s.ctrl (s.ctrl.size - 8) pos stride hA hp < s.keys.size := by
@@ -513,7 +450,7 @@ theorem WF.freshN_keys (wf : WF s size gl mask shift) (hs : ¬smallMask mask = t
   have := wf.place_keysN (wf.cap_pos_of_gl h.room)
   omega
 
-theorem WF.freshN_vals (wf : WF s size gl mask shift) (hs : ¬smallMask mask = true) {a : α}
+theorem WF.freshN_vals (wf : WF s size gl mask shift) (_hs : ¬smallMask mask = true) {a : α}
     (h : FreshPre s gl a) {pos stride : Nat} {hA : CtrlN s.ctrl (s.ctrl.size - 8)}
     {hp : pos < s.ctrl.size - 8} :
     findFreeN s.ctrl (s.ctrl.size - 8) pos stride hA hp < s.vals.size := by
@@ -524,18 +461,6 @@ theorem WF.freshN_vals (wf : WF s size gl mask shift) (hs : ¬smallMask mask = t
 end Fresh
 
 /-! ## The move loops -/
-
-/-- A machine-word byte read is the `Nat` one. -/
-private theorem buget_eq {c : ByteArray} {i : USize} (h : i.toNat < c.size) :
-    c.uget i h = c[i.toNat] := by
-  cases c; rfl
-
-/-- The bytes after `setCtrlN`, at every index (`slotByte_setCtrlN` sees only the slots). -/
-private theorem getElem_setCtrlN' {c : ByteArray} {cap i : Nat} {b : UInt8} {hi : i < c.size}
-    {hm : cap + 8 ≤ c.size} {hc : 0 < cap} {k : Nat} (hk : k < c.size) :
-    (setCtrlN c cap i b hi hm hc)[k]'(by rw [size_setCtrlN]; exact hk) =
-      if (i + cap - 8) % cap + 8 = k then b else if i = k then b else c[k] := by
-  simp only [setCtrlN, ByteArray.getElem_eq_getElem_data, ByteArray.data_set, Array.getElem_set]
 
 private theorem setCtrlN_congr {c : ByteArray} {cap i i' : Nat} {b b' : UInt8} {hi : i < c.size}
     {hi' : i' < c.size} {hm : cap + 8 ≤ c.size} {hc : 0 < cap} (h1 : i = i') (h2 : b = b') :
@@ -549,12 +474,12 @@ private theorem aset_congr {γ : Type w} {xs : Array γ} {i i' : Nat} {v v' : γ
 /-- `setCtrl` is `setCtrlN`, also at the placeholder slot `cap` (where both write byte `cap`
 twice). -/
 private theorem setCtrl_eq_setCtrlN' {c : ByteArray} {cap : Nat} {mask i : USize}
-    (hg : Geom cap mask) (hsz : c.size = cap + 8) (hic : i.toNat ≤ cap) {b : UInt8}
+    (hg : Geom cap mask) (hic : i.toNat ≤ cap) {b : UInt8}
     {h1 : i.toNat < c.size} {h2 : mask.toNat + 8 < c.size} {h3 : i.toNat < c.size}
     {h4 : cap + 8 ≤ c.size} {h5 : 0 < cap} :
     setCtrl c mask i b h1 h2 = setCtrlN c cap i.toNat b h3 h4 h5 := by
   rcases Nat.lt_or_eq_of_le hic with hlt | heq
-  · exact setCtrl_eq_setCtrlN hg hsz hlt
+  · exact setCtrl_eq_setCtrlN hg hlt
   · have h8 := hg.le_cap
     have hls := hg.lt_size
     have h8u : (8 : USize).toNat = 8 :=
@@ -573,22 +498,22 @@ private theorem setCtrl_eq_setCtrlN' {c : ByteArray} {cap : Nat} {mask i : USize
     apply ByteArray.ext_getElem (by rw [size_setCtrl, size_setCtrlN])
     intro k hk hk'
     have hkc : k < c.size := by rw [size_setCtrl] at hk; exact hk
-    rw [getElem_setCtrl _ _ _ _ _ _ _ hkc, getElem_setCtrlN' hkc, hmi, hmn, heq]
+    rw [getElem_setCtrl _ _ _ _ _ _ _ hkc, getElem_setCtrlN _ _ _ _ _ _ _ _ hkc, hmi, hmn, heq]
 
 /-- The free-slot probe from a home slot, on machine words and on `Nat` indices. -/
 private theorem findFree_home_toNat {nc : ByteArray} {ncap : Nat} {nmask : USize}
-    (hg : Geom ncap nmask) (hsz : nc.size = ncap + 8) (q : UInt64) {hA : ArrU nc nmask}
+    (hg : Geom ncap nmask) (q : UInt64) {hA : ArrU nc nmask}
     {hp : (homeU q nmask).toNat ≤ nmask.toNat} {hs : (0 : USize).toNat ≤ nmask.toNat}
     {hA' : CtrlN nc ncap} {hp' : homeN q ncap < ncap} :
     (findFree nc nmask (homeU q nmask) 0 hA hp hs).toNat =
       findFreeN nc ncap (homeN q ncap) 0 hA' hp' := by
   have hp'' : (homeU q nmask).toNat < ncap := by rw [homeU_toNat hg]; exact hp'
-  exact (findFree_toNat (pos := homeU q nmask) (stride := 0) hg hsz (hA' := hA')
+  exact (findFree_toNat (pos := homeU q nmask) (stride := 0) hg (hA' := hA')
     (hp' := hp'')).trans (findFreeN_congr (homeU_toNat hg) USize.toNat_zero)
 
 /-- The control write of a move, on machine words and on `Nat` indices. -/
 private theorem setCtrl_findFree {nc : ByteArray} {ncap : Nat} {nmask : USize}
-    (hg : Geom ncap nmask) (hsz : nc.size = ncap + 8) (q : UInt64) (b : UInt8)
+    (hg : Geom ncap nmask) (q : UInt64) (b : UInt8)
     {hA : ArrU nc nmask} {hp : (homeU q nmask).toNat ≤ nmask.toNat}
     {hs : (0 : USize).toNat ≤ nmask.toNat} {hA' : CtrlN nc ncap} {hp' : homeN q ncap < ncap}
     {h1 : (findFree nc nmask (homeU q nmask) 0 hA hp hs).toNat < nc.size}
@@ -598,12 +523,12 @@ private theorem setCtrl_findFree {nc : ByteArray} {ncap : Nat} {nmask : USize}
       setCtrlN nc ncap (findFreeN nc ncap (homeN q ncap) 0 hA' hp') b h3 h4 h5 := by
   have hb := freeBound nc (homeU q nmask) 0 hA hp hs
   have := hg.mask_add_one
-  exact (setCtrl_eq_setCtrlN' hg hsz (by omega) (h3 := h1)).trans
-    (setCtrlN_congr (findFree_home_toNat hg hsz q) rfl)
+  exact (setCtrl_eq_setCtrlN' hg (by omega) (h3 := h1)).trans
+    (setCtrlN_congr (findFree_home_toNat hg q) rfl)
 
 /-- The cell writes of a move, on machine words and on `Nat` indices. -/
 private theorem uset_findFree {γ : Type w} {nc : ByteArray} {ncap : Nat} {nmask : USize}
-    (hg : Geom ncap nmask) (hsz : nc.size = ncap + 8) (q : UInt64) {xs : Array γ} {v v' : γ}
+    (hg : Geom ncap nmask) (q : UInt64) {xs : Array γ} {v v' : γ}
     (hv : v = v') {hA : ArrU nc nmask} {hp : (homeU q nmask).toNat ≤ nmask.toNat}
     {hs : (0 : USize).toNat ≤ nmask.toNat} {hA' : CtrlN nc ncap} {hp' : homeN q ncap < ncap}
     {h1 : (findFree nc nmask (homeU q nmask) 0 hA hp hs).toNat < xs.size}
@@ -611,7 +536,7 @@ private theorem uset_findFree {γ : Type w} {nc : ByteArray} {ncap : Nat} {nmask
     xs.uset (findFree nc nmask (homeU q nmask) 0 hA hp hs) v h1 =
       xs.set (findFreeN nc ncap (homeN q ncap) 0 hA' hp') v' h2 := by
   rw [Array.uset_eq_set]
-  exact aset_congr (findFree_home_toNat hg hsz q) hv
+  exact aset_congr (findFree_home_toNat hg q) hv
 
 private theorem moveLoopN_congr [Hashable α] {oc : ByteArray} {ok : Array α} {ov : Array β}
     {ocap i i' : Nat} {nc nc' : ByteArray} {nk nk' : Array α} {nv nv' : Array β} {ncap : Nat}
@@ -622,11 +547,11 @@ private theorem moveLoopN_congr [Hashable α] {oc : ByteArray} {ok : Array α} {
       moveLoopN oc ok ov ocap i' nc' nk' nv' ncap nshift hO hN' hff := by
   subst h1 h2 h3 h4; rfl
 
-/-- `moveLoop` is `moveLoopN` (suggested route; not used outside this file). -/
-theorem moveLoop_eq_moveLoopN [Hashable α] {oc : ByteArray} {ok : Array α} {ov : Array β}
+/-- `moveLoop` is `moveLoopN`. -/
+private theorem moveLoop_eq_moveLoopN [Hashable α] {oc : ByteArray} {ok : Array α} {ov : Array β}
     {omask i : USize} {nc : ByteArray} {nk : Array α} {nv : Array β} {nmask : USize}
     {nshift : UInt64} {ocap ncap : Nat} (hog : omask.toNat + 1 = ocap) (hg : Geom ncap nmask)
-    (hsz : nc.size = ncap + 8) (hi : i.toNat ≤ ocap) {hO : MoveSrcU oc ok ov omask}
+    (hi : i.toNat ≤ ocap) {hO : MoveSrcU oc ok ov omask}
     {hN : MoveDstU nc nk nv nmask} {hff : FreeBound nmask} {hO' : MoveSrcN oc ok ov ocap}
     {hN' : MoveDstN nc nk nv ncap} {hff' : FreeBoundN ncap} :
     moveLoop oc ok ov omask i nc nk nv nmask nshift hO hN hff =
@@ -641,17 +566,17 @@ theorem moveLoop_eq_moveLoopN [Hashable α] {oc : ByteArray} {ok : Array α} {ov
       rw [dite_eq_left hgt, dite_eq_right hlt]
     · have hle := le_of_not_gt' hgt
       have hlt : i.toNat < ocap := by omega
-      have e1 := toNat_add_one' (a := i) (by omega)
-      rw [dite_eq_right hgt, dite_eq_left hlt, buget_eq (hO.ctrl_lt hgt)]
+      have e1 := toNat_add_one (a := i) (by omega)
+      rw [dite_eq_right hgt, dite_eq_left hlt, uget_eq_getElem' _ _ (hO.ctrl_lt hgt)]
       by_cases hf : (oc[i.toNat]'(hO'.ctrl_lt hlt) &&& 0x80 == 0) = true
       · rw [ite_eq_left hf, ite_eq_left hf]
         dsimp only
-        exact (ih (ocap - (i + 1).toNat) (by omega) (by rw [size_setCtrl]; exact hsz) (by omega)
+        exact (ih (ocap - (i + 1).toNat) (by omega) (by omega)
           (hN' := hN'.write (size_setCtrl ..) (Array.size_uset ..) (Array.size_uset ..))
-          rfl).trans (moveLoopN_congr e1 (setCtrl_findFree hg hsz _ _) (uset_findFree hg hsz _ rfl)
-            (uset_findFree hg hsz _ rfl))
+          rfl).trans (moveLoopN_congr e1 (setCtrl_findFree hg _ _) (uset_findFree hg _ rfl)
+            (uset_findFree hg _ rfl))
       · rw [ite_eq_right hf, ite_eq_right hf]
-        exact (ih (ocap - (i + 1).toNat) (by omega) hsz (by omega) (hN' := hN') rfl).trans
+        exact (ih (ocap - (i + 1).toNat) (by omega) (by omega) (hN' := hN') rfl).trans
           (moveLoopN_congr e1 rfl rfl rfl)
 
 /-! ## The move loops: the invariant -/
@@ -687,40 +612,9 @@ private theorem getElem?_eq_getElem! {c : ByteArray} {x : Nat} (hx : x < c.size)
     c[x]? = some c[x]! := by
   rw [getElem?_pos c x hx, getElem!_pos c x hx]
 
-/-- What an entry says about its slot. -/
-private theorem entryAt_eq_some {s : Slots α β} {x : Nat} {e : (_ : α) × β}
-    (h : s.entryAt x = some e) :
-    x < s.ctrl.size ∧ s.ctrl[x]! < 0x80 ∧ s.keys[x]? = some e.1 ∧ s.vals[x]? = some e.2 := by
-  unfold Slots.entryAt at h
-  by_cases hx : x < s.ctrl.size
-  · rw [getElem?_eq_getElem! hx] at h
-    simp only at h
-    by_cases hc : s.ctrl[x]! < 0x80
-    · rw [ite_eq_left hc] at h
-      refine ⟨hx, hc, ?_⟩
-      cases hk : s.keys[x]? with
-      | none => rw [hk] at h; simp at h
-      | some k =>
-        cases hv : s.vals[x]? with
-        | none => rw [hk, hv] at h; simp at h
-        | some v =>
-          rw [hk, hv] at h
-          simp only [Option.bind_some, Option.map_some, Option.some.injEq] at h
-          subst h
-          exact ⟨rfl, rfl⟩
-    · rw [ite_eq_right hc] at h; exact absurd h (by simp)
-  · rw [getElem?_neg s.ctrl x hx] at h; exact absurd h (by simp)
-
 private theorem entryAt_congr {s t : Slots α β} {x : Nat} (hc : s.ctrl[x]? = t.ctrl[x]?)
     (hk : s.keys[x]? = t.keys[x]?) (hv : s.vals[x]? = t.vals[x]?) : s.entryAt x = t.entryAt x := by
   unfold Slots.entryAt; rw [hc, hk, hv]
-
-private theorem filterMap_congr' {γ : Type _} {δ : Type _} {f g : γ → Option δ} :
-    ∀ {l : List γ}, (∀ x ∈ l, f x = g x) → l.filterMap f = l.filterMap g
-  | [], _ => rfl
-  | x :: l, h => by
-    rw [List.filterMap_cons, List.filterMap_cons, h x List.mem_cons_self,
-      filterMap_congr' (fun y hy => h y (List.mem_cons_of_mem _ hy))]
 
 /-- Filling one slot of a list of distinct slots adds its entry. -/
 private theorem filterMap_perm_update {δ : Type w} {f g : Nat → Option δ} {e : δ} {j : Nat}
@@ -734,7 +628,7 @@ private theorem filterMap_perm_update {δ : Type w} {f g : Nat → Option δ} {e
     · subst hxj
       rw [List.filterMap_cons, List.filterMap_cons, hf, hg]
       simp only
-      rw [filterMap_congr' (fun y hy => hfg y (List.mem_cons_of_mem _ hy)
+      rw [filterMap_congr_mem (fun y hy => hfg y (List.mem_cons_of_mem _ hy)
         (fun e => hnd.1 (e ▸ hy)))]
     · have hjl : j ∈ l := by
         rcases List.mem_cons.mp hj with h | h
@@ -796,7 +690,7 @@ private theorem MoveInv.old_of_full (inv : MoveInv s i t ncap nshift) {y : Nat} 
   have hk' : t.keys[y] = k := by rw [getElem?_pos t.keys y hyk] at hk; exact Option.some.inj hk
   have hf := hy.2
   rw [getElem!_pos t.ctrl y hyc'] at hf
-  have he := entryAt_some hyc' hf hyk hyv
+  have he := entryAt_of_full hyc' hf hyk hyv
   have hmem : (⟨t.keys[y], t.vals[y]⟩ : (_ : α) × β) ∈ t.entries :=
     List.mem_filterMap.mpr ⟨y, List.mem_range.mpr hy.1, he⟩
   obtain ⟨q, hq, hqe⟩ := mem_entriesBelow (inv.perm.subset hmem)
@@ -847,7 +741,7 @@ private theorem MoveInv.write [BEq α] [Hashable α] {s : Slots α β} {size gl 
       (setCtrlN nc ncap j (tagOf (hashBits nshift k)) h1 h2 h3)[y]! ≠ EMPTY := fun y hy hny => by
     rw [hb y hy]
     split
-    · intro e; exact not_lt_EMPTY (e ▸ tagOf_lt _)
+    · intro e; exact EMPTY_not_lt (e ▸ tagOf_lt _)
     · exact hny
   -- reaching in the new arrays
   have hreach' : ∀ p y, (Slots.mk nc nk nv).Reach p y →
@@ -946,7 +840,7 @@ private theorem MoveInv.write [BEq α] [Hashable α] {s : Slots α β} {size gl 
   · -- the entries
     have hjc : j < (Slots.mk nc nk nv).ctrl.size := h1
     have hnone : (Slots.mk nc nk nv).entryAt j = none :=
-      entryAt_none (fun h => absurd (le_of_isFree hfr) (by
+      entryAt_eq_none (fun h => absurd (le_of_isFree hfr) (by
         rw [UInt8.not_le]; exact h))
     have hsome : (Slots.mk (setCtrlN nc ncap j (tagOf (hashBits nshift k)) h1 h2 h3)
         (nk.set j k h4) (nv.set j v h5)).entryAt j = some ⟨k, v⟩ := by
@@ -988,7 +882,7 @@ private theorem moveInv_init [BEq α] [Hashable α] (s : Slots α β) {lg : Nat}
       (Array.replicate ((2 : Nat) ^ lg + 1) v0)).IsFull x := by
     rintro x ⟨hx, hf⟩
     rw [hcap] at hx
-    exact not_lt_EMPTY (getElem!_emptyCtrl h3 (i := x) (by omega) ▸ hf)
+    exact EMPTY_not_lt (getElem!_emptyCtrl h3 (i := x) (by omega) ▸ hf)
   have he := (WF.empty (α := α) (β := β) k0 v0 h3).size_eq
   exact {
     le := Nat.zero_le _
@@ -1031,7 +925,7 @@ private theorem moveLoopN_inv [BEq α] [Hashable α] {ctrl : ByteArray} {keys : 
       dsimp only
       have hfull : ctrl[i] < 0x80 := by rw [and80_eq_zero] at hf; simpa using hf
       have he : (Slots.mk ctrl keys vals).entryAt i = some ⟨keys[i], vals[i]⟩ :=
-        entryAt_some hic hfull hik hiv
+        entryAt_of_full hic hfull hik hiv
       have h8 := inv.mirrored.le_cap
       have hlen : (Slots.mk nc nk nv).entries.length < (Slots.mk nc nk nv).cap := by
         rw [inv.perm.length_eq, inv.cap_eq]
@@ -1054,7 +948,7 @@ private theorem moveLoopN_inv [BEq α] [Hashable α] {ctrl : ByteArray} {keys : 
     · rw [ite_eq_right hf]
       have hnf : ¬ctrl[i] < 0x80 := by rw [and80_eq_zero] at hf; simpa using hf
       exact moveLoopN_inv wf hsize d (i + 1) (by omega)
-        (inv.skip hlt (entryAt_none (by rw [getElem!_pos ctrl i hic]; exact hnf)))
+        (inv.skip hlt (entryAt_of_not_full hic hnf))
 
 /-- **The rebuild's move** (either loop) ends with the invariant over all old slots. -/
 private theorem rebuild_inv [BEq α] [Hashable α] {ctrl : ByteArray} {keys : Array α}
@@ -1082,7 +976,7 @@ private theorem rebuild_inv [BEq α] [Hashable α] {ctrl : ByteArray} {keys : Ar
       ((57 - lg).toUInt64) wf.moveSrcN (moveDstN h.three_le) freeBoundN = (nc, nk, nv) := by
     by_cases hs : smallMask (((2 : Nat) ^ lg - 1).toUSize) = true
     · rw [dite_eq_left hs] at hm
-      have hl := lg_le_of_smallMask hs
+      have hl := (smallMask_pow_iff lg).mp hs
       obtain ⟨lg₀, ha⟩ := wf.alloc h.alloc
       have hsz0 := ha.mirrored.size_eq
       have hcl := h.cap_le
@@ -1095,8 +989,8 @@ private theorem rebuild_inv [BEq α] [Hashable α] {ctrl : ByteArray} {keys : Ar
         rw [ha.mask_eq, toNat_mask_of_le hl0]
         have := Nat.two_pow_pos lg₀
         omega
-      have e := moveLoop_eq_moveLoopN (i := 0) hog (geom_of_le h3 hl) (size_emptyCtrl h3)
-        (Nat.zero_le _) (hO := wf.moveSrcU h hs) (hN := moveDstU h.three_le hs) (hff := freeBound)
+      have e := moveLoop_eq_moveLoopN (i := 0) hog (geom_of_le h3 hl) (Nat.zero_le _)
+        (hO := wf.moveSrcU h hs) (hN := moveDstU h.three_le hs) (hff := freeBound)
         (hO' := wf.moveSrcN) (hN' := moveDstN h.three_le) (hff' := freeBoundN)
         (nc := ctrl.propagateMark (emptyCtrl ((2 : Nat) ^ lg)))
         (nk := keys.propagateMark (Array.replicate ((2 : Nat) ^ lg + 1) k0))
@@ -1166,24 +1060,6 @@ theorem rebuild_perm_raw (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) {lg
           ((57 - lg).toUInt64) wf.moveSrcN (moveDstN h.three_le) freeBoundN) = (nc, nk, nv)) :
     (Slots.entries ⟨nc, nk, nv⟩).Perm (Slots.entries ⟨ctrl, keys, vals⟩) :=
   (rebuild_inv wf h hm).perm
-
-/-- The rebuilt table has `2 ^ lg` slots. -/
-theorem rebuild_cap_raw (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) {lg : Nat} {k0 : α}
-    {v0 : β} (h : RebuildPre ⟨ctrl, keys, vals⟩ size lg) {nc : ByteArray} {nk : Array α}
-    {nv : Array β}
-    (hm : (if hs : smallMask (((2 : Nat) ^ lg - 1).toUSize) = true then
-        moveLoop ctrl keys vals mask 0 (ctrl.propagateMark (emptyCtrl ((2 : Nat) ^ lg)))
-          (keys.propagateMark (Array.replicate ((2 : Nat) ^ lg + 1) k0))
-          (vals.propagateMark (Array.replicate ((2 : Nat) ^ lg + 1) v0))
-          (((2 : Nat) ^ lg - 1).toUSize) ((57 - lg).toUInt64) (wf.moveSrcU h hs)
-          (moveDstU h.three_le hs) freeBound
-      else
-        moveLoopN ctrl keys vals (ctrl.size - 8) 0 (ctrl.propagateMark (emptyCtrl ((2 : Nat) ^ lg)))
-          (keys.propagateMark (Array.replicate ((2 : Nat) ^ lg + 1) k0))
-          (vals.propagateMark (Array.replicate ((2 : Nat) ^ lg + 1) v0)) ((2 : Nat) ^ lg)
-          ((57 - lg).toUInt64) wf.moveSrcN (moveDstN h.three_le) freeBoundN) = (nc, nk, nv)) :
-    (Slots.mk nc nk nv).cap = (2 : Nat) ^ lg :=
-  (rebuild_inv wf h hm).cap_eq
 
 end Move
 

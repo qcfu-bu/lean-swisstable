@@ -7,12 +7,10 @@ public import Std.Data.Internal.List.Associative
 /-!
 # Swiss core proofs, part 4: single-slot writes, and the rebuilt table
 
-A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure"). Its
-owner edits only this file: the proofs, and any private helper lemmas or definitions. The
-statements are fixed: `Table.lean` and the later proof files use them.
+A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure").
 
 * **The invariant after each write of `Table.lean`** (stated on the code's terms, machine-word and
-  `Nat` forms): a value (`WF.replaceVals`), the key of a hit (`WF.keyU`, `WF.keyN`: `==` keys have
+  `Nat` forms): a value (`WF.replaceVals`), the key of a hit (`WF.keyN`, `WF.keyU`: `==` keys have
   the same hash and tag under lawfulness, and `TagInv` holds because the hit's byte is the tag of
   `a`), a new key at the slot of a `NewSlot` (`WF.newU_empty`, `WF.newU_del`, `WF.newN_empty`,
   `WF.newN_del`, `WF.freshU`, `WF.freshN`: `TagInv` by the tag written, `ProbeInv` by
@@ -22,15 +20,19 @@ statements are fixed: `Table.lean` and the later proof files use them.
   DELETED keeps it trivially; tombstone rule B only lowers `growthLeft`).
 * **The entries after each write** (`Nat` forms; the machine-word forms reduce to them through
   `setCtrl_eq_setCtrlN`, `ctrlWord_eq_ctrlWordN` and `Array.uset_eq_set`): pointwise
-  (`entryAt_newN`, `entryAt_kvN`, `entryAt_valN`, `entryAt_eraseN`), and as the list operations
-  of the contract (`WF.entries_newN_perm`, `WF.entries_kvN_replace`, `WF.entries_eraseN_eraseKey`).
+  (`entryAt_kvN`, `entryAt_eraseN`), and as the list operations of the contract
+  (`entries_newN_perm`, `WF.entries_kvN_replace`, `WF.entries_eraseN_eraseKey`).
 * **The rebuilt table** (`Table.lean`'s `reserveInsert`, `Proofs/Update.lean`): its entries
   (`rebuild_perm`, `emptyTable_entries`, `reserveTable_perm`) and its room for the new key
   (`freshPre_reserve`).
 
-Proof hints: the earlier linear-probing map's `Insert.lean` (`Slots.entries_setNew_perm`,
-`filterMap_perm_cons`, `TagInv.setNew`, `ProbeInv.setNew`); `numDeleted` is a `countP` over the
-slots, so a write at slot `i` changes it by the change at `i` only.
+The invariant is proved once per kind of write, on `Nat` indices: `WF.newGen` (a key and its tag
+at a free slot) and `WF.eraseGen` (EMPTY or DELETED at a full slot, given the erase rule's window
+fact); the stated forms instantiate them. `numDeleted` is a `countP` over the slots, so a write at
+slot `i` changes it by the change at `i` only (`numDeleted_write`), and a probe still reaches a slot
+after a write that leaves every group without an EMPTY slot without one (`reach_transfer`). The
+entries after a write are a `filterMap` over the slots that changes at slot `i` only
+(`filterMap_perm_cons`, `filterMap_replaceEntry`, `filterMap_eraseKey`).
 -/
 
 @[expose] public section
@@ -44,13 +46,6 @@ open Std.Internal.List
 variable {α : Type u} {β : Type v} {γ : Type w}
 
 /-! ## Helpers: lists -/
-
-private theorem filterMap_congr_mem {γ δ : Type _} {f g : γ → Option δ} :
-    ∀ {l : List γ}, (∀ j ∈ l, f j = g j) → l.filterMap f = l.filterMap g
-  | [], _ => rfl
-  | j :: l, h => by
-    rw [List.filterMap_cons, List.filterMap_cons, h j List.mem_cons_self,
-      filterMap_congr_mem fun x hx => h x (List.mem_cons_of_mem _ hx)]
 
 /-- Two `filterMap`s that agree on `l` off `i`, where the first keeps `x` at `i` and the second
 drops `i`, differ by `x` on a list that holds `i` once. -/
@@ -151,19 +146,11 @@ private theorem countP_range_update {i : Nat} {p p' : Nat → Bool} :
 
 /-! ## Helpers: control bytes and cells -/
 
-private theorem EMPTY_not_lt : ¬EMPTY < 0x80 := by rw [EMPTY_eq]; decide
-
-private theorem DELETED_not_lt : ¬DELETED < 0x80 := by rw [DELETED_eq]; decide
-
 private theorem ne_EMPTY_of_lt {b : UInt8} (h : b < 0x80) : b ≠ EMPTY := by
   rintro rfl; exact EMPTY_not_lt h
 
 private theorem ne_DELETED_of_lt {b : UInt8} (h : b < 0x80) : b ≠ DELETED := by
   rintro rfl; exact DELETED_not_lt h
-
-private theorem uget_eq_getElem' (c : ByteArray) (i : USize) (h : i.toNat < c.size) :
-    c.uget i h = c[i.toNat]'h := by
-  cases c; rfl
 
 private theorem getElem_bset (c : ByteArray) (i : Nat) (b : UInt8) (h : i < c.size) (j : Nat)
     (hj : j < c.size) :
@@ -219,47 +206,6 @@ private theorem getElem?_aset {xs : Array γ} {i : Nat} {v : γ} {h : i < xs.siz
   · subst hji; simp
   · rw [ite_eq_right (Ne.symm hji), ite_eq_right hji]
 
-/-- A slot whose control byte is not FULL has no entry. -/
-private theorem entryAt_eq_none {s : Slots α β} {i : Nat} (h : ¬s.ctrl[i]! < 0x80) :
-    s.entryAt i = none := by
-  unfold Slots.entryAt
-  by_cases hi : i < s.ctrl.size
-  · rw [getElem!_pos s.ctrl i hi] at h
-    rw [getElem?_pos s.ctrl i hi]
-    simp only [h, ite_false]
-  · rw [getElem?_neg s.ctrl i hi]
-
-/-- The entry of a full slot. -/
-private theorem entryAt_eq_some {s : Slots α β} {i : Nat} (hi : s.IsFull i) (hk : i < s.keys.size)
-    (hv : i < s.vals.size) : s.entryAt i = some ⟨s.keys[i], s.vals[i]⟩ := by
-  have hic : i < s.ctrl.size := by have := hi.1; unfold Slots.cap at this; omega
-  have hf := hi.2
-  rw [getElem!_pos s.ctrl i hic] at hf
-  unfold Slots.entryAt
-  rw [getElem?_pos s.ctrl i hic, getElem?_pos s.keys i hk, getElem?_pos s.vals i hv]
-  simp only [hf, ite_true, Option.bind_some, Option.map_some]
-
-/-- A slot with an entry is full, with that key and value. -/
-private theorem entryAt_some {s : Slots α β} {i : Nat} {e : (_ : α) × β}
-    (h : s.entryAt i = some e) (hi : i < s.cap) :
-    s.IsFull i ∧ s.keys[i]? = some e.1 := by
-  unfold Slots.entryAt at h
-  by_cases hic : i < s.ctrl.size
-  · rw [getElem?_pos s.ctrl i hic] at h
-    simp only at h
-    split at h
-    · rename_i hf
-      refine ⟨⟨hi, by rwa [getElem!_pos s.ctrl i hic]⟩, ?_⟩
-      cases hk : s.keys[i]? with
-      | none => rw [hk] at h; simp at h
-      | some k =>
-        rw [hk] at h
-        cases hv : s.vals[i]? with
-        | none => rw [hv] at h; simp at h
-        | some v => rw [hv] at h; simp at h; rw [← h]
-    · simp at h
-  · rw [getElem?_neg s.ctrl i hic] at h; simp at h
-
 /-! ## Helpers: entries after a write -/
 
 /-- The entry of slot `j` after a write of byte `t`, key `a` and value `b` at slot `i`. -/
@@ -314,7 +260,7 @@ private theorem entries_erase_perm {ctrl : ByteArray} {keys : Array α} {vals : 
   have hi : i < ctrl.size - 8 := hfull.1
   unfold Slots.entries
   rw [cap_write]
-  refine filterMap_perm_cons (i := i) (entryAt_eq_some hfull h4 h5) ?_
+  refine filterMap_perm_cons (i := i) (entryAt_of_isFull hfull h4 h5) ?_
     List.nodup_range (List.mem_range.mpr hi) (fun j hj hji => ?_)
   · rw [entryAt_write hi t a b hi, ite_eq_left rfl, ite_eq_right ht]
   · rw [entryAt_write hi t a b (List.mem_range.mp hj), ite_eq_right hji]
@@ -636,7 +582,7 @@ private theorem WF.eraseGen (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) 
 /-- **The erase rule on `Nat` indices**: when it writes EMPTY, every 8-slot window containing slot
 `i` already has an EMPTY slot. -/
 private theorem exists_empty_of_ruleN {c : ByteArray} {cap : Nat} (hm : Mirrored c cap)
-    (hctrl : ∀ k < cap, IsCtrl c[k]!) {i : Nat} (hic : i < cap) {hw1 : i + 8 ≤ c.size}
+    (hctrl : ∀ k < cap, IsCtrl c[k]!) {i : Nat} {hw1 : i + 8 ≤ c.size}
     {hw2 : (i + cap - 8) % cap + 8 ≤ c.size}
     (hrule : needsTombstone (matchEmpty (ctrlWordN c i hw1))
       (matchEmpty (ctrlWordN c ((i + cap - 8) % cap) hw2)) = false)
@@ -650,12 +596,12 @@ private theorem exists_empty_of_ruleN {c : ByteArray} {cap : Nat} (hm : Mirrored
   have hfa : ∀ l < 8, flag (matchEmpty (ctrlWordN c i hw1)) l =
       (slotByte c cap ((i + l) % cap) == EMPTY) := by
     intro l hl
-    have hb := byte_ctrlWordN_of_mirrored hm hic (hw := hw1) hl
+    have hb := byte_ctrlWordN_of_mirrored hm (hw := hw1) hl
     rw [flag_matchEmpty_ctrl _ hl (by rw [hb]; exact hctrl' _), hb]
   have hfb : ∀ l < 8, flag (matchEmpty (ctrlWordN c ((i + cap - 8) % cap) hw2)) l =
       (slotByte c cap (((i + cap - 8) % cap + l) % cap) == EMPTY) := by
     intro l hl
-    have hb := byte_ctrlWordN_of_mirrored hm (Nat.mod_lt _ hcp) (hw := hw2) hl
+    have hb := byte_ctrlWordN_of_mirrored hm (hw := hw2) hl
     rw [flag_matchEmpty_ctrl _ hl (by rw [hb]; exact hctrl' _), hb]
   rcases window_of_needsTombstone_eq_false (isMask_matchEmpty _) (isMask_matchEmpty _) hrule l₀
     with ⟨l, hl, hle, hf⟩ | ⟨l, hl, hlt, hf⟩
@@ -675,8 +621,45 @@ private theorem exists_empty_of_ruleN {c : ByteArray} {cap : Nat} (hm : Mirrored
     rw [H] at hf
     exact hf
 
-/-- `WF.keyN`, stated before `WF.keyU` uses it. -/
-private theorem WF.keyN' (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) {a : α} {i : Nat}
+end WFGen
+
+section Writes
+
+variable [BEq α] [Hashable α] {ctrl : ByteArray} {keys : Array α} {vals : Array β}
+  {size gl : Nat} {mask : USize} {shift : UInt64}
+
+/-! ## The invariant after a write -/
+
+/-- The invariant reads the value array only through its size. -/
+theorem WF.replaceVals (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) {vals' : Array γ}
+    (h : vals'.size = vals.size) : WF ⟨ctrl, keys, vals'⟩ size gl mask shift := by
+  have hv : ∀ j, (vals'[j]?).isSome = (vals[j]?).isSome := fun j => by
+    by_cases hj : j < vals.size
+    · rw [getElem?_pos vals j hj, getElem?_pos vals' j (by omega)]; rfl
+    · rw [getElem?_neg vals j hj, getElem?_neg vals' j (by omega)]; rfl
+  refine ⟨?_, wf.ctrl, wf.tag, ?_, wf.room, wf.distinct, wf.probe⟩
+  · rcases wf.shape with hu | ⟨lg, hal⟩
+    · exact Or.inl ⟨hu.ctrl_eq, hu.keys_size, by rw [h]; exact hu.vals_size, hu.mask_eq,
+        hu.shift_eq⟩
+    · exact Or.inr ⟨lg, hal.three_le, hal.mirrored, hal.keys_size,
+        by rw [h]; exact hal.vals_size, hal.mask_eq, hal.shift_eq⟩
+  · rw [wf.size_eq]
+    refine (length_entries_congr (s := ⟨ctrl, keys, vals⟩) (s' := ⟨ctrl, keys, vals'⟩) rfl
+      fun j _ => ?_).symm
+    unfold Slots.entryAt
+    simp only
+    cases ctrl[j]? with
+    | none => rfl
+    | some c =>
+      simp only
+      split
+      · cases keys[j]? with
+        | none => rfl
+        | some k => simp only [Option.bind_some, Option.isSome_map]; exact hv j
+      · rfl
+
+/-- Writing `a` over the key of a hit for `a`. -/
+theorem WF.keyN (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) {a : α} {i : Nat}
     (hi : Slots.Hit ⟨ctrl, keys, vals⟩ shift a i) {h : i < keys.size} :
     WF ⟨ctrl, keys.set i a h, vals⟩ size gl mask shift := by
   obtain ⟨hfull, htag, k, hk, hka⟩ := hi
@@ -742,55 +725,12 @@ private theorem WF.keyN' (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) {a 
     rw [hh] at this
     exact this
 
-end WFGen
-
-section Writes
-
-variable [BEq α] [Hashable α] {ctrl : ByteArray} {keys : Array α} {vals : Array β}
-  {size gl : Nat} {mask : USize} {shift : UInt64}
-
-/-! ## The invariant after a write -/
-
-/-- The invariant reads the value array only through its size. -/
-theorem WF.replaceVals (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) {vals' : Array γ}
-    (h : vals'.size = vals.size) : WF ⟨ctrl, keys, vals'⟩ size gl mask shift := by
-  have hv : ∀ j, (vals'[j]?).isSome = (vals[j]?).isSome := fun j => by
-    by_cases hj : j < vals.size
-    · rw [getElem?_pos vals j hj, getElem?_pos vals' j (by omega)]; rfl
-    · rw [getElem?_neg vals j hj, getElem?_neg vals' j (by omega)]; rfl
-  refine ⟨?_, wf.ctrl, wf.tag, ?_, wf.room, wf.distinct, wf.probe⟩
-  · rcases wf.shape with hu | ⟨lg, hal⟩
-    · exact Or.inl ⟨hu.ctrl_eq, hu.keys_size, by rw [h]; exact hu.vals_size, hu.mask_eq,
-        hu.shift_eq⟩
-    · exact Or.inr ⟨lg, hal.three_le, hal.mirrored, hal.keys_size,
-        by rw [h]; exact hal.vals_size, hal.mask_eq, hal.shift_eq⟩
-  · rw [wf.size_eq]
-    refine (length_entries_congr (s := ⟨ctrl, keys, vals⟩) (s' := ⟨ctrl, keys, vals'⟩) rfl
-      fun j _ => ?_).symm
-    unfold Slots.entryAt
-    simp only
-    cases ctrl[j]? with
-    | none => rfl
-    | some c =>
-      simp only
-      split
-      · cases keys[j]? with
-        | none => rfl
-        | some k => simp only [Option.bind_some, Option.isSome_map]; exact hv j
-      · rfl
-
 /-- Writing `a` over the key of a hit for `a` (machine-word index). -/
 theorem WF.keyU (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) {a : α} {i : USize}
     (hi : Slots.Hit ⟨ctrl, keys, vals⟩ shift a i.toNat) {h : i.toNat < keys.size} :
     WF ⟨ctrl, keys.uset i a h, vals⟩ size gl mask shift := by
   simp only [Array.uset_eq_set]
-  exact wf.keyN' hi
-
-/-- Writing `a` over the key of a hit for `a`. -/
-theorem WF.keyN (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) {a : α} {i : Nat}
-    (hi : Slots.Hit ⟨ctrl, keys, vals⟩ shift a i) {h : i < keys.size} :
-    WF ⟨ctrl, keys.set i a h, vals⟩ size gl mask shift := by
-  exact wf.keyN' hi
+  exact wf.keyN hi
 
 /-- A new key at an EMPTY slot, with room (machine words). -/
 theorem WF.newU_empty (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift)
@@ -805,7 +745,7 @@ theorem WF.newU_empty (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift)
   have hg : Geom (ctrl.size - 8) mask := wf.geom hs hc
   have hic : i.toNat < ctrl.size - 8 :=
     (h.slot.resolve_right fun ⟨hc0, _⟩ => absurd hc0 (Nat.ne_of_gt hc)).lt
-  rw [setCtrl_eq_setCtrlN hg (by omega) hic (h3 := h1) (h4 := wf.cap_word) (h5 := hc)]
+  rw [setCtrl_eq_setCtrlN hg hic (h3 := h1) (h4 := wf.cap_word) (h5 := hc)]
   simp only [Array.uset_eq_set]
   refine wf.newGen h ?_
   have he : ctrl[i.toNat]! = EMPTY := by
@@ -827,7 +767,7 @@ theorem WF.newU_del (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift)
   have hg : Geom (ctrl.size - 8) mask := wf.geom hs hc
   have hic : i.toNat < ctrl.size - 8 :=
     (h.slot.resolve_right fun ⟨hc0, _⟩ => absurd hc0 (Nat.ne_of_gt hc)).lt
-  rw [setCtrl_eq_setCtrlN hg (by omega) hic (h3 := h1) (h4 := wf.cap_word) (h5 := hc)]
+  rw [setCtrl_eq_setCtrlN hg hic (h3 := h1) (h4 := wf.cap_word) (h5 := hc)]
   simp only [Array.uset_eq_set]
   refine wf.newGen h ?_
   have he : ctrl[i.toNat]! ≠ EMPTY := by
@@ -876,7 +816,7 @@ theorem WF.freshU (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) (hs : smal
   have hfs := wf.findFree_slot hs h
   have hc : 0 < ctrl.size - 8 := wf.cap_pos_of_gl h.room
   have hg : Geom (ctrl.size - 8) mask := wf.geom hs hc
-  rw [setCtrl_eq_setCtrlN hg (by omega) hfs.lt (h3 := h1) (h4 := wf.cap_word) (h5 := hc)]
+  rw [setCtrl_eq_setCtrlN hg hfs.lt (h3 := h1) (h4 := wf.cap_word) (h5 := hc)]
   simp only [Array.uset_eq_set]
   refine wf.newGen ⟨rfl, Or.inl hfs, h.absent⟩ ?_
   have := h.room
@@ -915,7 +855,7 @@ theorem WF.eraseU (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) (hs : smal
   have hc : 0 < ctrl.size - 8 := hi.cap_pos
   have hg : Geom (ctrl.size - 8) mask := wf.geom hs hc
   have hm : Mirrored ctrl (ctrl.size - 8) := wf.mirrored hc
-  rw [setCtrl_eq_setCtrlN hg (by omega) hi.1 (h3 := h1) (h4 := wf.cap_word) (h5 := hc)]
+  rw [setCtrl_eq_setCtrlN hg hi.1 (h3 := h1) (h4 := wf.cap_word) (h5 := hc)]
   simp only [Array.uset_eq_set]
   refine wf.eraseGen hi del ?_ ?_
   · intro hd p l₀ hl₀ hp
@@ -940,7 +880,7 @@ theorem WF.eraseN (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) {i : Nat}
   obtain ⟨del, hdel, rfl, rfl⟩ := eraseCtrlN_spec he
   refine wf.eraseGen hi del ?_ ?_
   · intro hd p l₀ hl₀ hp
-    exact exists_empty_of_ruleN (wf.mirrored hi.cap_pos) (fun k hk => wf.ctrl k hk) hic
+    exact exists_empty_of_ruleN (wf.mirrored hi.cap_pos) (fun k hk => wf.ctrl k hk)
       (hdel ▸ hd) hl₀ hp
   · cases del
     · simp
@@ -949,24 +889,9 @@ theorem WF.eraseN (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) {i : Nat}
 
 /-! ## The entries after a write (`Nat` forms) -/
 
-set_option linter.unusedVariables false in
-/-- A new entry at slot `i` (any control byte below `0x80`, any free slot `i`). -/
-theorem entryAt_newN (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) {i : Nat}
-    (hi : i < ctrl.size - 8) {t : UInt8} (ht : t < 0x80) (a : α) (b : β) {h1 : i < ctrl.size}
-    {h2 : ctrl.size - 8 + 8 ≤ ctrl.size} {h3 : 0 < ctrl.size - 8} {h4 : i < keys.size}
-    {h5 : i < vals.size} {j : Nat} (hj : j < ctrl.size - 8) :
-    (Slots.mk (setCtrlN ctrl (ctrl.size - 8) i t h1 h2 h3) (keys.set i a h4)
-      (vals.set i b h5)).entryAt j =
-      if j = i then some ⟨a, b⟩ else Slots.entryAt ⟨ctrl, keys, vals⟩ j := by
-  rw [entryAt_write hi t a b hj]
-  by_cases hji : j = i
-  · rw [ite_eq_left hji, ite_eq_left hji, ite_eq_left ht]
-  · rw [ite_eq_right hji, ite_eq_right hji]
-
-set_option linter.unusedVariables false in
+omit [BEq α] [Hashable α] in
 /-- The erasure of slot `i` by the tombstone rule. -/
-theorem entryAt_eraseN (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) {i : Nat}
-    (hi : Slots.IsFull ⟨ctrl, keys, vals⟩ i) {sz g : Nat} {hic : i < ctrl.size - 8}
+theorem entryAt_eraseN {i sz g : Nat} {hic : i < ctrl.size - 8}
     {hc : ctrl.size - 8 + 8 ≤ ctrl.size} {c' : ByteArray} {gl' : Nat}
     (he : eraseCtrlN ctrl sz g (ctrl.size - 8) i hic hc = (c', gl')) {k0 : α} {v0 : β}
     {h1 : i < keys.size} {h2 : i < vals.size} {j : Nat} (hj : j < ctrl.size - 8) :
@@ -1008,34 +933,15 @@ theorem entryAt_kvN (s : Slots α β) {i : Nat} (hi : s.IsFull i) (a : α) (b : 
     simp [hf]
   · simp only [hji, ite_false]
 
-/-- The value of slot `i` (a full slot shows the new value; any other slot is unchanged). -/
-theorem entryAt_valN (s : Slots α β) {i : Nat} (v : β) {h : i < s.vals.size} (j : Nat) :
-    (Slots.mk s.ctrl s.keys (s.vals.set i v h)).entryAt j =
-      if j = i then (s.entryAt i).map (fun e => ⟨e.1, v⟩) else s.entryAt j := by
-  unfold Slots.entryAt
-  simp only
-  rw [getElem?_aset]
-  by_cases hji : j = i
-  · subst hji
-    simp only [ite_true, getElem?_pos s.vals j h]
-    cases s.ctrl[j]? with
-    | none => rfl
-    | some c =>
-      simp only
-      split
-      · cases s.keys[j]? <;> simp
-      · rfl
-  · simp only [hji, ite_false]
-
 section Lists
 
 variable [BEq α] [Hashable α] {ctrl : ByteArray} {keys : Array α} {vals : Array β}
   {size gl : Nat} {mask : USize} {shift : UInt64}
 
-set_option linter.unusedVariables false in
+omit [BEq α] [Hashable α] in
 /-- A new entry at a free slot: the entries gain it, up to order (no lawfulness). -/
-theorem WF.entries_newN_perm (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) {p₀ i : Nat}
-    (hslot : Slots.FreeSlot ⟨ctrl, keys, vals⟩ p₀ i) {t : UInt8} (ht : t < 0x80) (a : α) (b : β)
+theorem entries_newN_perm {p₀ i : Nat} (hslot : Slots.FreeSlot ⟨ctrl, keys, vals⟩ p₀ i) {t : UInt8}
+    (ht : t < 0x80) (a : α) (b : β)
     {h1 : i < ctrl.size} {h2 : ctrl.size - 8 + 8 ≤ ctrl.size} {h3 : 0 < ctrl.size - 8}
     {h4 : i < keys.size} {h5 : i < vals.size} :
     (Slots.mk (setCtrlN ctrl (ctrl.size - 8) i t h1 h2 h3) (keys.set i a h4)
@@ -1059,12 +965,13 @@ theorem WF.entries_kvN_replace (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shif
     rw [getElem?_pos keys i h1] at hk2; exact Option.some.inj hk2
   unfold Slots.entries
   refine filterMap_replaceEntry (i := i) (e₀ := ⟨keys[i], vals[i]⟩) ?_
-    (entryAt_eq_some hfull h1 h2) (by simp only; rw [hk']; exact hka) List.nodup_range ?_ ?_
+    (entryAt_of_isFull hfull h1 h2) (by simp only; rw [hk']; exact hka) List.nodup_range ?_ ?_
   · rw [entryAt_kvN ⟨ctrl, keys, vals⟩ hfull a b i, ite_eq_left rfl]
   · intro j _ hji
     rw [entryAt_kvN ⟨ctrl, keys, vals⟩ hfull a b j, ite_eq_right hji]
   · intro j hj hji e he
-    obtain ⟨hjf, hkj⟩ := entryAt_some he (List.mem_range.mp hj)
+    have hjf := isFull_of_entryAt he (List.mem_range.mp hj)
+    have hkj := (entryAt_eq_some he).2.2.1
     cases hc : (e.1 == a)
     · rfl
     · exact absurd (wf.distinct j i e.1 k hjf hfull hkj hk (BEq.trans hc (BEq.symm hka))) hji
@@ -1086,12 +993,13 @@ theorem WF.entries_eraseN_eraseKey (wf : WF ⟨ctrl, keys, vals⟩ size gl mask 
   unfold Slots.entries
   rw [hcap]
   refine filterMap_eraseKey (i := i) (e₀ := ⟨keys[i], vals[i]⟩) ?_
-    (entryAt_eq_some hfull h1 h2) (by simp only; rw [hk']; exact hka) List.nodup_range ?_ ?_
-  · rw [entryAt_eraseN wf hfull he hic, ite_eq_left rfl]
+    (entryAt_of_isFull hfull h1 h2) (by simp only; rw [hk']; exact hka) List.nodup_range ?_ ?_
+  · rw [entryAt_eraseN he hic, ite_eq_left rfl]
   · intro j hj hji
-    rw [entryAt_eraseN wf hfull he (List.mem_range.mp hj), ite_eq_right hji]
+    rw [entryAt_eraseN he (List.mem_range.mp hj), ite_eq_right hji]
   · intro j hj hji e he
-    obtain ⟨hjf, hkj⟩ := entryAt_some he (List.mem_range.mp hj)
+    have hjf := isFull_of_entryAt he (List.mem_range.mp hj)
+    have hkj := (entryAt_eq_some he).2.2.1
     cases hc : (e.1 == a)
     · rfl
     · exact absurd (wf.distinct j i e.1 k hjf hfull hkj hk (BEq.trans hc (BEq.symm hka))) hji
@@ -1117,7 +1025,8 @@ private theorem entries_of_absent [BEq α] {s : Slots α β} {a : α} (h : s.Abs
   intro e he
   unfold Slots.entries at he
   obtain ⟨j, hj, hje⟩ := List.mem_filterMap.mp he
-  obtain ⟨hjf, hk⟩ := entryAt_some hje (List.mem_range.mp hj)
+  have hjf := isFull_of_entryAt hje (List.mem_range.mp hj)
+  have hk := (entryAt_eq_some hje).2.2.1
   exact h j e.1 hjf hk
 
 /-- `a` is absent from a well-formed table when no entry has a key `== a`. -/
@@ -1132,7 +1041,7 @@ private theorem absent_of_entries [BEq α] [Hashable α] {s : Slots α β} {size
   have hk' : s.keys[i] = k := by rw [getElem?_pos s.keys i hik] at hk; exact Option.some.inj hk
   have hmem : (⟨s.keys[i], s.vals[i]'(wf.vals_lt hi.1)⟩ : (_ : α) × β) ∈ s.entries := by
     unfold Slots.entries
-    exact List.mem_filterMap.mpr ⟨i, List.mem_range.mpr hi.1, entryAt_eq_some hi hik _⟩
+    exact List.mem_filterMap.mpr ⟨i, List.mem_range.mpr hi.1, entryAt_of_isFull hi hik _⟩
   have := h _ hmem
   simp only at this
   rwa [hk'] at this
@@ -1154,12 +1063,6 @@ theorem rebuild_perm (t : Table α β) (lg : Nat) (k0 : α) (v0 : β)
     (rebuild t lg k0 v0 h).slots.entries.Perm t.slots.entries := by
   obtain ⟨ctrl, keys, vals, size, gl, mask, shift, req, wf⟩ := t
   exact rebuild_perm_raw wf h rfl
-
-/-- A rebuild keeps the size. -/
-theorem rebuild_size (t : Table α β) (lg : Nat) (k0 : α) (v0 : β)
-    (h : RebuildPre t.slots t.size lg) : (rebuild t lg k0 v0 h).size = t.size := by
-  obtain ⟨ctrl, keys, vals, size, gl, mask, shift, req, wf⟩ := t
-  rfl
 
 /-- A fresh table has no entries. -/
 theorem emptyTable_entries (lg : Nat) (k0 : α) (v0 : β) (req : Nat) (h : 3 ≤ lg) :

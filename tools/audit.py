@@ -6,9 +6,10 @@ Fails (exit status 1) when a library source file
 
   * does not start with `module` (every library file uses the module system, ARCHITECTURE.md §2.3);
   * contains, outside comments and string literals, one of the escape hatches excluded by the
-    correctness standard: `sorry`, `admit`, `native_decide`, `decide +native`, `ofReduceBool`,
-    `trustCompiler`, `implemented_by`, `extern`, `unsafe`, `partial`, `opaque` (as a keyword:
-    the attribute `cbv_opaque` is fine), `axiom`, `debug.skipKernelTC`, or `import all`.
+    correctness standard: `sorry`, `admit`, `native_decide`, `decide +native`, `bv_decide`
+    (its proofs use `Lean.ofReduceBool`), `ofReduceBool`, `trustCompiler`, `implemented_by`,
+    `extern`, `unsafe`, `partial`, `opaque` (as a keyword: the attribute `cbv_opaque` is fine),
+    `axiom`, `debug.skipKernelTC`, or `import all`.
 
 Comments (including doc comments) and strings are blanked first, so documentation may mention
 these words. The kernel-level counterpart is test/OAMapTest/Audit.lean.
@@ -22,6 +23,7 @@ FORBIDDEN = [
     (re.compile(r'\badmit\b'), 'admit'),
     (re.compile(r'\bnative_decide\b'), 'native_decide'),
     (re.compile(r'\bdecide\s*\+\s*native\b'), 'decide +native'),
+    (re.compile(r'\bbv_decide\b'), 'bv_decide'),
     (re.compile(r'\bofReduceBool\b'), 'ofReduceBool'),
     (re.compile(r'\btrustCompiler\b'), 'trustCompiler'),
     (re.compile(r'\bimplemented_by\b'), 'implemented_by'),

@@ -5,9 +5,8 @@ public import OAMap.Core.Swiss.Proofs.Write
 /-!
 # Swiss core proofs, part 5: the bulk passes of `filterMap` and `map`
 
-A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure"). Its
-owner edits only this file: the proofs, and any private helper lemmas or definitions. The
-statements are fixed: `Table.lean` and `Proofs/Traverse.lean` use them.
+A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure"); `Table.lean`
+and `Proofs/Traverse.lean` use its statements.
 
 * `firstFull` and `firstSome` find the first full slot (whose entry `f` keeps) from slot `i` on
   (`firstFull_spec`, `firstFull_none`, `firstSome_spec`, `firstSome_none`).
@@ -18,13 +17,13 @@ statements are fixed: `Table.lean` and `Proofs/Traverse.lean` use them.
   `List.filterMap` over the old ones, in slot order (`filterMap_entries_raw`; each erasure is
   `entryAt_eraseN`).
 
-Route (the private `fm_loop`, by `fun_induction`): an invariant of `filterMapLoop` after the
-slots below `i`: `cap = ctrl.size - 8`, `⟨ctrl, keys, vals⟩` with the counters `size`/`gl` is well
-formed (`WF.eraseN` at each erasure, the value array kept by `Array.set_getElem_self`), its entry
-at each slot `j < i` is the old one if `f` keeps it and none otherwise (`entryAt_eraseN`), the
-slots from `i` on are the old ones, `out` has `i` cells, and cell `j < i` holds the mapped value
-of each kept entry `j`. At the end `out` has `cap + 1` cells, and swapping in `out` as the value
-array (`entryAt_vals`, `WF.replaceVals`) gives the mapped entries.
+The proof (the private `fm_loop`, by `fun_induction`) carries an invariant of `filterMapLoop` after
+the slots below `i`: `cap = ctrl.size - 8`, `⟨ctrl, keys, vals⟩` with the counters `size`/`gl` is
+well formed (`WF.eraseN` at each erasure, the value array kept by `Array.set_getElem_self`), its
+entry at each slot `j < i` is the old one if `f` keeps it and none otherwise (`entryAt_eraseN`),
+the slots from `i` on are the old ones, `out` has `i` cells, and cell `j < i` holds the mapped
+value of each kept entry `j`. At the end `out` has `cap + 1` cells, and swapping in `out` as the
+value array (`entryAt_vals`, `WF.replaceVals`) gives the mapped entries (`fm_result`).
 -/
 
 @[expose] public section
@@ -146,46 +145,6 @@ theorem firstSome_none {f : α → β → Option γ} {ctrl : ByteArray} {keys : 
 
 /-! ### Private helpers: entries slot by slot, and the loop invariant -/
 
-/-- `List.filterMap` with pointwise equal functions on the list. -/
-private theorem filterMap_congr' {δ : Type _} {ε : Type _} {l : List δ} {f g : δ → Option ε}
-    (h : ∀ x ∈ l, f x = g x) : l.filterMap f = l.filterMap g := by
-  induction l with
-  | nil => rfl
-  | cons a l ih =>
-    simp only [List.filterMap_cons, h a List.mem_cons_self,
-      ih (fun x hx => h x (List.mem_cons_of_mem _ hx))]
-
-/-- The entry of a full slot with key and value cells. -/
-private theorem entryAt_of_full {s : Slots α β} {i : Nat} (hc : i < s.ctrl.size)
-    (hk : i < s.keys.size) (hv : i < s.vals.size) (hf : s.ctrl[i] < 0x80) :
-    s.entryAt i = some ⟨s.keys[i], s.vals[i]⟩ := by
-  simp [Slots.entryAt, hc, hk, hv, hf]
-
-/-- A slot whose byte is not FULL has no entry. -/
-private theorem entryAt_notFull {s : Slots α β} {i : Nat} (hc : i < s.ctrl.size)
-    (hf : ¬s.ctrl[i] < 0x80) : s.entryAt i = none := by
-  simp [Slots.entryAt, hc, hf]
-
-/-- A slot with an entry is full and holds the entry's key and value. -/
-private theorem entryAt_some {s : Slots α β} {i : Nat} {p : (_ : α) × β}
-    (h : s.entryAt i = some p) :
-    s.ctrl[i]! < 0x80 ∧ s.keys[i]? = some p.1 ∧ s.vals[i]? = some p.2 := by
-  unfold Slots.entryAt at h
-  split at h
-  · rename_i c hc
-    split at h
-    · rename_i hlt
-      have hi : i < s.ctrl.size := by
-        rcases Nat.lt_or_ge i s.ctrl.size with h' | h'
-        · exact h'
-        · simp [h'] at hc
-      have : s.ctrl[i] = c := by simpa [hi] using hc
-      refine ⟨by simp [hi, this, hlt], ?_⟩
-      cases hk : s.keys[i]? <;> cases hv : s.vals[i]? <;> simp_all
-      cases p; simp_all
-    · simp at h
-  · simp at h
-
 /-- Swapping the value array: the entry of a slot is read off the same control byte and key
 cell, with the value cell of the new array. -/
 private theorem entryAt_vals {c : ByteArray} {k : Array α} {v : Array β} {w : Array γ} {j : Nat}
@@ -270,13 +229,13 @@ private theorem fm_erase [BEq α] [Hashable α] {mask : USize} {shift : UInt64}
   have hfull : Slots.IsFull ⟨ctrl, keys, vals⟩ i :=
     ⟨h, by rw [getElem!_pos ctrl i (hA.ctrl_lt h)]; exact hf⟩
   have hs0 : s0.entryAt i = some ⟨keys[i], vals[i]⟩ := by
-    rw [fm_cur h hent]; exact entryAt_of_full (s := ⟨ctrl, keys, vals⟩) (hA.ctrl_lt h) hk hv hf
+    rw [fm_cur h hent]; exact entryAt_of_full (s := ⟨ctrl, keys, vals⟩) (hA.ctrl_lt h) hf hk hv
   have hsz := size_eraseCtrlN ctrl size gl _ i h hA.word
   rw [he] at hsz
   have wf' := wf.eraseN hfull he (k0 := keys[ctrl.size - 8]'hA.keys) (v0 := vals[i])
     (h1 := hk) (h2 := hv)
   rw [Array.set_getElem_self] at wf'
-  have hE := fun j (hj : j < ctrl.size - 8) => entryAt_eraseN wf hfull he
+  have hE := fun j (hj : j < ctrl.size - 8) => entryAt_eraseN he
     (k0 := keys[ctrl.size - 8]'hA.keys) (v0 := vals[i]) (h1 := hk) (h2 := hv) hj
   simp only [Array.set_getElem_self] at hE
   refine ⟨by simp only at hsz; omega, wf', ?_, ?_⟩
@@ -301,8 +260,8 @@ private theorem fm_keep {f : α → β → Option γ} {vals : Array β} {s0 : Sl
        else s0.entryAt j) ∧
     (∀ j < i + 1, ∀ p c, s0.entryAt j = some p → f p.1 p.2 = some c →
       (out.push x)[j]? = some c) := by
-  have hcur := entryAt_of_full (s := ⟨ctrl, keys, vals⟩) (hA.ctrl_lt h) (hA.keys_lt h)
-    (hA.vals_lt h) hf
+  have hcur := entryAt_of_full (s := ⟨ctrl, keys, vals⟩) (hA.ctrl_lt h) hf (hA.keys_lt h)
+    (hA.vals_lt h)
   have hs0 : s0.entryAt i = some ⟨keys[i]'(hA.keys_lt h), vals[i]'(hA.vals_lt h)⟩ := by
     rw [fm_cur h hent]; exact hcur
   refine ⟨hent_step hent (fun j _ _ => rfl) fun _ => ?_, hout_step hos hout fun p c hp hc => ?_⟩
@@ -340,8 +299,8 @@ private theorem fm_loop [BEq α] [Hashable α] {mask : USize} {shift : UInt64}
     subst hcap
     have hs0 : s0.entryAt i = some ⟨keys[i]'(hA.keys_lt h), vals[i]'(hA.vals_lt h)⟩ := by
       rw [fm_cur h hent]
-      exact entryAt_of_full (s := ⟨ctrl, keys, vals⟩) (hA.ctrl_lt h) (hA.keys_lt h)
-        (hA.vals_lt h) hf
+      exact entryAt_of_full (s := ⟨ctrl, keys, vals⟩) (hA.ctrl_lt h) hf (hA.keys_lt h)
+        (hA.vals_lt h)
     obtain ⟨h1, h2, h3, h4⟩ :=
       fm_erase (x := c0) hA h hf (hrej i hlt _ hs0) he wf hent hos hout
     exact ih h1 (by omega) h2 h3 (by simp [hos]) h4
@@ -349,8 +308,8 @@ private theorem fm_loop [BEq α] [Hashable α] {mask : USize} {shift : UInt64}
     intro hcap hi wf hent hos hout
     have hs0 : s0.entryAt i0 = some ⟨keys[i0]'(hA.keys_lt h), vals[i0]'(hA.vals_lt h)⟩ := by
       rw [fm_cur h hent]
-      exact entryAt_of_full (s := ⟨ctrl, keys, vals⟩) (hA.ctrl_lt h) (hA.keys_lt h)
-        (hA.vals_lt h) hf
+      exact entryAt_of_full (s := ⟨ctrl, keys, vals⟩) (hA.ctrl_lt h) hf (hA.keys_lt h)
+        (hA.vals_lt h)
     obtain ⟨h3, h4⟩ := fm_keep hA h hf (hi0 _ hs0) hent hos hout
     exact ih hcap (by omega) wf h3 (by simp [hos]) h4
   | case3 i ctrl keys size gl out hA h hf hlt hne c hc ih =>
@@ -364,7 +323,7 @@ private theorem fm_loop [BEq α] [Hashable α] {mask : USize} {shift : UInt64}
     exact ih h1 (by omega) h2 h3 (by simp [hos]) h4
   | case5 i ctrl keys size gl out hA h hf ih =>
     intro hcap hi wf hent hos hout
-    have hcur := entryAt_notFull (s := ⟨ctrl, keys, vals⟩) (hA.ctrl_lt h) hf
+    have hcur := entryAt_of_not_full (s := ⟨ctrl, keys, vals⟩) (hA.ctrl_lt h) hf
     have hs0 : s0.entryAt i = none := by rw [fm_cur h hent]; exact hcur
     apply ih hcap (by omega) wf ?_ (by simp [hos]) ?_
     · exact hent_step hent (fun j _ _ => rfl) fun _ => by rw [hcur, hs0]; rfl
@@ -399,10 +358,10 @@ private theorem fm_result [BEq α] [Hashable α] {ctrl : ByteArray} {keys : Arra
   obtain ⟨hcap', wf', hent', hos', hout'⟩ :=
     fm_loop (s0 := ⟨ctrl, keys, vals⟩) (f := f) (c0 := c0) (i0 := i0)
       (fun j hj p hp => by
-        obtain ⟨h1, h2, h3⟩ := entryAt_some hp
+        obtain ⟨-, h1, h2, h3⟩ := entryAt_eq_some hp
         exact hrej j (Nat.zero_le _) hj h1 p.1 p.2 h2 h3)
       (fun p hp => by
-        obtain ⟨-, h2, h3⟩ := entryAt_some hp
+        obtain ⟨-, -, h2, h3⟩ := entryAt_eq_some hp
         have e1 : p.1 = k0 := Option.some.inj (h2.symm.trans hk0)
         have e2 : p.2 = v0 := Option.some.inj (h3.symm.trans hv0)
         rw [e1, e2]; exact hf0)
@@ -462,7 +421,7 @@ theorem filterMap_entries_raw (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift
   obtain ⟨hc, -, hE⟩ := fm_result wf hs hl
   unfold Slots.entries Slots.cap
   rw [List.filterMap_filterMap, ← hc]
-  exact filterMap_congr' fun j hj => hE j (List.mem_range.mp hj)
+  exact filterMap_congr_mem fun j hj => hE j (List.mem_range.mp hj)
 
 end FilterMap
 

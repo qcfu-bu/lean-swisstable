@@ -12,13 +12,13 @@ those functions to the functions defined there, and checks:
    in-place update of it (`lean_array_uset`, `lean_byte_array_uset`, ...), which would make the
    update copy the whole array;
 3. lookups (getD, get!, contains, getKeyD, HashSet.contains): no allocation on the machine-word
-   path. Allocation calls are allowed only in the Nat-indexed probes for tables of 2^31 slots or
-   more (`findN`, `findLoopN`, which return an `Option`) and in `panic`;
+   path. Allocation calls are allowed only in the Nat-indexed probes for tables of more than 2^31
+   slots (`findN`, `findLoopN`, which return an `Option`) and in `panic`;
 4. updates (insert, insertIfNew, getThenInsertIfNew?, containsThenInsert, erase, modify, alter,
    HashSet.insert): the result reuses the argument's table cell when that is unshared (Lean's
    `reuseFailAlloc` pattern: the table is allocated only when the argument is shared, or by a
    rebuild), and the arrays are updated in place (2). A table cell allocated by the Nat-indexed
-   versions (tables of 2^31 slots or more) is printed as a note.
+   versions (tables of more than 2^31 slots) is printed as a note.
 
     lake build Bench.CCheck && python3 -I tools/check_c.py [-v] [CCheck.c]
 """
@@ -41,7 +41,7 @@ ALLOC = re.compile(r"\b(lean_alloc_\w+|lean_box_uint64|lean_box_usize|lean_box_u
                    r"lean_box_float\w*|lean_mk_string\w*|lean_mk_array|lean_mk_empty_\w+|"
                    r"lean_copy_\w+|lean_nat_big_\w+|lean_usize_to_nat|lean_uint64_to_nat|"
                    r"lean_cnstr_\w+)\(")
-# The Nat-indexed probes (tables of 2^31 slots or more) return an `Option`; `panic` builds its
+# The Nat-indexed probes (tables of more than 2^31 slots) return an `Option`; `panic` builds its
 # message. Only these may allocate on a lookup.
 COLD = re.compile(r"_find(Loop)?N___|panic")
 # The functions that build a fresh table (the allocation, the rebuild and its loops), and the
@@ -49,7 +49,7 @@ COLD = re.compile(r"_find(Loop)?N___|panic")
 FRESH = re.compile(r"_(rebuild|emptyTable|reserveTable|emptyImpl|moveLoop|moveLoopN)___")
 TABLE_ALLOC = "lean_alloc_ctor(0, 6, sizeof(size_t)*1 + 8)"
 # The Nat-indexed versions of the operations (`containsThenInsertN`, `eraseN`, ...), which run
-# only on tables of 2^31 slots or more. A table cell they allocate is reported, not failed.
+# only on tables of more than 2^31 slots. A table cell they allocate is reported, not failed.
 NAT_PATH = re.compile(r"[a-z]N___at___")
 
 
@@ -168,7 +168,7 @@ def main():
                         if TABLE_ALLOC in l and not l.startswith("v_reuseFailAlloc"):
                             msg = f"table cell allocated outside a reuse fallback in {f}"
                             if NAT_PATH.search(f):
-                                notes.add(msg + " (Nat path, tables of 2^31 slots or more)")
+                                notes.add(msg + " (Nat path, tables of more than 2^31 slots)")
                             else:
                                 problems.append(msg)
             status = "ok  " if not problems else "FAIL"

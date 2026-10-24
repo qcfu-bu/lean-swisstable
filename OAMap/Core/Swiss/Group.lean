@@ -3,8 +3,9 @@ module
 /-!
 # Groups of control bytes for a SwissTable core
 
-Definitions and lemmas that any SwissTable-style core (hashbrown's generic, non-SIMD layout)
-needs, independent of keys and values. Nothing here is imported by the library yet.
+Definitions and lemmas that a SwissTable-style core (hashbrown's generic, non-SIMD layout) needs,
+independent of keys and values. The selected core `OAMap.Core.Swiss` (`Defs.lean` on) is built on
+them; the lemmas are stated for any such core, so some of them are not used by this one.
 
 ## Layout assumed
 
@@ -41,17 +42,16 @@ byte `k < cap` is the control byte of slot `k`, and bytes `cap .. cap + 7` repea
   8-slot window containing slot `i` already has an EMPTY slot
   (`exists_empty_of_needsTombstone_eq_false`), so writing EMPTY cannot cut a probe short; on
   masks, `needsTombstone_eq_false_iff` says it is `false` exactly then.
-* Triangular probing over groups, as both prototypes do it: the `k`-th group starts at
+* Triangular probing over groups, as the core's probes do it: the `k`-th group starts at
   `probePos cap p₀ k = (p₀ + 8 * (k * (k + 1) / 2)) % cap`, which the loop computes as
   `pos ← (pos + stride) &&& mask` after `stride ← stride + 8` (`probe_step`). The first
   `cap / 8` groups cover every slot (`probe_cover`), each exactly once (`probe_unique`).
-  `probe_index` is the in-place rehash's group index `((s - p₀) &&& mask) / 8`.
 
 The lemmas about `setCtrl` assume `cap < USize.size`, so that slot `i + cap` of the mirror is an
 index that does not wrap. Core Lean bounds no array size by `USize.size`, so a core must get it
 from its allocation (`lg < System.Platform.numBits`) and keep it in its invariant (`Geom`).
-Swiss's unallocated empty map (8 control bytes, `mask = 0`) is not `Mirrored`: a core either
-allocates 8 slots for `∅` (as SwissH does) or proves that case with `byte_ctrlWord` directly.
+The core's unallocated empty map (the 8 EMPTY bytes `emptyGroup`, `mask = 0`) is not `Mirrored`;
+the core proves that case with `byte_ctrlWord` directly (`firstGroup` in `Proofs/Bounds.lean`).
 
 ## Use from other modules
 
@@ -66,14 +66,15 @@ with these lemmas only.
 
 ## Design choices
 
-* The tag match is the exact form, not hashbrown's borrow form `(x - lsbs) &&& ~~~x &&& msbs`
-  that both prototypes use. It costs one instruction more per group (5 against 4 on arm64), and
-  the Swiss prototype measured it within ±2% of the borrow form (its "Measured alternatives"
-  notes). It never flags a byte other than the tag, so a core needs no case for false positives
-  and never compares a key for one.
-* Only the Swiss prototype's comparison form of the erase rule is specified. SwissH's smear and
-  `countLanes` formula takes the same decision on all 65536 pairs of masks (checked by a script,
-  not proved), but costs more instructions and has no lemma here.
+* The tag match is the exact form, not hashbrown's borrow form `(x - lsbs) &&& ~~~x &&& msbs`,
+  which the bake-off prototypes used. It costs one instruction more per group (5 against 4 on
+  arm64), and the SwissF prototype measured it within ±2% of the borrow form (its "Measured
+  alternatives" notes, `docs/bakeoff/SwissF.lean.txt`). It never flags a byte other than the tag,
+  so a core needs no case for false positives and never compares a key for one.
+* The erase rule is specified in the comparison form the core uses (`needsTombstone`), not in
+  hashbrown's form that counts the EMPTY lanes before and after the slot. The bake-off's counting
+  version (by smearing the masks) took the same decision on all 65536 pairs of masks (checked by
+  a script, not proved) but cost more instructions; it has no lemma here.
 
 ## Proof method
 
@@ -185,7 +186,7 @@ open Lane
 
 /-! ## Control bytes -/
 
-/-- The control byte of an empty slot (never full since the last rehash). -/
+/-- The control byte of an empty slot (never full since the last rebuild). -/
 @[inline] def EMPTY : UInt8 := 0xFF
 
 /-- The control byte of a tombstone. -/
@@ -415,7 +416,7 @@ theorem msbs_and_lows : msbs &&& lows = 0 := by decide
 theorem repTag_eq (t : UInt8) : repTag t = t.toUInt64 * 0x0101010101010101 := by
   unfold repTag; rw [lsbs_eq]
 
-/-- The prototypes' replicated tag `x * lsbs`, for `x < 256`, is `repTag x.toUInt8`. -/
+/-- The replicated tag in hashbrown's form `x * lsbs`, for `x < 256`, is `repTag x.toUInt8`. -/
 theorem repTag_toUInt8 {x : UInt64} (hx : x < 256) :
     repTag x.toUInt8 = x * 0x0101010101010101 := by
   have hx' : x.toNat < 256 := UInt64.lt_iff_toNat_lt.mp hx
@@ -428,7 +429,7 @@ theorem and_7F_lt (x : UInt64) : x &&& 0x7F < 256 := by
   rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_and]
   exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
 
-/-- The tag `h2 = (q &&& 0x7F).toUInt8` of both prototypes is FULL. -/
+/-- The tag `h2 = (q &&& 0x7F).toUInt8` (the core's `tagOf`) is FULL. -/
 theorem toUInt8_and_7F_lt (x : UInt64) : (x &&& 0x7F).toUInt8 < 0x80 := by
   rw [UInt8.lt_iff_toNat_lt, UInt64.toNat_toUInt8, UInt64.toNat_and]
   exact Nat.lt_of_le_of_lt (Nat.mod_le _ _) (Nat.lt_of_le_of_lt Nat.and_le_right (by decide))
@@ -679,8 +680,8 @@ theorem clearLowest_lt {m : UInt64} (hm : IsMask m) (h0 : m ≠ 0) :
   forall_mask (fun m => m ≠ 0 → (clearLowest m).toNat < m.toNat)
     (by decide +kernel) hm h0
 
-/-- `lowestLane` is a lane of the group for every mask, `0` included (SwissH's `insertNew` takes
-`lowestLane (matchFree g)` without testing the mask). -/
+/-- `lowestLane` is a lane of the group for every mask, `0` included, so a slot index computed
+from it is in bounds without a test of the mask. -/
 theorem lowestLane_lt {m : UInt64} (hm : IsMask m) : (lowestLane m).toNat < 8 := by
   have h8 := forall_mask (fun m => (lowestLane64 m).toNat < 8) (by decide +kernel) hm
   rw [toNat_lowestLane h8]; exact h8
@@ -1180,7 +1181,7 @@ theorem probePos_succ (cap p₀ k : Nat) :
   unfold probePos
   rw [Nat.mod_add_mod, tri_succ, Nat.mul_add, Nat.add_assoc]
 
-/-- **One probe step in `USize`**, as the prototypes compute it: from the group `pos` of step `k`
+/-- **One probe step in `USize`**, as the core computes it: from the group `pos` of step `k`
 with `stride = 8 * k`, `stride + 8` and `(pos + (stride + 8)) &&& mask` are those of step
 `k + 1`. -/
 theorem probe_step {pos stride mask : USize} {cap n p₀ k : Nat} (hcap : cap = 2 ^ n)
@@ -1272,22 +1273,6 @@ theorem probe_slot_eq {cap n : Nat} (hcap : cap = 2 ^ n) (h8 : 8 ≤ cap) (p₀ 
       rw [← Nat.mul_assoc, ← h8G]
     omega
   rw [e, Nat.add_mul_mod_self_left]
-
-/-- **The probe index of a slot** (hashbrown's `probe_index`, used by the in-place rehash to test
-whether a slot is in the same group of a probe as another): for lane `j` of group `k` of the
-probe from `p₀ < cap`, `((s + (cap - p₀)) % cap) / 8` is `tri k % (cap / 8)`, the same for the
-8 lanes of a group and, by `tri_mod_inj`, different for the first `cap / 8` groups. With
-`toNat_sub_and_mask`, it is `((s - p₀) &&& mask) >>> 3` in `USize`. -/
-theorem probe_index {cap n p₀ : Nat} (hcap : cap = 2 ^ n) (h8 : 8 ≤ cap) (hp : p₀ < cap)
-    (k : Nat) {j : Nat} (hj : j < 8) :
-    ((probePos cap p₀ k + j) % cap + (cap - p₀)) % cap / 8 = tri k % (cap / 8) := by
-  obtain ⟨h8G, -⟩ := cap_facts hcap h8
-  have hr := Nat.mod_lt (tri k) (show 0 < cap / 8 by omega)
-  rw [probe_slot_eq hcap h8, Nat.mod_add_mod,
-    show p₀ + (8 * (tri k % (cap / 8)) + j) + (cap - p₀) = 8 * (tri k % (cap / 8)) + j + cap
-      by omega,
-    Nat.add_mod_right, Nat.mod_eq_of_lt (by omega)]
-  omega
 
 private theorem mod_two_cases {x cap : Nat} (hx : x < 2 * cap) :
     x % cap = if x < cap then x else x - cap := by

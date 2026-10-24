@@ -6,11 +6,9 @@ public import Std.Data.Internal.List.Associative
 /-!
 # Swiss core proofs, part 8: filter, filterMap, map and the traversals (contract 17–22)
 
-A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure"). Its
-owner edits only this file: the proofs, and any private helper lemmas or definitions. The
-contract lemmas (`docs/ARCHITECTURE.md` §3.3) are fixed word for word; the helpers below are the
-suggested route and may be changed or dropped (no other file uses them). All six lemmas are
-**U**: no lawfulness, only the invariant's unconditional part (`WF.shape`, `WF.size_eq`).
+A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure"): the
+contract lemmas 17–22 (`docs/ARCHITECTURE.md` §3.3). All six are **U**: no lawfulness, only the
+invariant's unconditional part (`WF.shape`, `WF.size_eq`).
 
 * **The traversals** (`foldM`, `foldRev`, `forIn`) go a group at a time over the `matchFull` mask
   of each group, lowest lane first (`foldRev`: highest lane first, last group first); the groups
@@ -18,16 +16,17 @@ suggested route and may be changed or dropped (no other file uses them). All six
   (`byte_ctrlWord'`, `byte_ctrlWordN`) and a lane's flag says the slot is full
   (`flag_matchFull`); `lowestLane_spec` and `flag_clearLowest` walk the lanes in order. So each
   loop folds over `entryAt` of the slots in (reverse) order: `(List.range cap).filterMap entryAt`
-  is the model. The machine-word loops are the `Nat` ones (`foldMLoop_eq_foldMLoopN`, ...).
-  The unallocated table has no group to visit (`cap = 0`).
+  is the model. The unallocated table has no group to visit (`cap = 0`).
   In the proofs, `laneEntries s p fm` is the list of entries of the lanes of `fm` in the group at
   `p`, and `restEntries` is that list followed by the full slots of the later groups: what a
   forward loop at `(p, fm)` has still to visit. Each `Nat` loop is shown by functional induction
   to fold over `restEntries` (`foldMLoopN_spec`, `forInLoopN_spec`; `foldRevGroupN_spec` and
   `foldRevLoopN_spec` for the reverse fold), and each machine-word loop equals its `Nat` loop
-  (`foldMLoop_eq_gen`, `forInLoop_eq_gen`, `foldRevGroup_eq_gen`, `foldRevLoop_eq_gen`).
-* **filter** erases the rejected entries in slot order (`filterLoop`, `eraseAtN`: pointwise, an
-  erasure removes exactly its slot, `entryAt_eraseN` of `Proofs/Write.lean`).
+  (`foldMLoop_eq_gen`, `forInLoop_eq_gen`, `foldRevGroup_eq_gen`, `foldRevLoop_eq_gen`; from the
+  first group, `foldMLoop_eq_foldMLoopN`).
+* **filter** erases the rejected entries in slot order (`filterLoop_entries`): pointwise, an
+  erasure removes exactly its slot (`eraseAtN_entryAt`, from `entryAt_eraseN` of
+  `Proofs/Write.lean`).
 * **filterMap** is `filterMap_entries_raw` of `Proofs/Bulk.lean`, or the unallocated table when
   `firstSome` finds nothing (`firstSome_none`: every entry is rejected).
 * **map** rewrites the value of each full slot (`Array.getElem_mapFinIdx`, slot by slot), or is
@@ -48,62 +47,14 @@ variable {α : Type u} {β : Type v} {γ : Type w}
 
 /-! ## The entries, slot by slot -/
 
-private theorem filterMap_congr' {δ : Type _} {ζ : Type _} {f g : δ → Option ζ} {l : List δ}
-    (h : ∀ x ∈ l, f x = g x) : l.filterMap f = l.filterMap g := by
-  induction l with
-  | nil => rfl
-  | cons a l ih =>
-    simp only [List.filterMap_cons, h a (by simp), ih (fun x hx => h x (by simp [hx]))]
-
-/-- The entry of a full slot. -/
-private theorem entryAt_full (s : Slots α β) {i : Nat} (hc : i < s.ctrl.size)
-    (hf : s.ctrl[i] < 0x80) (hk : i < s.keys.size) (hv : i < s.vals.size) :
-    s.entryAt i = some ⟨s.keys[i], s.vals[i]⟩ := by
-  unfold Slots.entryAt
-  rw [getElem?_pos s.ctrl i hc]
-  simp [hf, hk, hv]
-
-/-- A slot that is not full has no entry. -/
-private theorem entryAt_not_full (s : Slots α β) {i : Nat} (hc : i < s.ctrl.size)
-    (hf : ¬s.ctrl[i] < 0x80) : s.entryAt i = none := by
-  unfold Slots.entryAt
-  rw [getElem?_pos s.ctrl i hc]
-  simp [hf]
-
-/-- A slot with an entry is a full slot, and the entry is its key and value. -/
-private theorem entryAt_eq_some {s : Slots α β} {i : Nat} {e : (_ : α) × β}
-    (h : s.entryAt i = some e) :
-    ∃ (hc : i < s.ctrl.size) (hk : i < s.keys.size) (hv : i < s.vals.size),
-      s.ctrl[i] < 0x80 ∧ e = ⟨s.keys[i], s.vals[i]⟩ := by
-  unfold Slots.entryAt at h
-  by_cases hc : i < s.ctrl.size
-  · rw [getElem?_pos s.ctrl i hc] at h
-    by_cases hf : s.ctrl[i] < 0x80
-    · by_cases hk : i < s.keys.size
-      · by_cases hv : i < s.vals.size
-        · simp only [hf, ite_true, getElem?_pos s.keys i hk, getElem?_pos s.vals i hv,
-            Option.bind_some, Option.map_some, Option.some.injEq] at h
-          exact ⟨hc, hk, hv, hf, h.symm⟩
-        · simp [hf, getElem?_neg s.vals i hv] at h
-      · simp [hf, getElem?_neg s.keys i hk] at h
-    · simp [hf] at h
-  · rw [getElem?_neg s.ctrl i hc] at h
-    simp at h
-
-/-- The entries are the entries of the slots. -/
-private theorem mem_entries {s : Slots α β} {e : (_ : α) × β} :
-    e ∈ s.entries ↔ ∃ j, j < s.cap ∧ s.entryAt j = some e := by
-  unfold Slots.entries
-  simp [List.mem_filterMap, List.mem_range]
-
 /-- With no full slot, there is no entry. -/
 private theorem entries_eq_nil_of {s : Slots α β}
     (h : ∀ j, j < s.cap → ∀ hc : j < s.ctrl.size, ¬s.ctrl[j] < 0x80) : s.entries = [] := by
   apply List.eq_nil_iff_forall_not_mem.mpr
   intro e he
   obtain ⟨j, hj, hje⟩ := mem_entries.mp he
-  obtain ⟨hc, -, -, hf, -⟩ := entryAt_eq_some hje
-  exact h j hj hc hf
+  obtain ⟨hc, hf, -, -⟩ := entryAt_eq_some hje
+  exact h j hj hc (by rwa [getElem!_eq_getElem hc] at hf)
 
 /-- The unallocated table has no entry. -/
 private theorem emptyImpl_entries [BEq α] [Hashable α] (c : Nat) :
@@ -182,7 +133,7 @@ private theorem laneEntries_step (s : Slots α β) (p : Nat) {fm : UInt64} (hm :
       (fun j => if flag (clearLowest fm) j then s.entryAt (p + j) else none) =
       (List.range' (l + 1) (7 - l)).filterMap
       (fun j => if flag fm j then s.entryAt (p + j) else none) := by
-    apply filterMap_congr'
+    apply filterMap_congr_mem
     intro a ha
     rw [List.mem_range'_1] at ha
     have : (a != l) = true := by simp; omega
@@ -204,7 +155,7 @@ private theorem laneEntries_lane (s : Slots α β) (p : Nat) {fm : UInt64} (hm :
   rw [laneEntries_step s p hm h0]
   have e := toNat_lowestLane_of_isMask hm
   rw [e] at hl8 hlf ⊢
-  rw [entryAt_full s (by omega) (hs _ hl8 hlf (by omega))]
+  rw [entryAt_of_full (s := s) (by omega) (hs _ hl8 hlf (by omega))]
   rfl
 
 /-- The lanes of the full mask of a group are its full slots. -/
@@ -213,14 +164,14 @@ private theorem laneEntries_full (s : Slots α β) {p : Nat} {fm : UInt64}
     laneEntries s p fm = (List.range' p 8).filterMap s.entryAt := by
   unfold laneEntries
   rw [List.range'_eq_map_range, List.filterMap_map]
-  apply filterMap_congr'
+  apply filterMap_congr_mem
   intro j hj
   rw [List.mem_range] at hj
   simp only [Function.comp]
   rw [h j hj (by omega)]
   by_cases hf : s.ctrl[p + j] < 0x80
   · simp [hf]
-  · simp [hf, entryAt_not_full s (by omega) hf]
+  · simp [hf, entryAt_of_not_full (s := s) (by omega) hf]
 
 /-- What a traversal from the lanes `fm` of the group at `p` still visits: those lanes, then
 every full slot of the later groups. -/
@@ -264,12 +215,6 @@ private theorem restEntries_init (s : Slots α β) {cap : Nat} {fm : UInt64} (h8
   rw [← List.range'_append]
 
 /-! ## The traversals on `Nat` indices fold over the entries -/
-
-private theorem ne_zero_of_bne {fm : UInt64} (h : (fm != 0) = true) : fm ≠ 0 := by
-  simpa using h
-
-private theorem eq_zero_of_not_bne {fm : UInt64} (h : ¬(fm != 0) = true) : fm = 0 := by
-  simpa using h
 
 /-- The next group of a traversal of `cap` slots (a multiple of 8). -/
 private theorem next16 {cap p : Nat} (hp : GroupAtN cap p) (h8 : cap % 8 = 0) (hlt : p + 8 < cap) :
@@ -415,24 +360,10 @@ private theorem foldRevLoopN_spec {ε : Type w} (f : ε → α → β → ε) (c
 
 /-! ## The machine-word traversals are the `Nat` ones -/
 
-private theorem toNat_add_of_lt {a b : USize} (h : a.toNat + b.toNat < 2 ^ 32) :
-    (a + b).toNat = a.toNat + b.toNat := by
-  rw [USize.toNat_add]
-  exact Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le h USize.le_size)
-
-private theorem toNat_add_eight {a : USize} (h : a.toNat < 2 ^ 31) :
-    (a + 8).toNat = a.toNat + 8 := by
-  rw [toNat_add_of_lt (by simp; omega)]
-  simp
-
 private theorem toNat_add_lowestLane {p : USize} {fm : UInt64} (hm : IsMask fm)
     (h : p.toNat ≤ 2 ^ 31) : (p + lowestLane fm).toNat = p.toNat + (lowestLane64 fm).toNat := by
   have := lowestLane_lt hm
   rw [toNat_add_of_lt (by omega), toNat_lowestLane_of_isMask hm]
-
-private theorem ctrlWordN_congr {c : ByteArray} {i j : Nat} (e : i = j) {h : i + 8 ≤ c.size}
-    {h' : j + 8 ≤ c.size} : ctrlWordN c i h = ctrlWordN c j h' := by
-  subst e; rfl
 
 private theorem FoldU.toN {ctrl : ByteArray} {keys : Array α} {vals : Array β} {cap : USize}
     (h : FoldU ctrl keys vals cap) : FoldN ctrl keys vals cap.toNat :=
@@ -469,7 +400,7 @@ private theorem foldMLoop_eq_gen {ε : Type w} {m : Type w → Type w'} [Monad m
     rw [foldMLoop, dite_eq_right h, foldMLoopN, dite_eq_right h]
     dsimp only
     rw [dite_eq_left hlt, dite_eq_left hlt']
-    have hw : ctrlWord ctrl (p + 8) (hF.next_word hp hlt) =
+    have hw : ctrlWord ctrl (p + 8) (hF.next_word hlt) =
         ctrlWordN ctrl (p.toNat + 8) (hF'.next_word hlt') :=
       (ctrlWord_eq_ctrlWordN (h' := by rw [h8]; exact hF'.next_word hlt') (by omega)).trans
         (ctrlWordN_congr h8)
@@ -520,7 +451,7 @@ private theorem forInLoop_eq_gen {ε : Type w} {m : Type w → Type w'} [Monad m
     rw [forInLoop, dite_eq_right h, forInLoopN, dite_eq_right h]
     dsimp only
     rw [dite_eq_left hlt, dite_eq_left hlt']
-    have hw : ctrlWord ctrl (p + 8) (hF.next_word hp hlt) =
+    have hw : ctrlWord ctrl (p + 8) (hF.next_word hlt) =
         ctrlWordN ctrl (p.toNat + 8) (hF'.next_word hlt') :=
       (ctrlWord_eq_ctrlWordN (h' := by rw [h8]; exact hF'.next_word hlt') (by omega)).trans
         (ctrlWordN_congr h8)
@@ -609,7 +540,7 @@ variable [BEq α] [Hashable α]
 private theorem tentryAt_full (t : Table α β) {i : Nat} (hi : i < t.slots.cap)
     (hf : t.ctrl[i]'(by simp [Slots.cap, Table.slots] at hi; omega) < 0x80) :
     t.slots.entryAt i = some ⟨t.slotKeys[i]'(t.wf.keys_lt hi), t.slotVals[i]'(t.wf.vals_lt hi)⟩ :=
-  entryAt_full t.slots _ hf _ _
+  entryAt_of_full (s := t.slots) _ hf _ _
 
 /-- On the machine-word path, the table has fewer than `2 ^ 32` control bytes. -/
 private theorem ctrl_size_lt (t : Table α β) (hs : smallShift t.shift = true) :
@@ -635,18 +566,18 @@ private theorem entries_of_cap_zero (t : Table α β) (h : t.ctrl.size - 8 = 0) 
   rw [show t.slots.cap = 0 from h]
   rfl
 
-/-- *Suggested route.* An erasure on `Nat` indices removes exactly its slot. -/
-theorem eraseAtN_entryAt (t : Table α β) (i : Nat) (hi : t.slots.IsFull i) {j : Nat}
+/-- An erasure on `Nat` indices removes exactly its slot. -/
+private theorem eraseAtN_entryAt (t : Table α β) (i : Nat) (hi : t.slots.IsFull i) {j : Nat}
     (hj : j < t.slots.cap) :
     (eraseAtN t i hi).slots.entryAt j = if j = i then none else t.slots.entryAt j := by
   obtain ⟨ctrl, keys, vals, size, gl, mask, shift, req, wf⟩ := t
   unfold eraseAtN
   simp only [Table.slots]
-  apply entryAt_eraseN wf hi (Prod.eta _).symm hj
+  apply entryAt_eraseN (Prod.eta _).symm hj
 
-/-- *Suggested route.* `filterLoop` from slot `i`: the slots below `i` are untouched, the others
+/-- `filterLoop` from slot `i`: the slots below `i` are untouched, the others
 filtered. -/
-theorem filterLoop_entries (f : α → β → Bool) (cap i : Nat) (t : Table α β)
+private theorem filterLoop_entries (f : α → β → Bool) (cap i : Nat) (t : Table α β)
     (hc : cap = t.ctrl.size - 8) (hi : i ≤ cap) :
     (filterLoop f cap i t hc).slots.entries =
       (List.range cap).filterMap fun j =>
@@ -656,7 +587,7 @@ theorem filterLoop_entries (f : α → β → Bool) (cap i : Nat) (t : Table α 
   | case1 i t hc h hf hk ih =>
     intro hi
     rw [filterLoop, dite_eq_left h, dite_eq_left hf, ite_eq_left hk, ih (by omega)]
-    apply filterMap_congr'
+    apply filterMap_congr_mem
     intro j hj
     by_cases hji : j < i
     · simp [hji, Nat.lt_succ_of_lt hji]
@@ -670,7 +601,7 @@ theorem filterLoop_entries (f : α → β → Bool) (cap i : Nat) (t : Table α 
   | case2 i t hc h hf hk ih =>
     intro hi
     rw [filterLoop, dite_eq_left h, dite_eq_left hf, ite_eq_right hk, ih (by omega)]
-    apply filterMap_congr'
+    apply filterMap_congr_mem
     intro j hj
     have hj' : j < t.slots.cap := by simp at hj; simp [Slots.cap, Table.slots]; omega
     rw [eraseAtN_entryAt t i _ hj']
@@ -686,13 +617,13 @@ theorem filterLoop_entries (f : α → β → Bool) (cap i : Nat) (t : Table α 
   | case3 i t hc h hf ih =>
     intro hi
     rw [filterLoop, dite_eq_left h, dite_eq_right hf, ih (by omega)]
-    apply filterMap_congr'
+    apply filterMap_congr_mem
     intro j hj
     by_cases hji : j < i
     · simp [hji, Nat.lt_succ_of_lt hji]
     · by_cases hji' : j = i
       · subst hji'
-        rw [entryAt_not_full t.slots _ hf]
+        rw [entryAt_of_not_full (s := t.slots) _ hf]
         simp
       · simp only [hji, ite_false]
         rw [ite_eq_right (by omega)]
@@ -704,14 +635,14 @@ theorem filterLoop_entries (f : α → β → Bool) (cap i : Nat) (t : Table α 
     unfold Slots.entries
     simp only [Slots.cap, Table.slots] at hc ⊢
     rw [← hc]
-    apply filterMap_congr'
+    apply filterMap_congr_mem
     intro j hj
     simp at hj
     simp [hj]
 
 omit [BEq α] [Hashable α] in
-/-- *Suggested route.* The machine-word fold is the one on `Nat` indices. -/
-theorem foldMLoop_eq_foldMLoopN {ε : Type w} {m : Type w → Type w'} [Monad m]
+/-- The machine-word fold is the one on `Nat` indices. -/
+private theorem foldMLoop_eq_foldMLoopN {ε : Type w} {m : Type w → Type w'} [Monad m]
     (f : ε → α → β → m ε) {ctrl : ByteArray} {keys : Array α} {vals : Array β} {cap p : USize}
     {fm : UInt64} {acc : ε} {hF : FoldU ctrl keys vals cap} {hp : GroupAt cap p}
     {hm : IsMask fm} {hF' : FoldN ctrl keys vals cap.toNat} {hp' : GroupAtN cap.toNat p.toNat} :
@@ -754,11 +685,9 @@ theorem toListModel_filterMap (t : Table α β) (f : α → β → Option γ) :
     rw [List.filterMap_eq_nil_iff]
     intro e he
     obtain ⟨j, hj, hje⟩ := mem_entries.mp he
-    obtain ⟨hc, hk, hv, hf, rfl⟩ := entryAt_eq_some hje
-    dsimp only at hj hc hk hv hf ⊢
-    have := firstSome_none hs j (Nat.zero_le _) (by simpa [Slots.cap] using hj)
-      (by rw [getElem!_eq_getElem hc]; exact hf) _ _ (getElem?_pos keys j hk)
-      (getElem?_pos vals j hv)
+    obtain ⟨-, hf, hk, hv⟩ := entryAt_eq_some hje
+    dsimp only at hj hf hk hv ⊢
+    have := firstSome_none hs j (Nat.zero_le _) (by simpa [Slots.cap] using hj) hf _ _ hk hv
     simp [this]
   · rename_i i0 c0 hs
     apply List.Perm.of_eq
@@ -788,21 +717,21 @@ theorem toListModel_map (t : Table α β) (f : α → β → γ) :
     simp only [Table.slots]
     unfold Slots.entries
     rw [List.map_filterMap]
-    apply filterMap_congr'
+    apply filterMap_congr_mem
     intro j hj
     rw [List.mem_range] at hj
     have hjc : j < ctrl.size := by simp only [Slots.cap] at hj; omega
     have hjk : j < keys.size := wf.keys_lt hj
     have hjv : j < vals.size := wf.vals_lt hj
     by_cases hf : ctrl[j] < 0x80
-    · rw [entryAt_full _ hjc hf hjk (by simp only [Array.size_mapFinIdx]; exact hjv),
-        entryAt_full _ hjc hf hjk hjv]
+    · rw [entryAt_of_full hjc hf hjk (by simp only [Array.size_mapFinIdx]; exact hjv),
+        entryAt_of_full hjc hf hjk hjv]
       simp only [Option.map_some, Array.getElem_mapFinIdx]
       by_cases hji : j = i0
       · subst hji; simp
       · simp only [Slots.cap] at hj
         simp [hj, hji, hf]
-    · rw [entryAt_not_full _ hjc hf, entryAt_not_full _ hjc hf]
+    · rw [entryAt_of_not_full hjc hf, entryAt_of_not_full hjc hf]
       rfl
 
 theorem foldM_eq_foldlM_toListModel {ε : Type w} {m : Type w → Type w'} [Monad m]

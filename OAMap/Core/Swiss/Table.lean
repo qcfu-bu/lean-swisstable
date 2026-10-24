@@ -9,8 +9,9 @@ public import OAMap.Core.Swiss.Proofs.Bulk
 The 23 definitions of the core contract (`docs/ARCHITECTURE.md` §3.2) on hashbrown's generic
 (non-SIMD) layout, as chosen by the bake-off (`docs/bakeoff/decision.md`). This file and the code
 files it builds on (`Defs.lean`, `Loops.lean`, `Build.lean`) are the code the verified core
-compiles to. The code is frozen: later work proves the stated lemmas, and may change the code only
-to make it provable (then re-measuring it against this version).
+compiles to. The code is frozen at the version the bake-off measured: the proofs only add erased
+arguments, and a change to the code, even to those arguments, is checked against the frozen
+version (its generated C, or instructions per operation on the bake-off harness).
 
 ## Proof structure
 
@@ -27,7 +28,8 @@ stated before it (the code files are `Defs`, `Loops`, `Build` and this one):
 
 * `Bounds`: the bounds and termination facts of the loops, what the operations read off the
   invariant (shape, the guards `smallMask ↔ smallShift`, the loops' erased hypotheses), the
-  capacity arithmetic, and the machine-word forms of the control-array operations;
+  capacity arithmetic, the machine-word forms of the control-array operations, and the small
+  facts the later files share (machine-word arithmetic, the entry of a slot);
 * `Probe`: the probe lemmas (a lookup or insertion probe ends at a hit, or at a free slot that its
   key's probe reaches with the key absent), and the U facts of the fused operations (the
   insertion probe hits exactly where the lookup probe does);
@@ -39,8 +41,7 @@ stated before it (the code files are `Defs`, `Loops`, `Build` and this one):
 * `Bulk`: `firstFull`, `firstSome` and `filterMap`'s in-place pass;
 * `Query`, `Update`, `Traverse`: the 22 contract lemmas (`OAMap/Core/Swiss.lean` collects them).
 
-The statements that other files use are fixed. The ones marked *suggested route* are used only
-in their own file.
+Each proof file's header describes its proof.
 
 The contract definitions (namespace `Table`) are not exposed, as the contract requires (only
 `markLinear` is); their bodies are the exposed `Swiss.*Impl` definitions below, and each has an
@@ -64,8 +65,9 @@ Control bytes (hashbrown's): EMPTY = `0xFF`, DELETED = `0x80`, FULL = `0b0hhhhhh
 product: the home slot is `q >>> 7` (masked), the tag `q &&& 0x7F`. Hashes are not stored; a
 rebuild recomputes them, as Std does.
 
-The empty map (`emptyWithCapacity c`, hence `∅`) allocates nothing: its `ctrl` is a shared group
-of 8 EMPTY bytes (`emptyGroup`), `mask = 0`, `shift = 57`, both arrays `#[]`, and `reqCap = c`.
+The empty map (`emptyWithCapacity c`, hence `∅`) allocates no array, only its table cell: its
+`ctrl` is a shared group of 8 EMPTY bytes (`emptyGroup`), `mask = 0`, `shift = 57`, both arrays
+`#[]`, and `reqCap = c`.
 Every probe of it ends in its first group without reading a key, so the queries need no special
 case. The first insert allocates `lgFor (max c 1)` and takes its own pair as the placeholder.
 
@@ -103,11 +105,10 @@ case. The first insert allocates `lgFor (max c 1)` and takes its own pair as the
 ## Machine words
 
 Every operation runs on `USize` indices on tables of at most `2 ^ 31` slots (the `…U` loops), and
-on `Nat` indices beyond (the `…N` loops, the same algorithms; also executable), following the
-`slotFor` pattern of the earlier verified linear-probing map: below `2 ^ 31` slots no index
-computation wraps on any platform. Each operation tests this once, at its top, with `smallShift`
-or `smallMask` (equivalent on every table). The bulk operations `filter`, `filterMap` and `map`
-use `Nat` indices at every size.
+on `Nat` indices on larger ones, from `2 ^ 32` slots (the `…N` loops, the same algorithms; also
+executable): up to `2 ^ 31` slots no index computation wraps on any platform. Each operation tests
+this once, at its top, with `smallShift` or `smallMask` (equivalent on every table). The bulk
+operations `filter`, `filterMap` and `map` use `Nat` indices at every size.
 
 ## Fused operations
 
@@ -146,11 +147,15 @@ the bake-off harness), and these choices are deliberate:
 `docs/bakeoff/freeze-results.csv` (summary `freeze-summary.txt`): std, SwissF and this core
 (`final`) on rand, flat, string and struct keys at n = 1000, 98304, 10^6, 10^7, every workload,
 Apple M5 Pro, harness `oabench2`. Against SwissF, the geometric mean of ns/op over the 16 cells of
-each workload is within +2.8% (getopt) and down to 0.61 (fold, group at a time); instructions/op
-are +2% to +4% (the guard and the exact tag match), +9% on `get?`, and memory is identical. Later
+each workload is within +2.8% (getopt) and down to 0.61 (fold, group at a time); the geometric
+mean of instructions/op per workload ranges from −2% (insert, fold) to +4% (reinsert; the guard
+and the exact tag match), with +9% on `get?` (getopt, getopt-shuf), and memory is identical. Later
 changes made for the proofs are checked against these instructions/op.
 -/
 
+-- Elaborated `let`s stay `let`s instead of becoming `have`s, the setting of the SwissF prototype
+-- and of the bake-off harness that measured the frozen code. Without it, the generated C of this
+-- file differs from the frozen version's (the order of a join point's parameters in `eraseAtU`).
 set_option cleanup.letToHave false
 
 public section
@@ -641,7 +646,7 @@ variable {α : Type u} {β : Type v} {γ : Type w} [BEq α] [Hashable α]
 def toListModel (t : Table α β) : List ((_ : α) × β) := t.slots.entries
 
 /-- The empty table, with room for `capacity` entries once the first insert allocates it: it
-allocates nothing (a shared group of 8 EMPTY control bytes, no slots). -/
+allocates no array (a shared group of 8 EMPTY control bytes, no slots). -/
 def emptyWithCapacity (capacity : Nat) : Table α β := emptyImpl capacity
 
 /-- The number of slots, counting for the unallocated table the slots its first insert allocates

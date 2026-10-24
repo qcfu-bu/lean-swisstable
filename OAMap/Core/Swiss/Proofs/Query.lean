@@ -6,12 +6,9 @@ public import Std.Data.Internal.List.Associative
 /-!
 # Swiss core proofs, part 6: the model, the lookups and the fused operations (contract 1–11)
 
-A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure"). Its
-owner edits only this file: the proofs, and any private helper lemmas or definitions. The
-contract lemmas (`docs/ARCHITECTURE.md` §3.3, checked by `test/OAMapTest/CoreSpec.lean`) are
-fixed word for word; so are the helpers in namespace `Swiss` that `Proofs/Update.lean` uses
-(`WF.distinctKeys`, `WF.getEntry?_hit`, `getEntry?_absent`, `lookupImpl_cases`). Those marked
-*suggested route* may be changed or dropped.
+A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure"): the
+contract lemmas 1–11 (`docs/ARCHITECTURE.md` §3.3, checked by `test/OAMapTest/CoreSpec.lean`),
+and what `Proofs/Update.lean` reads off a hit or a miss (`WF.getEntry?_hit`, `getEntry?_absent`).
 
 * Lemmas 1–4, 6: the model is the entries in slot order; the size is their number
   (`WF.size_eq`); distinct keys come from `WF.distinct`; the unallocated table has no slot, so
@@ -24,8 +21,8 @@ fixed word for word; so are the helpers in namespace `Swiss` that `Proofs/Update
   `insProbeN_inl_iff` (`Proofs/Probe.lean`) and the guard equivalence `WF.smallMask_eq`; their
   second components are `insert`/`insertIfNew` by definition (`Table.insert_def`, ...).
 
-The contract definitions are sealed; unfold them with the `Table.*_def` lemmas of `Table.lean`
-and then the exposed `Swiss.*Impl` bodies.
+The contract definitions are sealed; the proofs unfold them with the `Table.*_def` lemmas of
+`Table.lean` and then the exposed `Swiss.*Impl` bodies.
 -/
 
 @[expose] public section
@@ -42,29 +39,6 @@ variable {α : Type u} {β : Type v}
 
 section Entries
 
-/-- What an entry of a slot says about the slot's cells. -/
-private theorem entryAt_eq_some {s : Slots α β} {i : Nat} {e : (_ : α) × β}
-    (h : s.entryAt i = some e) :
-    i < s.ctrl.size ∧ s.ctrl[i]! < 0x80 ∧ s.keys[i]? = some e.1 ∧ s.vals[i]? = some e.2 := by
-  unfold Slots.entryAt at h
-  split at h
-  · rename_i c hc
-    rw [getElem?_eq_some_iff] at hc
-    obtain ⟨hi, rfl⟩ := hc
-    split at h
-    · rename_i hlt
-      cases hk : s.keys[i]? with
-      | none => simp [hk] at h
-      | some k =>
-        cases hv : s.vals[i]? with
-        | none => simp [hk, hv] at h
-        | some v =>
-          simp only [hk, hv, Option.bind_some, Option.map_some, Option.some.injEq] at h
-          subst h
-          exact ⟨hi, by rw [getElem!_pos s.ctrl i hi]; exact hlt, rfl, rfl⟩
-    · exact absurd h (by simp)
-  · exact absurd h (by simp)
-
 /-- The entry of a full slot with both cells. -/
 private theorem entryAt_of {s : Slots α β} {i : Nat} (hf : s.IsFull i) {k : α} {v : β}
     (hk : s.keys[i]? = some k) (hv : s.vals[i]? = some v) : s.entryAt i = some ⟨k, v⟩ := by
@@ -73,14 +47,6 @@ private theorem entryAt_of {s : Slots α β} {i : Nat} (hf : s.IsFull i) {k : α
   unfold Slots.entryAt
   rw [getElem?_pos s.ctrl i hi]
   simp only [hlt, ↓reduceIte, hk, hv, Option.bind_some, Option.map_some]
-
-private theorem mem_entries {s : Slots α β} {e : (_ : α) × β} :
-    e ∈ s.entries ↔ ∃ i, i < s.cap ∧ s.entryAt i = some e := by
-  simp [Slots.entries, List.mem_filterMap, List.mem_range]
-
-private theorem isFull_of_entryAt {s : Slots α β} {i : Nat} {e : (_ : α) × β} (hi : i < s.cap)
-    (h : s.entryAt i = some e) : s.IsFull i :=
-  ⟨hi, (entryAt_eq_some h).2.1⟩
 
 end Entries
 
@@ -97,8 +63,8 @@ theorem WF.distinctKeys (wf : WF s size gl mask shift) [EquivBEq α] [LawfulHash
   refine List.Pairwise.imp_of_mem ?_ (List.pairwise_lt_range (n := s.cap))
   intro i j hi hj hij e he e' he'
   rw [List.mem_range] at hi hj
-  have hfi := isFull_of_entryAt hi he
-  have hfj := isFull_of_entryAt hj he'
+  have hfi := isFull_of_entryAt he hi
+  have hfj := isFull_of_entryAt he' hj
   cases hb : e.1 == e'.1 with
   | false => rfl
   | true =>
@@ -121,7 +87,7 @@ theorem getEntry?_absent {a : α} (habs : s.Absent a) : getEntry? a s.entries = 
   rw [getEntry?_eq_find, List.find?_eq_none]
   intro e he
   obtain ⟨i, hi, h⟩ := mem_entries.1 he
-  simp [habs i e.1 (isFull_of_entryAt hi h) (entryAt_eq_some h).2.2.1]
+  simp [habs i e.1 (isFull_of_entryAt h hi) (entryAt_eq_some h).2.2.1]
 
 end Model
 
@@ -157,8 +123,8 @@ theorem lookupImpl_cases {σ : Type w} (t : Table α β) (a : α) (f : α → β
       intro _ _
       exact t.wf.findN_absent (t.wf.arrN hs) he
 
-/-- *Suggested route.* `lookupMemImpl` takes the lookup's hit. -/
-theorem lookupMemImpl_eq {σ : Type w} (t : Table α β) (a : α) (h : containsImpl t a = true)
+/-- `lookupMemImpl` takes the lookup's hit. -/
+private theorem lookupMemImpl_eq {σ : Type w} (t : Table α β) (a : α) (h : containsImpl t a = true)
     (f : α → β → σ) : ∃ i k v, t.slots.Hit t.shift a i ∧ t.slotKeys[i]? = some k ∧
       t.slotVals[i]? = some v ∧ lookupMemImpl t a h f = f k v := by
   unfold lookupMemImpl

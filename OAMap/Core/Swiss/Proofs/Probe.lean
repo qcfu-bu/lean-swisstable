@@ -5,12 +5,8 @@ public import OAMap.Core.Swiss.Loops
 /-!
 # Swiss core proofs, part 2: the probe lemmas
 
-A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure"). Its
-owner edits only this file: the proofs, and any private helper lemmas or definitions. The
-statements are fixed (the code and later files use them), except those marked *suggested route*,
-which no other file uses and which may be changed or dropped.
-
-What a probe returns, in a well-formed table:
+A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure"). What a
+probe returns, in a well-formed table:
 
 * **Lookup** (`findU`, `findN`): a hit (`Slots.Hit`: a full slot with the tag of `a` and a key
   `== a`), or, for lawful instances, a proof that no stored key is `== a` (`Slots.Absent`).
@@ -19,7 +15,9 @@ What a probe returns, in a well-formed table:
   slot that the probe of `a` reaches (or slot `0` of the unallocated table), with `a` absent for
   lawful instances. A free slot exists because `size < cap` (the load bound `WF.room`).
 * **The fused operations' U facts** (`Proofs/Query.lean`): the insertion probe hits exactly where
-  the lookup probe does, and fast path C applies only where the lookup misses. No lawfulness.
+  the lookup probe does (`insProbeN_inl_iff`, `insSlotN_inl_iff`, `WF.insProbeU_le_iff`,
+  `insProbeU_eq_findU`), and fast path C applies only where the lookup misses (`fast_findU`). No
+  lawfulness.
 
 The probe invariant (`Slots.ProbeInv`) and `Distinct` are what make a miss an absence: the slot
 `i` of a stored key `k == a` lies in group `k'` of the probe from the home slot of `a` (the same
@@ -27,21 +25,20 @@ as that of `k`, by `LawfulHashable`), no group before `k'` has an EMPTY slot, so
 group `k'`, where slot `i` carries the tag of `a` (`TagInv`) and is compared. A probe that visits
 all `cap / 8` groups visits every slot (`probe_cover`, `probe_unique`).
 
-Suggested route (the earlier linear-probing map's `Probe.lean`: `walk_spec`, `probeN_eq`,
-`slotOf_of_beq`, `slotOf_absent`): state the loop invariant of `findLoopN`/`findInsLoopN` at group
-`k` of the probe from `p₀` (`pos = probePos cap p₀ k`, `stride = 8 * k`, `g` the group word, `m`
-the tag matches of `g` not yet compared, every tag match of the earlier groups and of the
-compared lanes compared and not `== a`, no EMPTY slot in the earlier groups, and for the
-insertion probe `ins` the first free slot passed or `cap`), prove the `Nat` loops by induction on
-the measure, and reduce the machine-word loops to them (`findU_toNat`, `insProbeU_toNat`) through
-`Geom` and `ctrlWord_eq_ctrlWordN`; the unallocated table is the separate case of `firstGroup`.
+The proofs go in three steps.
 
-Layout of the proofs: private helpers first, then the stated lemmas as short corollaries. The loop
-invariants on `Nat` indices are `findLoopN_spec` (a hit, or every reachable slot with the tag of
-`a` compared) and `findInsLoopN_free` (the first free slot passed, which exists by the load bound);
-`findInsLoopN_getLeft` says that the insertion probe hits exactly where the lookup does. The
-machine-word loops are simulated by the `Nat` ones in `findLoop_toNat` and `findInsLoop_toNat`
-(`InsRel`: a miss at `ins + (mask + 1)` with `ins ≤ cap`).
+1. The loops on `Nat` indices, by functional induction, with their invariant at group `k` of the
+   probe from `p₀` (`pos = probePos cap p₀ k`, `stride = 8 * k`, every tag match of the earlier
+   groups and of the compared lanes compared and not `== a`, no EMPTY slot in the earlier
+   groups): `findLoopN_spec` (a hit, or every reachable slot with the tag of `a` compared) and
+   `findInsLoopN_free` (the first free slot passed, which exists by the load bound);
+   `findInsLoopN_getLeft` says that the insertion probe hits exactly where the lookup does.
+2. The machine-word loops are the `Nat` ones (`findLoop_toNat`, `findInsLoop_toNat`; `InsRel`: a
+   miss at `ins + (mask + 1)` with `ins ≤ cap`), through `Geom` and `ctrlWord_eq_ctrlWordN`, and so
+   are the probes from the home slot (`findU_toNat`, `insProbeU_toNat`). The unallocated table,
+   which has no slot, is the separate case of `firstGroup`.
+3. The lemmas of a well-formed table follow (`WF.findN_hit`, `WF.findN_absent`,
+   `WF.insProbeN_new`, then the machine-word ones, `WF.findU_hit`, ...).
 -/
 
 @[expose] public section
@@ -86,10 +83,6 @@ private theorem miss_of_not {x : Nat} (hx : x < keys.size) (h : ¬(keys[x] == a)
   cases hk
   simpa using h
 
-private theorem ne_zero_of {m : UInt64} (h : (m != 0) = true) : m ≠ 0 := by simpa using h
-
-private theorem eq_zero_of {m : UInt64} (h : ¬(m != 0) = true) : m = 0 := by simpa using h
-
 /-- The lowest flag of a nonzero mask, in the `Nat` loops' form. -/
 private theorem lowest_spec {m : UInt64} (hm : IsMask m) (h0 : m ≠ 0) :
     (lowestLane64 m).toNat < 8 ∧ flag m (lowestLane64 m).toNat = true := by
@@ -115,10 +108,9 @@ private theorem ne_empty_of_matchEmpty {g : UInt64} (h : matchEmpty g = 0) {j : 
   exact absurd this (by decide)
 
 /-- The group word of the group at `pos` under the mirror: its bytes are the slots' bytes. -/
-private theorem byte_wordN (hM : Mirrored ctrl cap) {pos : Nat} (hp : pos < cap)
-    {hw : pos + 8 ≤ ctrl.size} {j : Nat} (hj : j < 8) :
-    byte (ctrlWordN ctrl pos hw) j = ctrl[(pos + j) % cap]! := by
-  rw [byte_ctrlWordN_of_mirrored hM hp hj, slotByte_def, Nat.mod_mod]
+private theorem byte_wordN (hM : Mirrored ctrl cap) {pos : Nat} {hw : pos + 8 ≤ ctrl.size}
+    {j : Nat} (hj : j < 8) : byte (ctrlWordN ctrl pos hw) j = ctrl[(pos + j) % cap]! := by
+  rw [byte_ctrlWordN_of_mirrored hM hj, slotByte_def, Nat.mod_mod]
 
 /-- **The lookup loop on `Nat` indices** (the core probe lemma). The invariant at group `k` of the
 probe from `p₀`: `pos` and `stride` are those of group `k`, `g` is its group word, the lanes left
@@ -143,11 +135,11 @@ private theorem findLoopN_spec (hM : Mirrored ctrl cap) (hctrl : ∀ i < cap, Is
   fun_induction findLoopN ctrl keys a cap (repTag t) pos stride g m hA hm with
   | case1 pos stride g m hm h i hk =>
     intro k hpos hstr hk8 hg htag hcov hdone
-    obtain ⟨hl8, hfl⟩ := lowest_spec hm (ne_zero_of h)
+    obtain ⟨hl8, hfl⟩ := lowest_spec hm (ne_zero_of_bne h)
     refine ⟨Nat.mod_lt _ hc0, htag _ hl8 hfl, keys[i]'(hA.mod_keys _), getElem?_pos _ _ _, hk⟩
   | case2 pos stride g m hm h i hk ih =>
     intro k hpos hstr hk8 hg htag hcov hdone
-    have h0 := ne_zero_of h
+    have h0 := ne_zero_of_bne h
     refine ih k hpos hstr hk8 hg (fun j hj hf => ?_) (fun j hj ht => ?_) hdone
     · rw [flag_clearLowest' hm h0, Bool.and_eq_true] at hf
       exact htag j hj hf.1
@@ -161,8 +153,8 @@ private theorem findLoopN_spec (hM : Mirrored ctrl cap) (hctrl : ∀ i < cap, Is
       · exact Or.inr hmiss
   | case3 pos stride g m hm h he =>
     intro k hpos hstr hk8 hg htag hcov hdone
-    have hm0 := eq_zero_of h
-    obtain ⟨j0, hj0, hf0⟩ := exists_flag (isMask_matchEmpty g) (ne_zero_of he)
+    have hm0 := eq_zero_of_not_bne h
+    obtain ⟨j0, hj0, hf0⟩ := exists_flag (isMask_matchEmpty g) (ne_zero_of_bne he)
     have hE : ctrl[(pos + j0) % cap]! = EMPTY := by
       rw [flag_matchEmpty g hj0, decide_eq_true_iff, hg j0 hj0] at hf0
       exact (isCtrl_le_iff (hctrl _ (Nat.mod_lt _ hc0))).mp hf0
@@ -177,7 +169,7 @@ private theorem findLoopN_spec (hM : Mirrored ctrl cap) (hctrl : ∀ i < cap, Is
       exact absurd hE (hne k hgt j0 hj0)
   | case4 pos stride g m hm h he stride' hle =>
     intro k hpos hstr hk8 hg htag hcov hdone
-    have hm0 := eq_zero_of h
+    have hm0 := eq_zero_of_not_bne h
     intro K hK J hJ hne ht
     have hKk : K ≤ k := by
       simp only [stride'] at hle
@@ -190,13 +182,13 @@ private theorem findLoopN_spec (hM : Mirrored ctrl cap) (hctrl : ∀ i < cap, Is
       · exact hmiss
   | case5 pos stride g m hm h he stride' hle pos' g' ih =>
     intro k hpos hstr hk8 hg htag hcov hdone
-    have hm0 := eq_zero_of h
+    have hm0 := eq_zero_of_not_bne h
     have hpos' : pos' = probePos cap p₀ (k + 1) := by
       simp only [pos', stride']
       rw [probePos_succ, hpos, hstr]
       congr 1
     have hp' : pos' < cap := Nat.mod_lt _ hc0
-    have hg' : ∀ j < 8, byte g' j = ctrl[(pos' + j) % cap]! := fun j hj => byte_wordN hM hp' hj
+    have hg' : ∀ j < 8, byte g' j = ctrl[(pos' + j) % cap]! := fun j hj => byte_wordN hM hj
     refine ih (k + 1) hpos' (by simp only [stride']; omega) (by simp only [stride'] at hle; omega)
       hg' (fun j hj hf => ?_) (fun j hj ht => ?_) (fun k' hk' j hj ht => ?_)
     · rw [flag_matchTag g' t hj, beq_iff_eq, hg' j hj] at hf
@@ -316,7 +308,7 @@ private theorem findInsLoopN_free (hM : Mirrored ctrl cap) (hctrl : ∀ i < cap,
     rcases insUpd_cases (cap := cap) (pos := pos) (ins := ins) (ins' := ins') (g := g) rfl with
       ⟨h1, h2, h3⟩ | ⟨h1, h2, h3⟩ | ⟨h1, h3⟩
     · rw [h3]; exact found pos g k hpos hk8 hg hne h2
-    · exact absurd h2 (matchFree_ne_of_matchEmpty (ne_zero_of he))
+    · exact absurd h2 (matchFree_ne_of_matchEmpty (ne_zero_of_bne he))
     · rw [h3]; exact hlt h1
   | case4 pos stride g m ins hm h ins' he stride' hle =>
     intro k hpos hstr hk8 hg hne hlt hge j hj
@@ -348,7 +340,7 @@ private theorem findInsLoopN_free (hM : Mirrored ctrl cap) (hctrl : ∀ i < cap,
       · rw [← hpos, ← hg j hj]
         exact ne_empty_of_matchEmpty (by simpa using he) hj
     refine ih (k + 1) hpos' (by simp only [stride']; omega) (by simp only [stride'] at hle; omega)
-      (fun j hj => byte_wordN hM hp' hj) hne' (fun hlt' => ?_) (fun hge' => ?_)
+      (fun j hj => byte_wordN hM hj) hne' (fun hlt' => ?_) (fun hge' => ?_)
     · rcases insUpd_cases (cap := cap) (pos := pos) (ins := ins) (ins' := ins') (g := g) rfl with
         ⟨h1, h2, h3⟩ | ⟨h1, h2, h3⟩ | ⟨h1, h3⟩
       · rw [h3]; exact found pos g k hpos hk8 hg hne h2
@@ -377,7 +369,7 @@ private theorem findN_post [Hashable α] (hM : Mirrored ctrl cap)
   have hc0 := hA.pos
   have hp : homeN (hashBits shift a) cap < cap := Nat.mod_lt _ hc0
   have hg : ∀ j < 8, byte (ctrlWordN ctrl (homeN (hashBits shift a) cap) (hA.mod_word _)) j =
-      ctrl[(homeN (hashBits shift a) cap + j) % cap]! := fun j hj => byte_wordN hM hp hj
+      ctrl[(homeN (hashBits shift a) cap + j) % cap]! := fun j hj => byte_wordN hM hj
   refine findLoopN_spec hM hctrl hA _ _ _ _ _ 0 (start_pos shift a) rfl
     (by have := hM.le_cap; omega) hg (fun j hj hf => ?_) (fun j hj ht => ?_)
     (fun k' hk' => absurd hk' (Nat.not_lt_zero _))
@@ -397,7 +389,7 @@ private theorem insProbeN_free [Hashable α] (hM : Mirrored ctrl cap)
   have hc0 := hA.pos
   have hp : homeN (hashBits shift a) cap < cap := Nat.mod_lt _ hc0
   exact findInsLoopN_free hM hctrl hfree hA _ _ _ _ _ _ _ 0 (start_pos shift a) rfl
-    (by have := hM.le_cap; omega) (fun j hj => byte_wordN hM hp hj)
+    (by have := hM.le_cap; omega) (fun j hj => byte_wordN hM hj)
     (fun k' hk' => absurd hk' (Nat.not_lt_zero _)) (fun h => absurd h (Nat.lt_irrefl _))
     (fun _ k' hk' => absurd hk' (Nat.not_lt_zero _)) j he
 
@@ -434,20 +426,8 @@ end NatLoops
 
 section WordFacts
 
-private theorem toNat_add_eight {x : USize} (hx : x.toNat < 2 ^ 31) :
-    (x + 8).toNat = x.toNat + 8 := by
-  have h1 : (8 : USize).toNat = 8 := by simp
-  have h2 : 2 ^ 32 ≤ 2 ^ System.Platform.numBits := USize.le_size
-  rw [USize.toNat_add, h1, Nat.mod_eq_of_lt (by omega)]
-
-private theorem toNat_add_one' {x : USize} (hx : x.toNat < 2 ^ 31) :
-    (x + 1).toNat = x.toNat + 1 := by
-  have h1 : (1 : USize).toNat = 1 := by simp
-  have h2 : 2 ^ 32 ≤ 2 ^ System.Platform.numBits := USize.le_size
-  rw [USize.toNat_add, h1, Nat.mod_eq_of_lt (by omega)]
-
 private theorem not_succ_le {mask : USize} (hx : mask.toNat < 2 ^ 31) : ¬mask + 1 ≤ mask := by
-  rw [USize.le_iff_toNat_le, toNat_add_one' hx]; omega
+  rw [USize.le_iff_toNat_le, toNat_add_one hx]; omega
 
 private theorem smallMask_of_lt {mask : USize} (h : mask.toNat < 2 ^ 31) :
     smallMask mask = true := by
@@ -462,11 +442,6 @@ private theorem smallMask_of_lt {mask : USize} (h : mask.toNat < 2 ^ 31) :
   by_cases hi : 31 = i
   · subst hi; rw [Nat.testBit_lt_two_pow h]; rfl
   · simp [hi]
-
-/-- The group word at equal indices. -/
-private theorem ctrlWordN_congr {c : ByteArray} {i j : Nat} {h : i + 8 ≤ c.size}
-    {h' : j + 8 ≤ c.size} (e : i = j) : ctrlWordN c i h = ctrlWordN c j h' := by
-  subst e; rfl
 
 end WordFacts
 
@@ -703,6 +678,35 @@ private theorem findInsLoop_first {rep : UInt64} {hA : ArrU ctrl mask} {pos stri
 
 end WordLoops
 
+/-! ## The insertion probe on `Nat` indices hits where the lookup does (no lawfulness) -/
+
+section FusedN
+
+variable [BEq α] [Hashable α] {ctrl : ByteArray} {keys : Array α} {mask : USize} {cap : Nat}
+  {shift : UInt64} {a : α}
+
+/-- The insertion probe hits exactly where the lookup does. -/
+theorem insProbeN_inl_iff (hA : ArrN ctrl keys cap) {i : Nat} :
+    insProbeN ctrl keys cap shift a hA = .inl i ↔ findN ctrl keys cap shift a hA = some i := by
+  rw [← insProbeN_getLeft hA shift a, Sum.getLeft?_eq_some_iff]
+
+/-- The insertion probe of `containsThenInsertN` (with fast path C) hits exactly where the lookup
+does. -/
+theorem insSlotN_inl_iff (hA : ArrN ctrl keys cap) {i : Nat} :
+    insSlotN ctrl keys a cap (hashBits shift a) hA = .inl i ↔
+      findN ctrl keys cap shift a hA = some i := by
+  unfold insSlotN
+  dsimp only
+  split
+  · rename_i hfast
+    rw [Bool.and_eq_true, beq_iff_eq] at hfast
+    have hn : findN ctrl keys cap shift a hA = none :=
+      findLoopN_first hfast.1 (matchEmpty_ne_of_low hfast.2)
+    simp [hn]
+  · exact insProbeN_inl_iff hA
+
+end FusedN
+
 /-! ## The probes in a well-formed table -/
 
 section Helpers
@@ -756,16 +760,18 @@ private theorem absent_of_post (wf : WF s size gl mask shift) {cap : Nat} (hcap 
     rw [hb] at this
     cases this
 
-private theorem WF.findN_hit' (wf : WF s size gl mask shift)
-    (hA : ArrN s.ctrl s.keys (s.ctrl.size - 8)) {a : α} {i : Nat}
-    (he : findN s.ctrl s.keys (s.ctrl.size - 8) shift a hA = some i) : s.Hit shift a i := by
+/-- A lookup on `Nat` indices that finds a slot finds a hit. -/
+theorem WF.findN_hit (wf : WF s size gl mask shift) (hA : ArrN s.ctrl s.keys (s.ctrl.size - 8))
+    {a : α} {i : Nat} (he : findN s.ctrl s.keys (s.ctrl.size - 8) shift a hA = some i) :
+    s.Hit shift a i := by
   have hc : 0 < s.cap := hA.pos
   have post := findN_post (cap := s.ctrl.size - 8) (wf.mirrored hc) wf.ctrl hA shift a
   rw [he] at post
   obtain ⟨hi, ht, hk⟩ := post
   exact ⟨⟨hi, by rw [ht]; exact tagOf_lt _⟩, ht, hk⟩
 
-private theorem WF.findN_absent' (wf : WF s size gl mask shift)
+/-- A lookup on `Nat` indices that finds none proves `a` absent (lawful instances). -/
+theorem WF.findN_absent (wf : WF s size gl mask shift)
     (hA : ArrN s.ctrl s.keys (s.ctrl.size - 8)) {a : α}
     (he : findN s.ctrl s.keys (s.ctrl.size - 8) shift a hA = none) [EquivBEq α]
     [LawfulHashable α] : s.Absent a := by
@@ -774,13 +780,8 @@ private theorem WF.findN_absent' (wf : WF s size gl mask shift)
   rw [he] at post
   exact absent_of_post wf rfl post
 
-omit [Hashable α] in
-private theorem insProbeN_inl_iff' [Hashable α] {ctrl : ByteArray} {keys : Array α} {cap : Nat}
-    {a : α} (hA : ArrN ctrl keys cap) {i : Nat} :
-    insProbeN ctrl keys cap shift a hA = .inl i ↔ findN ctrl keys cap shift a hA = some i := by
-  rw [← insProbeN_getLeft hA shift a, Sum.getLeft?_eq_some_iff]
-
-private theorem WF.insProbeN_new' (wf : WF s size gl mask shift)
+/-- The insertion probe on `Nat` indices that finds no hit returns where the new key goes. -/
+theorem WF.insProbeN_new (wf : WF s size gl mask shift)
     (hA : ArrN s.ctrl s.keys (s.ctrl.size - 8)) {a : α} {j : Nat}
     (he : insProbeN s.ctrl s.keys (s.ctrl.size - 8) shift a hA = .inr j) :
     NewSlot s shift a (hashBits shift a) j := by
@@ -791,7 +792,7 @@ private theorem WF.insProbeN_new' (wf : WF s size gl mask shift)
   intro _ _
   have hl := insProbeN_getLeft hA shift a
   rw [he, Sum.getLeft?_inr] at hl
-  exact wf.findN_absent' hA hl.symm
+  exact wf.findN_absent hA hl.symm
 
 /-- Fast path C on `Nat` indices: the home slot of `a` is a `NewSlot`. -/
 private theorem WF.fastN_new (wf : WF s size gl mask shift)
@@ -807,7 +808,8 @@ private theorem WF.fastN_new (wf : WF s size gl mask shift)
   rw [Bool.and_eq_true, beq_iff_eq] at hfast
   obtain ⟨hmt, hlow⟩ := hfast
   have hE := byte_zero_of_low hlow
-  have hb := byte_wordN (cap := s.ctrl.size - 8) (j := 0) (hw := hA.mod_word _) hM hp (by decide)
+  have hb := byte_wordN (cap := s.ctrl.size - 8) (pos := homeN (hashBits shift a) (s.ctrl.size - 8))
+    (j := 0) (hw := hA.mod_word _) hM (by decide)
   rw [hb, Nat.add_zero, Nat.mod_eq_of_lt hp] at hE
   refine ⟨rfl, Or.inl ⟨hp, Or.inl hE, 0, by have := hM.le_cap; unfold Slots.cap at this ⊢; omega,
     0, by decide, ?_, fun k' hk' => absurd hk' (Nat.not_lt_zero _)⟩, ?_⟩
@@ -815,22 +817,7 @@ private theorem WF.fastN_new (wf : WF s size gl mask shift)
       (s.ctrl.size - 8) = _
     rw [Nat.add_zero, ← start_pos shift a, Nat.mod_eq_of_lt hp]
   · intro _ _
-    exact wf.findN_absent' hA (findLoopN_first hmt (matchEmpty_ne_of_low hlow))
-
-omit [Hashable α] in
-private theorem insSlotN_inl_iff' [Hashable α] {ctrl : ByteArray} {keys : Array α} {cap : Nat}
-    {a : α} (hA : ArrN ctrl keys cap) {i : Nat} :
-    insSlotN ctrl keys a cap (hashBits shift a) hA = .inl i ↔
-      findN ctrl keys cap shift a hA = some i := by
-  unfold insSlotN
-  dsimp only
-  split
-  · rename_i hfast
-    rw [Bool.and_eq_true, beq_iff_eq] at hfast
-    have hn : findN ctrl keys cap shift a hA = none :=
-      findLoopN_first hfast.1 (matchEmpty_ne_of_low hfast.2)
-    simp [hn]
-  · exact insProbeN_inl_iff' hA
+    exact wf.findN_absent hA (findLoopN_first hmt (matchEmpty_ne_of_low hlow))
 
 /-- The shape facts of an allocated table on the machine-word path. -/
 private theorem WF.wordFacts (wf : WF s size gl mask shift) (h : LoopU s.ctrl s.keys mask)
@@ -848,7 +835,7 @@ variable [BEq α] [Hashable α] {ctrl : ByteArray} {keys : Array α} {mask : USi
   {shift : UInt64} {a : α}
 
 /-- The machine-word lookup is the one on `Nat` indices. -/
-private theorem findU_toNat' (hg : Geom cap mask) (h : LoopU ctrl keys mask)
+private theorem findU_toNat (hg : Geom cap mask) (h : LoopU ctrl keys mask)
     (hA : ArrN ctrl keys cap) :
     (if findU ctrl keys mask shift a h ≤ mask then some (findU ctrl keys mask shift a h).toNat
       else none) = findN ctrl keys cap shift a hA := by
@@ -864,7 +851,7 @@ private theorem findU_toNat' (hg : Geom cap mask) (h : LoopU ctrl keys mask)
     (findLoopN_congr hh (by simp) hgw (congrArg (fun x => matchTag x _) hgw))
 
 /-- The machine-word insertion probe is the one on `Nat` indices, in a well-formed table. -/
-private theorem insProbeU_toNat' {vals : Array β} {size gl : Nat}
+private theorem insProbeU_toNat {vals : Array β} {size gl : Nat}
     (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) (hg : Geom cap mask)
     (hsz : ctrl.size = cap + 8) (h : LoopU ctrl keys mask) (hA : ArrN ctrl keys cap) :
     (if insProbeU ctrl keys mask shift a h ≤ mask then
@@ -878,7 +865,7 @@ private theorem insProbeU_toNat' {vals : Array β} {size gl : Nat}
   have hgw : ctrlWord ctrl (homeU (hashBits shift a) mask) (and_mask_word h.arr.word) =
       ctrlWordN ctrl (homeN (hashBits shift a) cap) (hA.mod_word _) :=
     (ctrlWord_eq_ctrlWordN (h' := hA.word_of_lt hp) (by omega)).trans (ctrlWordN_congr hh)
-  have hm1 : (mask + 1).toNat = cap := by rw [toNat_add_one' hsm]; omega
+  have hm1 : (mask + 1).toNat = cap := by rw [toNat_add_one hsm]; omega
   have hrel : InsRel mask cap (insProbeU ctrl keys mask shift a h)
       (findInsLoopN ctrl keys a cap (repTag (tagOf (hashBits shift a)))
         (homeU (hashBits shift a) mask).toNat (0 : USize).toNat
@@ -954,7 +941,7 @@ private theorem insProbeU_unalloc (h : LoopU ctrl keys mask) (hk : keys.size = 0
     omega
 
 /-- Fast path C applies only where the lookup misses (no lawfulness). -/
-private theorem fast_findU' (h : LoopU ctrl keys mask)
+theorem fast_findU (h : LoopU ctrl keys mask)
     (hmt : (matchTag (ctrlWord ctrl (homeU (hashBits shift a) mask) (and_mask_word h.arr.word))
       (repTag (tagOf (hashBits shift a))) == 0) = true)
     (hg : (ctrlWord ctrl (homeU (hashBits shift a) mask) (and_mask_word h.arr.word) &&& 0xFF ==
@@ -979,9 +966,9 @@ theorem WF.findU_hit (wf : WF s size gl mask shift) (h : LoopU s.ctrl s.keys mas
   rcases Nat.eq_zero_or_pos s.cap with hc | hc
   · exact absurd hi (findU_unalloc h (wf.unalloc_of hc).keys_size)
   · obtain ⟨hg, -, hAN⟩ := wf.wordFacts h hc
-    have e := findU_toNat' (a := a) (shift := shift) hg h hAN
+    have e := findU_toNat (a := a) (shift := shift) hg h hAN
     rw [ite_eq_left hi] at e
-    exact wf.findN_hit' hAN e.symm
+    exact wf.findN_hit hAN e.symm
 
 /-- A machine-word lookup that ends past the slots proves `a` absent (lawful instances). -/
 theorem WF.findU_absent (wf : WF s size gl mask shift) (h : LoopU s.ctrl s.keys mask) {a : α}
@@ -990,22 +977,9 @@ theorem WF.findU_absent (wf : WF s size gl mask shift) (h : LoopU s.ctrl s.keys 
   rcases Nat.eq_zero_or_pos s.cap with hc | hc
   · intro i _ hf; exact absurd hf.1 (by omega)
   · obtain ⟨hg, -, hAN⟩ := wf.wordFacts h hc
-    have e := findU_toNat' (a := a) (shift := shift) hg h hAN
+    have e := findU_toNat (a := a) (shift := shift) hg h hAN
     rw [ite_eq_right hi] at e
-    exact wf.findN_absent' hAN e.symm
-
-/-- A lookup on `Nat` indices that finds a slot finds a hit. -/
-theorem WF.findN_hit (wf : WF s size gl mask shift) (hA : ArrN s.ctrl s.keys (s.ctrl.size - 8))
-    {a : α} {i : Nat} (he : findN s.ctrl s.keys (s.ctrl.size - 8) shift a hA = some i) :
-    s.Hit shift a i :=
-  wf.findN_hit' hA he
-
-/-- A lookup on `Nat` indices that finds none proves `a` absent (lawful instances). -/
-theorem WF.findN_absent (wf : WF s size gl mask shift)
-    (hA : ArrN s.ctrl s.keys (s.ctrl.size - 8)) {a : α}
-    (he : findN s.ctrl s.keys (s.ctrl.size - 8) shift a hA = none) [EquivBEq α]
-    [LawfulHashable α] : s.Absent a :=
-  wf.findN_absent' hA he
+    exact wf.findN_absent hAN e.symm
 
 /-! ## The insertion probe -/
 
@@ -1017,9 +991,9 @@ theorem WF.insProbeU_hit (wf : WF s size gl mask shift) (h : LoopU s.ctrl s.keys
   · have hu := wf.unalloc_of hc
     exact absurd hr (insProbeU_unalloc h hu.keys_size hu.mask_eq).1
   · obtain ⟨hg, hsz, hAN⟩ := wf.wordFacts h hc
-    have e := insProbeU_toNat' (a := a) (vals := s.vals) wf hg hsz h hAN
+    have e := insProbeU_toNat (a := a) (vals := s.vals) wf hg hsz h hAN
     rw [ite_eq_left hr] at e
-    exact wf.findN_hit' hAN ((insProbeN_inl_iff' hAN).mp e.symm)
+    exact wf.findN_hit hAN ((insProbeN_inl_iff hAN).mp e.symm)
 
 /-- The machine-word insertion probe that ends past the slots ends at `mask + 1` plus the slot
 where the new key goes. -/
@@ -1032,9 +1006,9 @@ theorem WF.insProbeU_new (wf : WF s size gl mask shift) (h : LoopU s.ctrl s.keys
     refine ⟨rfl, Or.inr ⟨hc, (insProbeU_unalloc h hu.keys_size hu.mask_eq).2⟩, ?_⟩
     intro _ _ i _ hf; exact absurd hf.1 (by omega)
   · obtain ⟨hg, hsz, hAN⟩ := wf.wordFacts h hc
-    have e := insProbeU_toNat' (a := a) (vals := s.vals) wf hg hsz h hAN
+    have e := insProbeU_toNat (a := a) (vals := s.vals) wf hg hsz h hAN
     rw [ite_eq_right hr] at e
-    exact wf.insProbeN_new' hAN e.symm
+    exact wf.insProbeN_new hAN e.symm
 
 /-- **Fast path C**: when no lane of the home group carries the tag and the home slot is EMPTY,
 the new key goes to the home slot. -/
@@ -1060,12 +1034,12 @@ theorem WF.fast_new (wf : WF s size gl mask shift) (h : LoopU s.ctrl s.keys mask
         ctrlWordN s.ctrl (homeU (hashBits shift a) mask).toNat (hAN.word_of_lt hp) :=
       ctrlWord_eq_ctrlWordN (by omega)
     have hE := byte_zero_of_low (hgw ▸ hg)
-    have hb := byte_wordN (j := 0) (hw := hAN.word_of_lt hp) hM hp (by decide)
+    have hb := byte_wordN (j := 0) (hw := hAN.word_of_lt hp) hM (by decide)
     rw [hb, Nat.add_zero, Nat.mod_eq_of_lt hp] at hE
     refine ⟨rfl, Or.inl ⟨hp, Or.inl hE, 0, by have := hM.le_cap; omega, 0, by decide, ?_,
       fun k' hk' => absurd hk' (Nat.not_lt_zero _)⟩, ?_⟩
     · rw [Nat.add_zero, probePos_zero, hh]; simp [homeN]
-    · intro _ _; exact wf.findU_absent h (fast_findU' h hmt hg)
+    · intro _ _; exact wf.findU_absent h (fast_findU h hmt hg)
 
 /-- The insertion probe of `containsThenInsertN` (with fast path C) that finds a slot finds a
 hit. -/
@@ -1073,7 +1047,7 @@ theorem WF.insSlotN_hit (wf : WF s size gl mask shift)
     (hA : ArrN s.ctrl s.keys (s.ctrl.size - 8)) {a : α} {i : Nat}
     (he : insSlotN s.ctrl s.keys a (s.ctrl.size - 8) (hashBits shift a) hA = .inl i) :
     s.Hit shift a i :=
-  wf.findN_hit hA ((insSlotN_inl_iff' hA).mp he)
+  wf.findN_hit hA ((insSlotN_inl_iff hA).mp he)
 
 /-- The insertion probe of `containsThenInsertN` that finds no hit returns where the new key
 goes. -/
@@ -1087,20 +1061,13 @@ theorem WF.insSlotN_new (wf : WF s size gl mask shift)
   · rename_i hfast
     cases he
     exact wf.fastN_new hA hfast
-  · exact wf.insProbeN_new' hA he
+  · exact wf.insProbeN_new hA he
 
 /-- The insertion probe on `Nat` indices that finds a slot finds a hit. -/
 theorem WF.insProbeN_hit (wf : WF s size gl mask shift)
     (hA : ArrN s.ctrl s.keys (s.ctrl.size - 8)) {a : α} {i : Nat}
     (he : insProbeN s.ctrl s.keys (s.ctrl.size - 8) shift a hA = .inl i) : s.Hit shift a i :=
-  wf.findN_hit hA ((insProbeN_inl_iff' hA).mp he)
-
-/-- The insertion probe on `Nat` indices that finds no hit returns where the new key goes. -/
-theorem WF.insProbeN_new (wf : WF s size gl mask shift)
-    (hA : ArrN s.ctrl s.keys (s.ctrl.size - 8)) {a : α} {j : Nat}
-    (he : insProbeN s.ctrl s.keys (s.ctrl.size - 8) shift a hA = .inr j) :
-    NewSlot s shift a (hashBits shift a) j :=
-  wf.insProbeN_new' hA he
+  wf.findN_hit hA ((insProbeN_inl_iff hA).mp he)
 
 end Spec
 
@@ -1123,10 +1090,10 @@ theorem WF.insProbeU_le_iff {vals : Array β} {size gl : Nat}
     · have hu := wf.unalloc_of hc
       exact absurd hr (insProbeU_unalloc h hu.keys_size hu.mask_eq).1
     · obtain ⟨hg, hsz, hAN⟩ := wf.wordFacts h hc
-      have e1 := insProbeU_toNat' (a := a) wf hg hsz h hAN
+      have e1 := insProbeU_toNat (a := a) wf hg hsz h hAN
       rw [ite_eq_left hr] at e1
-      have e2 := findU_toNat' (a := a) (shift := shift) hg h hAN
-      rw [(insProbeN_inl_iff' hAN).mp e1.symm] at e2
+      have e2 := findU_toNat (a := a) (shift := shift) hg h hAN
+      rw [(insProbeN_inl_iff hAN).mp e1.symm] at e2
       refine Classical.byContradiction fun hn => ?_
       rw [ite_eq_right hn] at e2
       cases e2
@@ -1136,58 +1103,12 @@ theorem WF.insProbeU_le_iff {vals : Array β} {size gl : Nat}
     rw [e]
     exact hr
 
+/-- Where the lookup hits, the insertion probe ends at the same slot. -/
 theorem insProbeU_eq_findU (h : LoopU ctrl keys mask)
     (hr : findU ctrl keys mask shift a h ≤ mask) :
     insProbeU ctrl keys mask shift a h = findU ctrl keys mask shift a h :=
   findInsLoop_eq_findLoop _ h.arr _ _ _ _ _ _ _ (mask + 1) hr
 
-/-- Fast path C applies only where the lookup misses. -/
-theorem fast_findU (h : LoopU ctrl keys mask)
-    (hmt : (matchTag (ctrlWord ctrl (homeU (hashBits shift a) mask) (and_mask_word h.arr.word))
-      (repTag (tagOf (hashBits shift a))) == 0) = true)
-    (hg : (ctrlWord ctrl (homeU (hashBits shift a) mask) (and_mask_word h.arr.word) &&& 0xFF ==
-      0xFF) = true) :
-    ¬findU ctrl keys mask shift a h ≤ mask :=
-  fast_findU' h hmt hg
-
-theorem insSlotN_inl_iff (hA : ArrN ctrl keys cap) {i : Nat} :
-    insSlotN ctrl keys a cap (hashBits shift a) hA = .inl i ↔
-      findN ctrl keys cap shift a hA = some i :=
-  insSlotN_inl_iff' hA
-
-theorem insProbeN_inl_iff (hA : ArrN ctrl keys cap) {i : Nat} :
-    insProbeN ctrl keys cap shift a hA = .inl i ↔ findN ctrl keys cap shift a hA = some i :=
-  insProbeN_inl_iff' hA
-
 end Fused
-
-/-! ## Machine words against `Nat` indices (suggested route) -/
-
-section Words
-
-variable [BEq α] [Hashable α] {ctrl : ByteArray} {keys : Array α} {mask : USize} {cap : Nat}
-  {shift : UInt64} {a : α}
-
-/-- *Suggested route.* The machine-word lookup is the one on `Nat` indices. -/
-theorem findU_toNat (hg : Geom cap mask) (hsz : ctrl.size = cap + 8) (h : LoopU ctrl keys mask)
-    (hA : ArrN ctrl keys cap) :
-    (if findU ctrl keys mask shift a h ≤ mask then some (findU ctrl keys mask shift a h).toNat
-      else none) = findN ctrl keys cap shift a hA := by
-  -- The simulation does not need `hsz`; the statement keeps it, as `insProbeU_toNat` does.
-  have _ := hsz
-  exact findU_toNat' hg h hA
-
-/-- *Suggested route.* The machine-word insertion probe is the one on `Nat` indices (in a table
-with the invariant, which leaves a free slot: see `WF.insProbeU_le_iff`). -/
-theorem insProbeU_toNat {vals : Array β} {size gl : Nat}
-    (wf : WF ⟨ctrl, keys, vals⟩ size gl mask shift) (hg : Geom cap mask) (hsz : ctrl.size = cap + 8)
-    (h : LoopU ctrl keys mask) (hA : ArrN ctrl keys cap) :
-    (if insProbeU ctrl keys mask shift a h ≤ mask then
-      Sum.inl (insProbeU ctrl keys mask shift a h).toNat
-      else Sum.inr (insProbeU ctrl keys mask shift a h - (mask + 1)).toNat) =
-      insProbeN ctrl keys cap shift a hA :=
-  insProbeU_toNat' wf hg hsz h hA
-
-end Words
 
 end OAMap.Core.Swiss

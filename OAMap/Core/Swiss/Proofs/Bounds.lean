@@ -5,36 +5,43 @@ public import OAMap.Core.Swiss.Defs
 /-!
 # Swiss core proofs, part 1: bounds, termination, and what the code reads off the invariant
 
-A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure"). Its
-owner edits only this file: the proofs, and any private helper lemmas. The statements are fixed:
-the code files and the later proof files use them. Every statement is proved; the private helpers
-(`smallMask_pow_iff`, the shape facts `Alloc.*`/`Unalloc.*`, `getElem_setCtrlN`, the `clog2`
-facts, ...) sit just before their first use.
+A proof file of the SwissTable core (`OAMap/Core/Swiss/Table.lean`, "Proof structure"): the facts
+that the code files (`Loops.lean`, `Build.lean`, `Table.lean`) discharge their array bounds and
+termination measures with, and the small facts that every later proof file uses.
 
-Contents, and who uses them:
-
-* **Machine-word arithmetic and termination** (`Loops.lean`): masked indices (`and_mask_lt`,
-  ...), the probe step and the traversal steps without wrapping below `2 ^ 31`, the `Prod.Lex`
-  measures of the loops (`lex_lane`, `lex_group`, `lex_fold`, ...).
+* **Machine words** (all later files): `USize` additions that do not wrap (`toNat_add_of_lt`,
+  `toNat_add_eight`, `toNat_add_one`), the slot mask `2 ^ lg - 1` (`toNat_mask_of_le`, and
+  `smallMask_pow_iff`: its bit 31 is clear iff `lg ≤ 31`, the heart of the guard lemmas; on 32-bit
+  platforms the mask of a table of `2 ^ 32` slots or more wraps to `2 ^ 32 - 1`, whose bit 31 is
+  set), masked indices (`and_mask_lt`, ...), and the byte read `uget_eq_getElem'`.
+* **Termination** (`Loops.lean`): the `Prod.Lex` measures of the loops (`lex_lane`, `lex_group`,
+  `lex_fold`, ...), with the probe and traversal steps that do not wrap on machine words.
 * **The loops' erased hypotheses** (`Loops.lean`): the bounds that `ArrU`, `LoopU`, `ArrN`,
   `MoveSrcU`, `FoldU`, ... give, and how they carry over from one iteration to the next.
-  `firstGroup`: in the unallocated table no tag matches and the first group has an EMPTY slot.
-* **Control arrays** (all later files): sizes and bytes after `setCtrlN` and `eraseCtrlN`, and the
-  machine-word forms against the `Nat` ones (`setCtrl_eq_setCtrlN`, `ctrlWord_eq_ctrlWordN`,
-  `homeU_toNat`).
+* **Control arrays** (all later files): sizes and bytes after `setCtrlN` and `eraseCtrlN`
+  (`getElem_setCtrlN`, `mirrored_setCtrlN`, `slotByte_setCtrlN`), the group word on `Nat` indices
+  (`byte_ctrlWordN`, `byte_ctrlWordN_of_mirrored`, `ctrlWordN_congr`), and the machine-word forms
+  against the `Nat` ones (`setCtrl_eq_setCtrlN`, `ctrlWord_eq_ctrlWordN`, `homeU_toNat`).
+* **Slots** (all later files): the entry of a slot and its cells, in both directions
+  (`entryAt_of_full`, `entryAt_of_isFull`, `entryAt_of_not_full`, `entryAt_eq_none`,
+  `entryAt_eq_some`, `isFull_of_entryAt`), membership in the entries (`mem_entries`), and
+  `filterMap_congr_mem` for the entries as a `filterMap` over the slots.
 * **The invariant** (`Build.lean`, `Table.lean`, all later files): the shape facts (`WF.geom`,
   `WF.mirrored`, the cell bounds), the guards (`WF.smallMask_eq`: `smallMask ↔ smallShift`), the
   hypotheses of the loops from the invariant (`WF.loopU`, `WF.arrN`, `WF.foldU`, ...), the
-  unallocated table (`WF.unalloc`), the capacity arithmetic of `lgFor`, and the preconditions of a
-  rebuild (`WF.rebuildPre_same`, `WF.rebuildPre_grow`).
+  unallocated table (`WF.unalloc`; `firstGroup`: no tag matches in its only group, which has an
+  EMPTY slot), the cells an insert writes (`WF.new_*`), the capacity arithmetic of `lgFor`, and the
+  preconditions of a rebuild (`WF.rebuildPre_same`, `WF.rebuildPre_grow`).
 
-Proof hints: `Geom` and `Mirrored` of `Group.lean` carry the slot arithmetic
-(`Geom.toNat_and_mask`, `Geom.toNat_add_and_mask`, `byte_ctrlWord_of_mirrored`,
-`slotByte_setCtrl`); `smallMask ((2 ^ lg - 1).toUSize) = true ↔ lg ≤ 31` is the heart of the guard
-lemmas (see `Shape.fast_of_mask_lt` of the earlier linear-probing map for the wrap argument);
-`lowestLane_lt`/`lowestLane64_lt` bound the lanes; `clearLowest_lt` is the lane measure. Write
-`(2 : Nat) ^ lg` in statements that unify with code terms: with the bare numeral, the elaborator
-tries to evaluate `2 ^ lg` before the default instance fixes its type, and times out.
+The slot arithmetic comes from `Geom` and `Mirrored` of `Group.lean` (`Geom.toNat_and_mask`,
+`Geom.toNat_add_and_mask`, `byte_ctrlWord_of_mirrored`, `slotByte_setCtrl`). Statements that unify
+with code terms write `(2 : Nat) ^ lg`: with the bare numeral, the elaborator tries to evaluate
+`2 ^ lg` before the default instance fixes its type, and times out.
+
+`WF.new_alloc_gl`, `WF.new_alloc_old` and `WF.new_alloc_oldN` take a `NewSlot` (`_h`) that their
+proofs do not need, because the inserts of `Table.lean` pass it: removing it there changes only
+erased arguments, but it reorders the parameters of a join point in `Table.lean`'s generated C,
+and the code is frozen.
 -/
 
 @[expose] public section
@@ -45,10 +52,10 @@ namespace OAMap.Core.Swiss
 
 variable {α : Type u} {β : Type v} {γ : Type w}
 
-/-! ## Private helpers: machine words below `2 ^ 32`, and the `2 ^ 31` guard -/
+/-! ## Machine words below `2 ^ 32`, and the `2 ^ 31` guard -/
 
 /-- An addition of `USize`s below `2 ^ 32` does not wrap. -/
-private theorem toNat_add_of_lt {a b : USize} (h : a.toNat + b.toNat < 2 ^ 32) :
+theorem toNat_add_of_lt {a b : USize} (h : a.toNat + b.toNat < 2 ^ 32) :
     (a + b).toNat = a.toNat + b.toNat := by
   rw [USize.toNat_add]
   exact Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le h USize.le_size)
@@ -57,9 +64,18 @@ private theorem toNat_eight_u : (8 : USize).toNat = 8 := by simp
 
 private theorem toNat_one_u : (1 : USize).toNat = 1 := by simp
 
-private theorem toNat_add_eight {a : USize} (h : a.toNat ≤ 2 ^ 31) :
+/-- The probe and traversal step `+ 8` does not wrap up to `2 ^ 31`. -/
+theorem toNat_add_eight {a : USize} (h : a.toNat ≤ 2 ^ 31) :
     (a + 8).toNat = a.toNat + 8 := by
   rw [toNat_add_of_lt (by rw [toNat_eight_u]; omega), toNat_eight_u]
+
+/-- `+ 1` does not wrap below `2 ^ 31`. -/
+theorem toNat_add_one {a : USize} (h : a.toNat < 2 ^ 31) : (a + 1).toNat = a.toNat + 1 := by
+  rw [toNat_add_of_lt (by rw [toNat_one_u]; omega), toNat_one_u]
+
+theorem ne_zero_of_bne {m : UInt64} (h : (m != 0) = true) : m ≠ 0 := by simpa using h
+
+theorem eq_zero_of_not_bne {m : UInt64} (h : ¬(m != 0) = true) : m = 0 := by simpa using h
 
 private theorem eight_le_of_not_lt {a : USize} (h : ¬a < 8) : 8 ≤ a.toNat := by
   rw [USize.lt_iff_toNat_lt, toNat_eight_u] at h; omega
@@ -100,8 +116,8 @@ private theorem and_two_pow_eq_zero_iff (x n : Nat) : x &&& 2 ^ n = 0 ↔ x.test
 
 /-- **The heart of the guards**: the slot mask `2 ^ lg - 1` has bit 31 clear iff `lg ≤ 31` (on
 32-bit platforms the mask of a table of `2 ^ 32` slots or more wraps to `2 ^ 32 - 1`, whose bit 31
-is set: the wrap argument of the earlier linear-probing map). -/
-private theorem smallMask_pow_iff (lg : Nat) :
+is set). -/
+theorem smallMask_pow_iff (lg : Nat) :
     smallMask ((2 : Nat) ^ lg - 1).toUSize = true ↔ lg ≤ 31 := by
   have hnb : 32 ≤ System.Platform.numBits := by
     rcases System.Platform.numBits_eq with h | h <;> omega
@@ -122,7 +138,7 @@ private theorem smallShift_sub_iff (lg : Nat) : smallShift (57 - lg).toUInt64 = 
   omega
 
 /-- `2 ^ lg - 1` as a slot mask, for `lg ≤ 31`. -/
-private theorem toNat_mask_of_le {lg : Nat} (h : lg ≤ 31) :
+theorem toNat_mask_of_le {lg : Nat} (h : lg ≤ 31) :
     ((2 : Nat) ^ lg - 1).toUSize.toNat = 2 ^ lg - 1 :=
   toNat_toUSize_lt (by have := two_pow_le_31 h; omega)
 
@@ -138,7 +154,8 @@ private theorem getElem_emptyGroup {c : ByteArray} (hc : c = emptyGroup) {j : Na
     decide
   exact h j hj
 
-private theorem uget_eq_getElem' (c : ByteArray) (i : USize) (h : i.toNat < c.size) :
+/-- A machine-word byte read is the `Nat` one. -/
+theorem uget_eq_getElem' (c : ByteArray) (i : USize) (h : i.toNat < c.size) :
     c.uget i h = c[i.toNat] := by
   cases c; rfl
 
@@ -214,20 +231,18 @@ theorem lex_lane {a : Nat} {m : UInt64} (hm : IsMask m) (h : (m != 0) = true) :
       (a, m.toNat) :=
   Prod.Lex.right _ (clearLowest_lt_of hm h)
 
--- The statement's hypothesis is not needed by the proof.
-set_option linter.unusedVariables false in
-/-- One probe step on machine words: below `2 ^ 31` slots `stride + 8` does not wrap. -/
+/-- One probe step on machine words: on at most `2 ^ 31` slots `stride + 8` does not wrap. -/
 theorem sub_group {mask stride : USize} (hsm : mask.toNat < 2 ^ 31)
-    (hs : stride.toNat ≤ mask.toNat) (h : ¬stride + 8 > mask) :
+    (hs : stride.toNat ≤ mask.toNat) :
     mask.toNat + 8 - (stride + 8).toNat < mask.toNat + 8 - stride.toNat := by
   have h8 := toNat_add_eight (a := stride) (by omega)
   omega
 
 theorem lex_group {mask stride : USize} {b b' : Nat} (hsm : mask.toNat < 2 ^ 31)
-    (hs : stride.toNat ≤ mask.toNat) (h : ¬stride + 8 > mask) :
+    (hs : stride.toNat ≤ mask.toNat) :
     Prod.Lex (fun a₁ a₂ => a₁ < a₂) (fun a₁ a₂ => a₁ < a₂)
       (mask.toNat + 8 - (stride + 8).toNat, b') (mask.toNat + 8 - stride.toNat, b) :=
-  Prod.Lex.left _ _ (sub_group hsm hs h)
+  Prod.Lex.left _ _ (sub_group hsm hs)
 
 theorem sub_groupN {cap stride : Nat} (h : ¬cap ≤ stride + 8) :
     cap + 8 - (stride + 8) < cap + 8 - stride := by
@@ -244,10 +259,7 @@ theorem move_dec {omask i : USize} (hsm : omask.toNat < 2 ^ 31) (hi : ¬i > omas
   rw [toNat_add_of_lt (by rw [toNat_one_u]; omega), toNat_one_u]
   omega
 
--- The statement's hypothesis is not needed by the proof.
-set_option linter.unusedVariables false in
-theorem lex_fold {cap p : USize} {b b' : Nat} (hsm : cap.toNat ≤ 2 ^ 31) (hp : GroupAt cap p)
-    (h : p + 8 < cap) :
+theorem lex_fold {cap p : USize} {b b' : Nat} (hsm : cap.toNat ≤ 2 ^ 31) (hp : GroupAt cap p) :
     Prod.Lex (fun a₁ a₂ => a₁ < a₂) (fun a₁ a₂ => a₁ < a₂)
       (cap.toNat + 8 - (p + 8).toNat, b') (cap.toNat + 8 - p.toNat, b) := by
   have h1 := hp.1
@@ -374,10 +386,8 @@ theorem FoldU.lane_vals {ctrl : ByteArray} {keys : Array α} {vals : Array β} {
   rw [toNat_add_lane hm (by omega)]
   omega
 
--- The statement's hypothesis is not needed by the proof.
-set_option linter.unusedVariables false in
 theorem FoldU.next_word {ctrl : ByteArray} {keys : Array α} {vals : Array β} {cap : USize}
-    (h : FoldU ctrl keys vals cap) {p : USize} (hp : GroupAt cap p) (hlt : p + 8 < cap) :
+    (h : FoldU ctrl keys vals cap) {p : USize} (hlt : p + 8 < cap) :
     (p + 8).toNat + 8 ≤ ctrl.size := by
   have := USize.lt_iff_toNat_lt.mp hlt
   have := h.word
@@ -522,7 +532,7 @@ theorem FMArr.erase {ctrl : ByteArray} {keys : Array α} {vals : Array β} {cap 
   exact ⟨by have := h.word; simp only at hs; omega, by have := h.keys; omega, h.vals⟩
 
 /-- Byte `k` after `setCtrlN`: the two written indices, else the old byte. -/
-private theorem getElem_setCtrlN (c : ByteArray) (cap i : Nat) (b : UInt8) (hi : i < c.size)
+theorem getElem_setCtrlN (c : ByteArray) (cap i : Nat) (b : UInt8) (hi : i < c.size)
     (hm : cap + 8 ≤ c.size) (hc : 0 < cap) (k : Nat) (hk : k < c.size) :
     (setCtrlN c cap i b hi hm hc)[k]'(by rw [size_setCtrlN]; exact hk) =
       if (i + cap - 8) % cap + 8 = k then b else if i = k then b else c[k] := by
@@ -558,6 +568,11 @@ theorem slotByte_setCtrlN {c : ByteArray} {cap : Nat} (h : Mirrored c cap) {i : 
   repeat' split
   all_goals first | rfl | omega
 
+/-- The group word at equal indices. -/
+theorem ctrlWordN_congr {c : ByteArray} {i j : Nat} (e : i = j) {h : i + 8 ≤ c.size}
+    {h' : j + 8 ≤ c.size} : ctrlWordN c i h = ctrlWordN c j h' := by
+  subst e; rfl
+
 /-- Byte `j` of the group word on `Nat` indices. -/
 theorem byte_ctrlWordN (c : ByteArray) (i : Nat) (h : i + 8 ≤ c.size) {j : Nat} (hj : j < 8) :
     byte (ctrlWordN c i h) j = c[i + j]'(by omega) := by
@@ -566,12 +581,10 @@ theorem byte_ctrlWordN (c : ByteArray) (i : Nat) (h : i + 8 ≤ c.size) {j : Nat
   rcases j with _ | _ | _ | _ | _ | _ | _ | _ | j <;> simp
   all_goals omega
 
--- The statement's hypothesis is not needed by the proof.
-set_option linter.unusedVariables false in
 /-- Under the mirror, byte `j` of the group word at slot `p` is the byte of slot
 `(p + j) % cap`. -/
 theorem byte_ctrlWordN_of_mirrored {c : ByteArray} {cap : Nat} (h : Mirrored c cap) {p : Nat}
-    (hp : p < cap) {hw : p + 8 ≤ c.size} {j : Nat} (hj : j < 8) :
+    {hw : p + 8 ≤ c.size} {j : Nat} (hj : j < 8) :
     byte (ctrlWordN c p hw) j = slotByte c cap ((p + j) % cap) := by
   rw [byte_ctrlWordN c p hw hj, h.getElem_eq, slotByte_mod]
 
@@ -583,11 +596,9 @@ theorem ctrlWord_eq_ctrlWordN {c : ByteArray} {i : USize} (hs : i.toNat < 2 ^ 31
   intro j hj
   rw [byte_ctrlWord' c i h (by have := USize.le_size; omega) hj, byte_ctrlWordN c i.toNat h' hj]
 
--- The statement's hypothesis is not needed by the proof.
-set_option linter.unusedVariables false in
 /-- The machine-word control write is the `Nat` one. -/
 theorem setCtrl_eq_setCtrlN {c : ByteArray} {cap : Nat} {mask i : USize} (hg : Geom cap mask)
-    (hsz : c.size = cap + 8) (hic : i.toNat < cap) {b : UInt8} {h1 : i.toNat < c.size}
+    (hic : i.toNat < cap) {b : UInt8} {h1 : i.toNat < c.size}
     {h2 : mask.toNat + 8 < c.size} {h3 : i.toNat < c.size} {h4 : cap + 8 ≤ c.size}
     {h5 : 0 < cap} : setCtrl c mask i b h1 h2 = setCtrlN c cap i.toNat b h3 h4 h5 := by
   obtain ⟨n, hcap⟩ := hg.pow_two
@@ -621,6 +632,87 @@ theorem isFull_of {s : Slots α β} {i : Nat} (hi : i < s.cap) {h : i < s.ctrl.s
 /-- A tag is a FULL byte. -/
 theorem tagOf_lt (q : UInt64) : tagOf q < 0x80 := by
   unfold tagOf; exact toUInt8_and_7F_lt q
+
+theorem EMPTY_not_lt : ¬EMPTY < 0x80 := by rw [EMPTY_eq]; decide
+
+theorem DELETED_not_lt : ¬DELETED < 0x80 := by rw [DELETED_eq]; decide
+
+/-! ## Slots: the entry of a slot -/
+
+/-- The entry of a full slot with both cells. -/
+theorem entryAt_of_full {s : Slots α β} {i : Nat} (hc : i < s.ctrl.size) (hf : s.ctrl[i] < 0x80)
+    (hk : i < s.keys.size) (hv : i < s.vals.size) :
+    s.entryAt i = some ⟨s.keys[i], s.vals[i]⟩ := by
+  unfold Slots.entryAt
+  rw [getElem?_pos s.ctrl i hc]
+  simp [hf, hk, hv]
+
+/-- The entry of a full slot with both cells, from `IsFull`. -/
+theorem entryAt_of_isFull {s : Slots α β} {i : Nat} (hi : s.IsFull i) (hk : i < s.keys.size)
+    (hv : i < s.vals.size) : s.entryAt i = some ⟨s.keys[i], s.vals[i]⟩ := by
+  have hc : i < s.ctrl.size := by have := hi.1; unfold Slots.cap at this; omega
+  have hf := hi.2
+  rw [getElem!_pos s.ctrl i hc] at hf
+  exact entryAt_of_full hc hf hk hv
+
+/-- A slot whose control byte is not FULL has no entry. -/
+theorem entryAt_of_not_full {s : Slots α β} {i : Nat} (hc : i < s.ctrl.size)
+    (hf : ¬s.ctrl[i] < 0x80) : s.entryAt i = none := by
+  unfold Slots.entryAt
+  rw [getElem?_pos s.ctrl i hc]
+  simp [hf]
+
+/-- A slot whose control byte is not FULL has no entry (`getElem!` form: no bound needed). -/
+theorem entryAt_eq_none {s : Slots α β} {i : Nat} (h : ¬s.ctrl[i]! < 0x80) :
+    s.entryAt i = none := by
+  unfold Slots.entryAt
+  by_cases hi : i < s.ctrl.size
+  · rw [getElem?_pos s.ctrl i hi]
+    rw [getElem!_pos s.ctrl i hi] at h
+    simp only [h, ite_false]
+  · rw [getElem?_neg s.ctrl i hi]
+
+/-- What an entry of a slot says about the slot's cells. -/
+theorem entryAt_eq_some {s : Slots α β} {i : Nat} {e : (_ : α) × β}
+    (h : s.entryAt i = some e) :
+    i < s.ctrl.size ∧ s.ctrl[i]! < 0x80 ∧ s.keys[i]? = some e.1 ∧ s.vals[i]? = some e.2 := by
+  unfold Slots.entryAt at h
+  split at h
+  · rename_i c hc
+    rw [getElem?_eq_some_iff] at hc
+    obtain ⟨hi, rfl⟩ := hc
+    split at h
+    · rename_i hlt
+      cases hk : s.keys[i]? with
+      | none => simp [hk] at h
+      | some k =>
+        cases hv : s.vals[i]? with
+        | none => simp [hk, hv] at h
+        | some v =>
+          simp only [hk, hv, Option.bind_some, Option.map_some, Option.some.injEq] at h
+          subst h
+          exact ⟨hi, by rw [getElem!_pos s.ctrl i hi]; exact hlt, rfl, rfl⟩
+    · exact absurd h (by simp)
+  · exact absurd h (by simp)
+
+/-- A slot below `cap` with an entry is full. -/
+theorem isFull_of_entryAt {s : Slots α β} {i : Nat} {e : (_ : α) × β} (h : s.entryAt i = some e)
+    (hi : i < s.cap) : s.IsFull i :=
+  ⟨hi, (entryAt_eq_some h).2.1⟩
+
+/-- The entries are the entries of the slots below `cap`. -/
+theorem mem_entries {s : Slots α β} {e : (_ : α) × β} :
+    e ∈ s.entries ↔ ∃ i, i < s.cap ∧ s.entryAt i = some e := by
+  simp [Slots.entries, List.mem_filterMap, List.mem_range]
+
+/-- `List.filterMap` with functions that agree on the list. -/
+theorem filterMap_congr_mem {δ : Type _} {ε : Type _} {f g : δ → Option ε} {l : List δ}
+    (h : ∀ x ∈ l, f x = g x) : l.filterMap f = l.filterMap g := by
+  induction l with
+  | nil => rfl
+  | cons a l ih =>
+    simp only [List.filterMap_cons, h a List.mem_cons_self,
+      ih (fun x hx => h x (List.mem_cons_of_mem _ hx))]
 
 /-! ## Private helpers: the two shapes -/
 
@@ -1007,20 +1099,16 @@ theorem WF.new_alloc_gl (wf : WF s size gl mask shift) {a : α} {q : UInt64} {i 
     (_h : NewSlot s shift a q i) (hgl : ¬(gl == 0) = true) : 0 < s.cap :=
   wf.cap_pos_of_gl (by simp at hgl; omega)
 
--- The statement's hypothesis is not needed by the proof.
-set_option linter.unusedVariables false in
 theorem WF.new_alloc_old (wf : WF s size gl mask shift) {a : α} {q : UInt64} {i : USize}
-    (h : NewSlot s shift a q i.toNat) {hi : i.toNat < s.ctrl.size}
+    (_h : NewSlot s shift a q i.toNat) {hi : i.toNat < s.ctrl.size}
     (hold : ¬(s.ctrl.uget i hi == EMPTY) = true) : 0 < s.cap := by
   refine Nat.pos_of_ne_zero fun hc => hold ?_
   have hu := wf.unalloc_of hc
   rw [uget_eq_getElem', getElem_emptyGroup hu.ctrl_eq, EMPTY_eq]
   decide
 
--- The statement's hypothesis is not needed by the proof.
-set_option linter.unusedVariables false in
 theorem WF.new_alloc_oldN (wf : WF s size gl mask shift) {a : α} {q : UInt64} {i : Nat}
-    (h : NewSlot s shift a q i) {hi : i < s.ctrl.size}
+    (_h : NewSlot s shift a q i) {hi : i < s.ctrl.size}
     (hold : ¬(s.ctrl[i]'hi == EMPTY) = true) : 0 < s.cap := by
   refine Nat.pos_of_ne_zero fun hc => hold ?_
   have hu := wf.unalloc_of hc
@@ -1097,10 +1185,7 @@ theorem WF.rebuildPre_same (wf : WF s size gl mask shift) (hz : ¬(s.keys.size =
   rw [hcap, lgFor_capacityOf ha.three_le]
   exact ⟨hc, ha.three_le, by rw [ha.cap_eq]; exact Nat.le_refl _, by omega⟩
 
--- The statement's hypothesis is not needed by the proof.
-set_option linter.unusedVariables false in
-theorem WF.rebuildPre_grow (wf : WF s size gl mask shift) (hz : ¬(s.keys.size == 0) = true)
-    (hh : ¬size + 1 ≤ capacityOf (s.ctrl.size - 8) / 2) :
+theorem WF.rebuildPre_grow (wf : WF s size gl mask shift) (hz : ¬(s.keys.size == 0) = true) :
     RebuildPre s size (lgFor (max (size + 1) (capacityOf (s.ctrl.size - 8) + 1))) := by
   have hc : 0 < s.cap := by
     refine Nat.pos_of_ne_zero fun h0 => hz ?_

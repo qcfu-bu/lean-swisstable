@@ -10,8 +10,8 @@ algorithms and the measurements; its "Proof structure" section lists the files).
 the definitions everything else is stated with:
 
 * hashing (`hashBits`, `homeU`, `homeN`, `tagOf`), the control arrays (`emptyGroup`, `emptyCtrl`,
-  `ctrlWordN`, `setCtrlN`, the erase rule on `Nat` indices `eraseCtrlN`), the `2 ^ 31` guards and
-  the capacity (`capacityOf`, `lgFor`);
+  `ctrlWordN`, `setCtrlN`, the erase rule on `Nat` indices `eraseCtrlN`), the guards
+  (`smallShift`, `smallMask`: at most `2 ^ 31` slots) and the capacity (`capacityOf`, `lgFor`);
 * the model: `Slots` (the three arrays of a table), the entry of a slot (`Slots.entryAt`) and the
   entries in slot order (`Slots.entries`, which `Table.toListModel` is);
 * the invariant `WF`, bundled in `Table` as its field `wf`: the shape (unallocated, or `2 ^ lg`
@@ -26,6 +26,9 @@ Everything here is exposed (`@[expose]`), so that the proof files can unfold it;
 the core never see it (they use only the contract names, `test/OAMapTest/SealCheck.lean`).
 -/
 
+-- Elaborated `let`s stay `let`s instead of becoming `have`s, the setting of the SwissF prototype
+-- and of the bake-off harness that measured the frozen code. It changes no generated C in this
+-- file today, but it does in `Table.lean`, and every code file is compiled under the same setting.
 set_option cleanup.letToHave false
 
 @[expose] public section
@@ -226,9 +229,8 @@ structure Unalloc (s : Slots α β) (mask : USize) (shift : UInt64) : Prop where
 
 /-- **The invariant** of a table with arrays `s`, `size` entries, `gl` EMPTY slots that may still
 be filled, slot mask `mask` and hash shift `shift`. The last two fields hold for lawful instances
-only (as `WF.probe` of the earlier verified linear-probing map): a probe passes slots of other
-tags without comparing keys, so an unlawful `==` or `hash` could break them; everything the
-U lemmas of the contract need is unconditional. -/
+only: a probe passes slots of other tags without comparing keys, so an unlawful `==` or `hash`
+could break them; everything the U lemmas of the contract need is unconditional. -/
 structure WF [BEq α] [Hashable α] (s : Slots α β) (size gl : Nat) (mask : USize)
     (shift : UInt64) : Prop where
   /-- Unallocated, or `2 ^ lg` slots. -/

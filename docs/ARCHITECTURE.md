@@ -104,53 +104,72 @@ runs both plus the text-level audits.
 
 ### 2.2 Module tree
 
-Sizes are estimates in lines of Lean, based on Std's files and on `Mock2.lean`.
+Sizes are the files' line counts as built (they replace the design's estimates, which were based
+on Std's files and on `Mock2.lean`).
 
 ```
-OAMap.lean                         aggregator: HashMap, HashSet                      10
+OAMap.lean                         aggregator: HashMap, HashSet                           13
 OAMap/
   Core/
-    Table.lean                     selector, ONE line: public import OAMap.Core.<X>     3
-    Swiss/, Swiss.lean             the selected core: the bake-off winner (§3.7)      10125
-    ListRef.lean                   reference core: list-backed, satisfies the contract 350
-    Derived.lean                   queries and traversals from the primitives         450
+    Table.lean                     selector, ONE line: public import OAMap.Core.<X>       13
+    Swiss.lean                     the selected core (§3.7): collects the contract        18
+    Swiss/Group.lean               SWAR control-byte groups, probing, erase rule        1349
+    Swiss/{Defs,Loops,Build,Table} the code (frozen at the bake-off's version)          1779
+    Swiss/Proofs/                  Bounds, Probe, Rebuild, Write, Bulk, Query,
+                                   Update, Traverse                                     6610
+    ListRef.lean                   reference core: list-backed, satisfies the contract   292
+    Derived.lean                   queries and traversals from the primitives            397
     Bulk.lean                      Std's algorithms: insertMany/ofList/union/inter/
-                                   diff/beq/partition, and their model lemmas         600
+                                   diff/beq/partition, and their model lemmas            546
   HashMap/
-    Basic.lean                     Std's Basic.lean: wrappers ⟨m.inner.op ...⟩        420
-    AdditionalOperations.lean      filterMap, map                                       50
-    Model.lean                     Layer 1 at HashMap level (simp_to_model's tables)  300
-    Tactic.lean                    simp_to_model, wf_trivial, wf_finish               130
-    Lemmas/Basic.lean              Std Lemmas.lean l.34-502: isEmpty ... getD         560
-    Lemmas/GetKey.lean             l.503-859: getKey* ... LawfulGetElem               400
-    Lemmas/Iterate.lean            l.860-1192: keys, toList, monadic, all/any        340
-    Lemmas/InsertMany.lean         l.1193-1395                                        210
-    Lemmas/SetOps.lean             l.1396-2069: BEq, Union, Inter, Diff               650
-    Lemmas/UnitOf.lean             l.2070-2527: insertManyIfNewUnit, ofList, unitOfList 450
-    Lemmas/Alter.lean              l.2528-2879: alter, modify                         350
-    Lemmas/Equiv.lean              l.2880-3075: namespace Equiv, section Equiv        200
-    Lemmas/FilterMap.lean          l.3076-3580: filterMap, filter, map                500
-    Lemmas.lean                    aggregator + `attribute [simp] contains_eq_false_iff_not_mem`
-    DecidableEquiv.lean            Decidable (m₁ ~m m₂)                                 30
-    Iterator.lean                  iter, keysIter, valuesIter                           60
-    IteratorLemmas.lean            9 theorems                                           90
-  HashMap.lean                     aggregator
+    Basic.lean                     Std's Basic.lean: wrappers ⟨m.inner.op ...⟩           525
+    AdditionalOperations.lean      filterMap, map                                         53
+    Model.lean                     Layer 1 at HashMap level (simp_to_model's tables)     362
+    Tactic.lean                    simp_to_model, wf_trivial, wf_finish                  170
+    Lemmas/Basic.lean              Std Lemmas.lean l.34-502: isEmpty ... getD            519
+    Lemmas/GetKey.lean             l.503-859: getKey* ... LawfulGetElem                  399
+    Lemmas/Iterate.lean            l.860-1192: keys, toList, monadic, all/any            431
+    Lemmas/InsertMany.lean         l.1193-1395                                           250
+    Lemmas/SetOps.lean             l.1396-2069: BEq, Union, Inter, Diff                  732
+    Lemmas/UnitOf.lean             l.2070-2527: insertManyIfNewUnit, ofList, unitOfList  528
+    Lemmas/Alter.lean              l.2528-2879: alter, modify                            392
+    Lemmas/Equiv.lean              l.2880-3075: namespace Equiv, section Equiv           245
+    Lemmas/FilterMap.lean          l.3076-3580: filterMap, filter, map                   565
+    Lemmas.lean                    aggregator, and `attribute [simp]` for
+                                   `contains_eq_false_iff_not_mem`                        29
+    DecidableEquiv.lean            Decidable (m₁ ~m m₂)                                   27
+    Iterator.lean                  iter, keysIter, valuesIter                             78
+    IteratorLemmas.lean            9 theorems                                            101
+  HashMap.lean                     aggregator                                             14
   HashSet/
-    Basic.lean                     Std's text, namespace renamed                      320
-    Lemmas.lean                    Std's text, 2 references renamed                  1600
-    DecidableEquiv.lean, Iterator.lean, IteratorLemmas.lean                       25/40/60
-  HashSet.lean                     aggregator
+    Basic.lean                     Std's text, namespace renamed                         321
+    Lemmas.lean                    Std's text, 2 references renamed                     1592
+    DecidableEquiv.lean, Iterator.lean, IteratorLemmas.lean                         32/46/51
+  HashSet.lean                     aggregator                                             13
 test/
-  Parity.lean                      the checker (996 lines, unchanged from this directory)
-  OAMapTest.lean                   aggregator of the tests below
-  OAMapTest/CoreSpec.lean          the core contract as `example`s (section 3.4)      170
-  OAMapTest/SealCheck.lean         layers above the core use only contract names       60
-  OAMapTest/ParityRun.lean         Parity.run against Std                              40
-  OAMapTest/Cbv.lean               `by cbv` examples, same as on Std                    60
-  OAMapTest/Unverified.lean        #guard tests for partition, values, valuesArray, Repr 60
-bench/Main.lean, Bench/            OAMap vs Std timing (the bake-off harness's workloads) 1043
+  Parity.lean                      the checker (the design directory's, plus the
+                                   Merge's failOnWarning and notation renaming)         1010
+  OAMapTest.lean                   aggregator of the tests below                          33
+  OAMapTest/CoreSpec.lean          the core contract as `example`s (section 3.4)         118
+  OAMapTest/CoreSpecListRef.lean   the same text against ListRef (second root, §3.6)     119
+  OAMapTest/SealCheck.lean         layers above the core use only contract names         112
+  OAMapTest/AuditLib.lean          the kernel-level audit, as a command                  110
+  OAMapTest/Audit.lean             the audit of every constant of `OAMap`                 20
+  OAMapTest/AuditListRef.lean      the audit of ListRef (third root, §3.6)                14
+  OAMapTest/ParityRun.lean         Parity.run against Std                                 46
+  OAMapTest/Cbv.lean               `by cbv` examples, same as on Std                     133
+  OAMapTest/Unverified.lean        #guard tests: partition, values, valuesArray, Repr,
+                                   the SwissTable core's slot counts                     212
+  OAMapTest/Semantics.lean         #guard tests: kept keys and values, traversal
+                                   order, `~m` scoping                                   264
+  OAMapTest/SwissGroupUse.lean     Group.lean's exported lemmas, from another module      69
+bench/
+  Main.lean                        OAMap vs Std timing (the harness's workloads)         186
+  Bench/{Keys,Iface,Loops,Run}     the bake-off harness's modules                        791
+  Bench/CCheck.lean                one function per API operation, for check_c.py         63
 tools/                             port.py, chain.py, extract2.py, split.py, srccheck.py,
-                                   select-core.sh, ci.sh, inventory.json (copied from here)
+                                   audit.py, check_c.py, gen_basic.py, select-core.sh,
+                                   ci.sh, inventory.json (copied from here)
 ```
 
 The Lemmas files keep Std's order and each imports the previous one, so the cut points do not
@@ -538,7 +557,9 @@ takes seconds, which is what lets eight agents port lemmas at once.
 Since the SwissTable core is selected (§3.7), ListRef stays in the repository as the reference
 implementation of the contract: `test/OAMapTest/CoreSpecListRef.lean` (CoreSpec's text, importing
 `OAMap.Core.ListRef` directly; `tools/ci.sh` checks the text is the same) is a second root of the
-test library, so `lake test` keeps checking it. `tools/select-core.sh listref` selects it again.
+test library, so `lake test` keeps checking it, and `test/OAMapTest/AuditListRef.lean`, a third
+root, runs `Audit`'s kernel checks on it (the library no longer imports it, so `Audit` does not
+see it). `tools/select-core.sh listref` selects it again.
 
 ### 3.7 The selected core `OAMap.Core.Swiss`
 
@@ -561,7 +582,7 @@ erased field `Table.wf`, with the probe and distinctness parts under
 3. `insert := (containsThenInsert ..).2` and `insertIfNew`, `containsThenInsertIfNew` from
    `getThenInsertIfNew?`, each one probe and one write.
 4. A hit writes the argument key (the tag matched, so `TagInv` holds unconditionally).
-5. No `Inhabited`: the empty map allocates nothing (a shared group of 8 EMPTY bytes, `#[]`
+5. No `Inhabited`: the empty map allocates no array (a shared group of 8 EMPTY bytes, `#[]`
    arrays); the first insert, and every rebuild, takes the inserted pair as the placeholder of the
    free cells; `filterMap` and `map` take the first mapped value. At most one erased pair stays
    referenced, until the next rebuild.
@@ -570,9 +591,9 @@ erased field `Table.wf`, with the probe and distinctness parts under
 7. `markLinear` marks the three arrays.
 8. Lookups, inserts and erases specialise to scalar code (`tools/check_c.py`, §9.3).
 
-Every operation runs on `USize` indices below `2 ^ 31` slots and on `Nat` indices beyond (the same
-algorithms; one guard at the top of each operation). The proofs (6,977 lines in
-`OAMap/Core/Swiss/Proofs/`, plus the 1,364-line SWAR library `Group.lean`) only add erased
+Every operation runs on `USize` indices on tables of at most `2 ^ 31` slots and on `Nat` indices
+beyond (the same algorithms; one guard at the top of each operation). The proofs (6,610 lines in
+`OAMap/Core/Swiss/Proofs/`, plus the 1,349-line SWAR library `Group.lean`) only add erased
 arguments, so the code is the frozen version measured in the bake-off: instructions per operation
 of `OAMap.HashMap` on the bake-off harness equal the frozen core's (ratio 1.0002 over 36 cells).
 The layers above the core needed no change when it was selected.
@@ -1162,7 +1183,8 @@ and the checker falls back to matching by type otherwise.
 |---|---|---|
 | `CoreSpec` | the 45-name contract (section 3.4) | the selected core lacks a name or has a less general type |
 | `CoreSpecListRef` | the same text against the reference core (a second root of the library, §3.6) | ListRef stops satisfying the contract |
-| `Audit` | every constant of `OAMap`: only the three standard axioms; no axiom, `opaque`, `partial`, `unsafe`, `implemented_by`, `extern` (the compiler's `_unsafe_rec` helpers of safe definitions by well-founded recursion are exempt from the `partial`/`unsafe` test) | anything else, or `sorry` |
+| `AuditListRef` | `Audit`'s checks on the reference core (a third root, §3.6) | as `Audit`, for ListRef |
+| `Audit` | every constant of `OAMap`: only the three standard axioms; no axiom, `opaque`, `partial`, `unsafe`, `implemented_by`, `extern` (the compiler's `f._unsafe_rec` helper of a safe definition `f` by well-founded recursion, in the same module, is exempt from the `partial`/`unsafe` test); the checks are `AuditLib.lean`'s | anything else, or `sorry` |
 | `SwissGroupUse` | a lookup step and an erase step proved from another module with `Swiss.Group`'s exported lemmas only | the SWAR library's statements stop being usable without unfolding |
 | `SealCheck` | layers above the core use only contract names | a proof reaches into a layout module |
 | `ParityRun` | statement, attribute and axiom parity with Std | any parity error, or `sorry` |
@@ -1179,7 +1201,7 @@ statements), not from output tests.
 #!/bin/sh
 set -eu
 lake build OAMap                      # every proof, against the selected core
-lake test                             # OAMapTest (§9.2), CoreSpecListRef included
+lake test                             # OAMapTest (§9.2), CoreSpecListRef and AuditListRef included
 python3 -I tools/srccheck.py tools/inventory.json OAMap   # source text of the 16 ignored iterator decls
 python3 -I tools/audit.py OAMap OAMap.lean                # spec-integrity audit: no escape hatches
 python3 -I tools/port.py lemmas --check                   # the generated files are reproduced exactly
@@ -1197,12 +1219,12 @@ SwissTable core's exact slot counts in `Unverified.lean`.)
 operation at `Nat` and `String` keys (`getD`, `get!`, `contains`, `getKeyD`, `HashSet.contains`,
 `insert`, `insertIfNew`, `getThenInsertIfNew?`, `containsThenInsert`, `erase`, `modify`, `alter`,
 `HashSet.insert`, `fold`), follows the direct calls from each, and fails on a closure call, on an
-allocation in a lookup (outside the `Nat`-indexed probes of tables of `2 ^ 31` slots or more,
+allocation in a lookup (outside the `Nat`-indexed probes of tables of more than `2 ^ 31` slots,
 which return an `Option`), on an array shared (`lean_inc`) in the same block before its in-place
 update (the bake-off's "bug A": the update then copies the array), and on an update whose
 unshared table cell is not reused. It prints, as a note, that `containsThenInsertN` (the
-`Nat`-indexed insert, tables of `2 ^ 31` slots or more) allocates a fresh table cell on a hit; its
-arrays are still updated in place.
+`Nat`-indexed insert, tables of more than `2 ^ 31` slots) allocates a fresh table cell on a hit;
+its arrays are still updated in place.
 
 ### 9.4 Benchmarks (`bench/Main.lean`, not gating)
 
@@ -1283,7 +1305,7 @@ If the seal holds, INTEG has nothing to fix: every proof above the core is alrea
 against the contract. (So it went: selecting the SwissTable core changed no file above the
 core. INTEG adjusted only tests: the `Unverified` slot-count guards, the second test root for
 ListRef, and an `Audit` exemption for the compiler's `_unsafe_rec` helpers of the core's
-well-founded loops.)
+well-founded loops. The review after it added the third root, `AuditListRef`.)
 
 **Wave 4: performance (optional, after measurement)**: single-probe fast paths that the first
 core version left derived, the lazy `SlotIter`, a value-less set core if `Array Unit` costs
