@@ -109,64 +109,16 @@ theorem Equiv.union_congr {m₃ m₄ : HashMap α β} [EquivBEq α] [LawfulHasha
   simp_to_model [Equiv, union] at * using insertList_congr
 
 theorem union_insert_right_equiv_insert_union [EquivBEq α] [LawfulHashable α] {p : α × β} :
-    (m₁ ∪ (m₂.insert p.fst p.snd)) ~m ((m₁ ∪ m₂).insert p.fst p.snd) :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Function expected at
-  -- Std (HashMap): ⟨@DHashMap.union_insert_right_equiv_insert_union _ _ _ _ m₁.inner m₂.inner _ _ ⟨p.fst, p.snd⟩⟩
-  -- Std (DHashMap.union_insert_right_equiv_insert_union): ⟨@Raw₀.union_insert_right_equiv_insert_union _ _ _ _ ⟨m₁.1, m₁.2.size_buckets_pos⟩ ⟨m₂.1, m₂.2.size_buckets_pos⟩ _ _ p m₁.2 m₂.2⟩
-  -- Std (DHashMap.Internal.Raw₀.union_insert_right_equiv_insert_union): by
-  --   simp_to_model [Equiv, union, insert]
-  --   apply List.Perm.trans
-  --   . apply insertList_perm_of_perm_second
-  --     simp_to_model [Equiv, insert]
-  --     . apply insertEntry_of_perm
-  --       . wf_trivial
-  --       . apply List.Perm.refl
-  --     . constructor
-  --       rw [← Raw.keys_eq_keys_toListModel]
-  --       exact m₁.distinct_keys h₁
-  --     . apply List.DistinctKeys.perm
-  --       . apply toListModel_insert
-  --         . wf_trivial
-  --       . apply List.DistinctKeys.insertEntry
-  --         . constructor
-  --           rw [← Raw.keys_eq_keys_toListModel]
-  --           exact m₂.distinct_keys h₂
-  --   . apply List.Perm.trans
-  --     . apply insertList_insertEntry_right_equiv_insertEntry_insertList
-  --       any_goals wf_trivial
-  --     . apply insertEntry_of_perm
-  --       . apply List.DistinctKeys.insertList
-  --         . wf_trivial
-  --       . apply List.Perm.symm
-  --         . apply toListModel_union (by wf_trivial) (by wf_trivial)
-  -- tried 0 (renamed Raw0 text (chain)): by
-  --   simp_to_model [Equiv, union, insert]
-  --   apply List.Perm.trans
-  --   . apply insertList_perm_of_perm_second
-  --     simp_to_model [Equiv, insert]
-  --     . apply insertEntry_of_perm
-  --       . wf_trivial
-  --       . apply List.Perm.refl
-  --     . constructor
-  --       rw [← Model.keys_eq_keys_toListModel]
-  --       exact m₁.distinct_keys h₁
-  --     . apply List.DistinctKeys.perm
-  --       . apply Model.toListModel_insert
-  --         . wf_trivial
-  --       . apply List.DistinctKeys.insertEntry
-  --         . constructor
-  --           rw [← Model.keys_eq_keys_toListModel]
-  --           exact m₂.distinct_keys h₂
-  --   . apply List.Perm.trans
-  --     . apply insertList_insertEntry_right_equiv_insertEntry_insertList
-  --       any_goals wf_trivial
-  --     . apply insertEntry_of_perm
-  --       . apply List.DistinctKeys.insertList
-  --         . wf_trivial
-  --       . apply List.Perm.symm
-  --         . apply Model.toListModel_union _ _
-  sorry
+    (m₁ ∪ (m₂.insert p.fst p.snd)) ~m ((m₁ ∪ m₂).insert p.fst p.snd) := by
+  refine ⟨?_⟩
+  refine (Model.toListModel_union m₁ (m₂.insert p.fst p.snd)).trans ?_
+  refine List.Perm.trans ?_ (Model.toListModel_insert (m₁ ∪ m₂)).symm
+  refine (insertList_perm_of_perm_second (Model.toListModel_insert m₂) (Model.distinctKeys m₁)
+    (Model.distinctKeys _)).trans ?_
+  refine (insertList_insertEntry_right_equiv_insertEntry_insertList ⟨p.fst, p.snd⟩
+    (Model.distinctKeys m₁) (Model.distinctKeys m₂)).trans ?_
+  exact insertEntry_of_perm (Model.distinctKeys m₁).insertList
+    (Model.toListModel_union m₁ m₂).symm
 
 @[deprecated union_insert_right_equiv_insert_union (since := "2025-11-03")]
 theorem union_insert_right_equiv_union_insert [EquivBEq α] [LawfulHashable α] {p : α × β} :

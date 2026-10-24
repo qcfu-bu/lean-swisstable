@@ -336,28 +336,11 @@ theorem getElem?_congr [EquivBEq α] [LawfulHashable α] {a b : α} (hab : a == 
   simp_to_model [insert, getElem] using List.getValue_insertEntry
 
 theorem toList_insert_perm [EquivBEq α] [LawfulHashable α] {k : α} {v : β} :
-    (m.insert k v).toList.Perm (⟨k, v⟩ :: m.toList.filter (¬k == ·.1)) :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `toListModel_insert`
-  -- Std (HashMap): DHashMap.Const.toList_insert_perm
-  -- Std (DHashMap.Const.toList_insert_perm): Raw₀.Const.toList_insert_perm ⟨m.1, _⟩ m.2
-  -- Std (DHashMap.Internal.Raw₀.Const.toList_insert_perm): by
-  --   simp_to_model
-  --   apply List.Perm.trans <| List.Perm.map _ <| toListModel_insert (by wf_trivial)
-  --   apply List.Perm.trans <| List.Const.map_insertEntry_perm_filter_map _ _ (by wf_trivial)
-  --   simp
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   simp_to_model
-  --   apply List.Perm.trans <| List.Perm.map _ <| toListModel_insert _
-  --   apply List.Perm.trans <| List.Const.map_insertEntry_perm_filter_map _ _ _
-  --   simp
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   simp_to_model
-  --   apply List.Perm.trans <| List.Perm.map _ <| Model.toListModel_insert _
-  --   apply List.Perm.trans <| List.Const.map_insertEntry_perm_filter_map _ _ _
-  --   simp
-  --   error 1: unsolved goals
-  sorry
+    (m.insert k v).toList.Perm (⟨k, v⟩ :: m.toList.filter (¬k == ·.1)) := by
+  simp_to_model
+  apply List.Perm.trans <| List.Perm.map _ <| Model.toListModel_insert _
+  apply List.Perm.trans <| List.Const.map_insertEntry_perm_filter_map _ _ (by wf_trivial)
+  simp
 
 theorem keys_insertIfNew_perm [EquivBEq α] [LawfulHashable α] {k : α} {v : β} :
     (m.insertIfNew k v).keys.Perm (if k ∈ m then m.keys else k :: m.keys) := by

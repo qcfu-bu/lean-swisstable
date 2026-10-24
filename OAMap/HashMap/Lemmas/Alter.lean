@@ -87,71 +87,26 @@ theorem size_alter [EquivBEq α] [LawfulHashable α] {k : α} {f : Option β →
 
 theorem size_alter_eq_add_one [EquivBEq α] [LawfulHashable α] {k : α} {f : Option β → Option β}
     (h : k ∉ m) (h' : (f m[k]?).isSome) :
-    (alter m k f).size = m.size + 1 :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `h₁`
-  -- Std (HashMap): DHashMap.Const.size_alter_eq_add_one h h'
-  -- Std (DHashMap.Const.size_alter_eq_add_one): by
-  --   rw [mem_iff_contains, Bool.not_eq_true] at h
-  --   exact Raw₀.Const.size_alter_eq_add_one ⟨m.1, _⟩ m.2 h h'
-  -- Std (DHashMap.Internal.Raw₀.Const.size_alter_eq_add_one): by
-  --   simp [size_alter, h, h₁, h₂]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   simp [size_alter, h, h₁, h₂]
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   simp [size_alter, h, h']
-  --   error 1: unsolved goals
-  sorry
+    (alter m k f).size = m.size + 1 := by
+  rw [size_alter, ite_eq_right (fun hc => h hc.1), ite_eq_left ⟨h, h'⟩]
 
 theorem size_alter_eq_sub_one [EquivBEq α] [LawfulHashable α] {k : α} {f : Option β → Option β}
     (h : k ∈ m) (h' : (f m[k]?).isNone) :
-    (alter m k f).size = m.size - 1 :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `h₁`
-  -- Std (HashMap): DHashMap.Const.size_alter_eq_sub_one h h'
-  -- Std (DHashMap.Const.size_alter_eq_sub_one): Raw₀.Const.size_alter_eq_sub_one ⟨m.1, _⟩ m.2 h h'
-  -- Std (DHashMap.Internal.Raw₀.Const.size_alter_eq_sub_one): by
-  --   simp [size_alter, h, h₁, h₂]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   simp [size_alter, h, h₁, h₂]
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   simp [size_alter, h, h₂]
-  --   error 1: Unknown identifier `h₂`
-  sorry
+    (alter m k f).size = m.size - 1 := by
+  rw [size_alter, ite_eq_left ⟨h, h'⟩]
 
 theorem size_alter_eq_self_of_not_mem [EquivBEq α] [LawfulHashable α] {k : α} {f : Option β → Option β}
     (h : k ∉ m) (h' : (f m[k]?).isNone) :
-    (alter m k f).size = m.size :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `h₁`
-  -- Std (HashMap): DHashMap.Const.size_alter_eq_self_of_not_mem h h'
-  -- Std (DHashMap.Const.size_alter_eq_self_of_not_mem): by
-  --   rw [mem_iff_contains, Bool.not_eq_true] at h
-  --   exact Raw₀.Const.size_alter_eq_self_of_not_mem ⟨m.1, _⟩ m.2 h h'
-  -- Std (DHashMap.Internal.Raw₀.Const.size_alter_eq_self_of_not_mem): by
-  --   simp [size_alter, h, h₁, h₂]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   simp [size_alter, h, h₁, h₂]
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   simp [size_alter, h, h₂]
-  --   error 1: Unknown identifier `h₂`
-  sorry
+    (alter m k f).size = m.size := by
+  rw [size_alter, ite_eq_right (fun hc => h hc.1),
+    ite_eq_right (fun hc => Option.isSome_iff_ne_none.1 hc.2 (Option.isNone_iff_eq_none.1 h'))]
 
 theorem size_alter_eq_self_of_mem [EquivBEq α] [LawfulHashable α] {k : α} {f : Option β → Option β}
     (h : k ∈ m) (h' : (f m[k]?).isSome) :
-    (alter m k f).size = m.size :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `h₁`
-  -- Std (HashMap): DHashMap.Const.size_alter_eq_self_of_mem h h'
-  -- Std (DHashMap.Const.size_alter_eq_self_of_mem): Raw₀.Const.size_alter_eq_self_of_mem ⟨m.1, _⟩ m.2 h h'
-  -- Std (DHashMap.Internal.Raw₀.Const.size_alter_eq_self_of_mem): by
-  --   simp [size_alter, h, h₁, Option.isSome_iff_ne_none.mp h₂]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   simp [size_alter, h, h₁, Option.isSome_iff_ne_none.mp h₂]
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   simp [size_alter, h, Option.isSome_iff_ne_none.mp h']
-  --   error 1: unsolved goals
-  sorry
+    (alter m k f).size = m.size := by
+  rw [size_alter,
+    ite_eq_right (fun hc => Option.isSome_iff_ne_none.1 h' (Option.isNone_iff_eq_none.1 hc.2)),
+    ite_eq_right (fun hc => hc.1 h)]
 
 theorem size_alter_le_size [EquivBEq α] [LawfulHashable α] {k : α} {f : Option β → Option β} :
     (alter m k f).size ≤ m.size + 1 := by
@@ -195,15 +150,8 @@ theorem getElem_alter [EquivBEq α] [LawfulHashable α] {k k' : α} {f : Option 
 theorem getElem_alter_self [EquivBEq α] [LawfulHashable α] {k : α} {f : Option β → Option β}
     {h : k ∈ alter m k f} :
     haveI h' : (f m[k]?).isSome := mem_alter_self.mp h
-    (alter m k f)[k] = (f m[k]?).get h' :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `get_alter`
-  -- Std (HashMap): DHashMap.Const.get_alter_self
-  -- Std (DHashMap.Const.get_alter_self): by
-  --   simp [get_alter]
-  -- tried 0 (copy-DHashMap-renamed (chain)): by
-  --   simp [get_alter]
-  sorry
+    (alter m k f)[k] = (f m[k]?).get h' := by
+  simp [getElem_alter]
 
 @[grind =]
 theorem getElem!_alter [EquivBEq α] [LawfulHashable α] {k k' : α} [Inhabited β]
