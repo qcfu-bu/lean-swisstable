@@ -1,12 +1,28 @@
 module
 
-public import OAMap.HashMap.Lemmas
+public import OAMap.HashMap.Model
 
 /-!
-# Decidable equivalence of hash maps
+# Decidable equivalence for `HashMap`
 
-`instance : Decidable (m₁ ~m m₂)` under `LawfulBEq`, from `Model.beq_eq_beqModel`
-(ARCHITECTURE.md §6.4).
+Std's `Std/Data/HashMap/DecidableEquiv.lean`: the instance has Std's binders and statement, so its
+auto-generated name (`instDecidableEquivOfLawfulBEq`) is Std's. Std decides `m₁ ~m m₂` through
+`DHashMap`'s instance; ours decides it by `m₁ == m₂` (`OAMap.Core.Table.beq`, Std's algorithm) and
+`Model.beq_iff_equiv` (`docs/ARCHITECTURE.md` §6.4). That route does not go through
+`Model.beq_eq_beqModel`, so the instance does not depend on the `sorry` of `OAMap.Core.Bulk`.
+Like Std's file, this one needs the model lemmas but none of the user lemmas, so it imports
+`OAMap.HashMap.Model` rather than `OAMap.HashMap.Lemmas`.
 
-Stub (Wave 0). Owner: API, Wave 1.
+Owner: API, Wave 1.
 -/
+
+public section
+
+universe u v
+
+namespace OAMap.HashMap
+
+instance {α : Type u} {β : Type v} [BEq α] [LawfulBEq α] [Hashable α] [BEq β] [LawfulBEq β] (m₁ m₂ : HashMap α β) : Decidable (m₁ ~m m₂) :=
+  decidable_of_iff _ Model.beq_iff_equiv
+
+end OAMap.HashMap
