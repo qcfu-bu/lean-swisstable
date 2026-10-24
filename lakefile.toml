@@ -8,9 +8,11 @@ testDriver = "OAMapTest"
 autoImplicit = false
 relaxedAutoImplicit = false
 
-# The library: every module reachable from OAMap.lean.
+# The library: every module reachable from OAMap.lean, and the modules of OAMap/Core/Swiss (a
+# bake-off core in progress, not imported by OAMap.lean yet), so that `lake build` checks them.
 [[lean_lib]]
 name = "OAMap"
+globs = ["OAMap", "OAMap.Core.Swiss.+"]
 
 # The statement-parity checker (imports only Lean).
 [[lean_lib]]
