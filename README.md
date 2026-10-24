@@ -1,223 +1,266 @@
 # SwissTable
 
-A verified drop-in replacement for `Std.HashMap` and `Std.HashSet` (Lean v4.35.0, core and Std
-only): `SwissTable.HashMap α β` and `SwissTable.HashSet α`, with Std's public theorems, definitions
-and instances reproduced under the same names, statements, binders and attributes.
+A verified, drop-in replacement for `Std.HashMap` and `Std.HashSet` for Lean 4 (v4.35.0, core
+and Std only, no Mathlib). `SwissTable.HashMap α β` and `SwissTable.HashSet α` have Std's
+operations, instances and all of Std's lemmas, with identical names, statements, binders and
+attributes. On the benchmark below they take about 0.55× the time of Std's maps.
 
-The library is named after the layout of its core: the SwissTable design of Abseil's
-`flat_hash_map`, in the generic (non-SIMD) form of Rust's hashbrown. "The Swiss core" below is that
-core, `SwissTable.Core.Swiss`. The library was called OAMap before. In `docs/bakeoff/`, `oamap-lib`
-(`lib-results.csv`, `lib-summary.txt`) is this library under that name, while `oamap`
-(`fullrun-results.csv`) and `OAMap` (the summaries' headers, `decision.md`) are the earlier
-linear-probing map of `Wnetkat2/Data/OAMap`.
+```lean
+import SwissTable.HashMap        -- instead of `import Std.Data.HashMap`
 
-The design is fixed in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); the supporting studies are
-`docs/proofs.md`, `docs/parity.md`, `docs/inventory.md` (with `tools/inventory.json`), and the
-experiments they cite are in `docs/experiments/` (`Mock2.lean`, `modtest/`, ...). These documents
-were written in a separate design directory: where they say "this directory", read
-`docs/experiments/` for the mocks and `modtest/`, `test/Parity.lean` for the checker, `tools/`
-for the scripts (including `tools2/secdeps.py`, now `tools/secdeps.py`) and `tools/data/` for
-the JSON inputs.
+def m : SwissTable.HashMap String Nat := (∅ : SwissTable.HashMap String Nat).insert "a" 1
 
-Status: complete. The library runs on the Swiss core `SwissTable.Core.Swiss`, the winner of the
-benchmark bake-off (`docs/bakeoff/decision.md`, below), selected by `SwissTable/Core/Table.lean`.
-Every proof is complete: no `sorry`, and every constant of the library (4187, core included) depends
-only on `propext`, `Classical.choice` and `Quot.sound`. Parity with Std reports 1140 of 1140 Std
-declarations ok, 0 missing and 0 extras (structure internals and `Internal` included; 30 names
-ignored, see below). The layers above the core were developed and proved against the list-backed
-reference core `SwissTable.Core.ListRef`, which is kept and still checked against the contract; the
-switch changed no line above the core. The nine `HashMap/Lemmas/*.lean` files and
-`HashSet/{Basic,Lemmas,DecidableEquiv}.lean` are generated from Std's text (below), with hand proofs
-where no generated proof compiled (kept in `tools/data/hand.json`; each file's docstring lists
-them). On the bake-off's benchmark matrix `SwissTable.HashMap` takes 0.55 of `Std.HashMap`'s time
-per operation (geometric mean over 512 cells, section "Performance").
-
-## Build and test
-
-```sh
-lake build                 # the library SwissTable (default target): every proof
-lake test                  # the test library SwissTableTest (below)
-lake exe swisstable-bench  # SwissTable.HashMap against Std.HashMap (section "Performance")
-tools/ci.sh                # all of these (the benchmark only built), plus the text and C checks
+example : m["a"]? = some 1 := by simp [m]   -- Std's simp lemmas, under the same names
 ```
 
-`lake test` builds `test/SwissTableTest.lean`, whose modules log an error (failing the build) when
-their check fails:
+```toml
+# lakefile.toml of a project that uses it
+[[require]]
+name = "swisstable"
+path = "../lean-swisstable"
+```
 
-| module | check |
+`DHashMap`, the `Raw` maps and the `Ext` maps are not provided.
+
+## What "drop-in" and "verified" mean here
+
+* **Same declarations.** A checker (`test/Parity.lean`, run by `lake test`) compares every public
+  theorem, definition and instance of `Std.HashMap`/`Std.HashSet` with ours, after renaming
+  `Std.HashMap ↦ SwissTable.HashMap`: 1140 of 1140 match, with no extras. Code written against Std
+  compiles against SwissTable, and so do its proofs.
+* **Same semantics where the lemmas fix it.** `insert` replaces the stored key and value,
+  `insertIfNew` and `HashSet.insert` keep the old entry, `union` is right-biased, `ofList` keeps the
+  last duplicate, and so on. No `Inhabited` requirement is added.
+* **Fully proved.** No `sorry`. Every constant depends only on `propext`, `Classical.choice` and
+  `Quot.sound`. There is no `native_decide`, `bv_decide`, `implemented_by`, `extern`, `unsafe`,
+  `partial` or `opaque`. The `_unsafe_rec` helpers that Lean's compiler generates for well-founded
+  definitions are the only exception, and the audit allows them only for such definitions. The
+  compiled code is the code the proofs are about.
+* **Known differences from Std.**
+  * The iteration order is different (Std leaves it unspecified).
+  * `Repr` prints `SwissTable.HashMap.ofList …`.
+  * The `inner` field of a map has a different type, as does the state type of the iterators.
+  * After an `erase`, the table may keep one reference to the erased key and value until it next
+    rebuilds; values that release a resource when freed (such as file handles) can notice this.
+
+## Structure
+
+```
+SwissTable/
+  Core/Swiss/   the table: a SwissTable with its invariant and proofs   ← the only layout-specific part
+  Core/Table    the one line that selects the core
+  Core/ListRef  a list-backed reference core with the same interface (for testing)
+  Core/Derived, Core/Bulk   queries, traversals, insertMany/union/inter/diff, on top of the core
+  HashMap/      Std's API (Basic), the model bridge and tactic, and Std's lemmas (Lemmas/)
+  HashSet/      Std's HashSet over HashMap α Unit, as in Std
+test/           parity checker, contract test, axiom audit, seal check, #guard tests
+tools/          lemma generator, audits, C check, CI script
+bench/          SwissTable.HashMap against Std.HashMap
+```
+
+**The core contract.** Everything above `Core/` sees the table only through 23 definitions
+(`lookup`, `insert`, `erase`, `alter`, `filter`, `foldM`, …) and 22 lemmas. The lemmas relate
+each operation to a list model `toListModel : Table α β → List ((_ : α) × β)`. For example,
+inserting permutes the model into `insertEntry k v` of the old model. These are the list functions
+of `Std.Internal.List`, the same model Std's own proofs use.
+
+* Lemmas about the queries and operations hold under `[EquivBEq α] [LawfulHashable α]`, where
+  Std's do. Lemmas about traversals and filtering hold for any `BEq`/`Hashable`, as Std's do.
+* The table bundles its invariant, and the part that needs lawful instances is stated only under
+  them. So the operations themselves need no lawfulness, again as in Std.
+* `SealCheck` makes sure nothing above the core uses anything else, so a different core can be
+  slotted in by changing `Core/Table.lean`. The list-backed `ListRef` core passes the same contract
+  test.
+
+**Std's lemmas, reused.** Std proves its map lemmas in layers, ending in proofs of the form
+`simp_to_model [insert, get?] using List.getValue?_insertEntry`: rewrite to the list model, then
+apply a lemma about lists. SwissTable keeps that bottom layer. A copy of the `simp_to_model`
+tactic (`HashMap/Tactic.lean`) runs over our model lemmas, with Std's own `using` terms.
+`tools/port.py` generates `HashMap/Lemmas/*.lean` and `HashSet/*.lean` from Std's source text, so
+the statements are Std's character for character. 56 lemmas needed a short hand proof; they are
+kept in `tools/data/hand.json`. `tools/ci.sh` checks that the generated files are exactly what the
+generator produces.
+
+## The SwissTable core
+
+The layout is Abseil's SwissTable in the portable, non-SIMD form of Rust's hashbrown.
+
+* **Arrays.** For `cap = 2^lg` slots there are three arrays:
+  * `ctrl : ByteArray` of `cap + 8` bytes, one control byte per slot;
+  * `slotKeys` and `slotVals`, of `cap + 1` cells each.
+* **Control bytes**, hashbrown's encoding: `0xFF` empty, `0x80` deleted (a tombstone), and
+  `0b0hhhhhhh` full, where `hhhhhhh` is a 7-bit tag from the key's hash.
+* **Hash split.** `q = (hash k * ⌊2^64/φ⌋) >>> (57 − lg)` keeps the top `lg + 7` bits of a
+  Fibonacci product. The home slot is `q >>> 7` and the tag is `q &&& 0x7F`, so both depend on
+  every bit of the hash; Lean's `hash` on a `Nat` is the identity.
+* **Lookup.** Probe groups of 8 slots, in triangular steps (`+8, +16, +24, …` modulo `cap`).
+  * In each group, compare the key at every slot whose control byte equals the tag, lowest first.
+  * Stop at the first group that contains an empty byte.
+* **Insert.** The same probe also remembers the first free slot it passes.
+  * A hit replaces the key and value.
+  * A new key goes into the first free slot.
+  * Fast path: when the home slot is empty and nothing in its group has the tag, the key is new
+    and is written there with no probe.
+  * Load limit 7/8. When the table is full, it rebuilds into fresh arrays: at the same capacity
+    if at most half full, otherwise at twice the capacity.
+* **Erase.** Writes empty when every 8-slot window around the slot already has another empty
+  slot, since then no probe can have passed through it (hashbrown's rule). Otherwise it writes a
+  tombstone. Once tombstones exceed a quarter of the capacity, the next insert that needs an empty
+  slot rebuilds.
+* **Rebuild.** Moves every entry into fresh arrays without comparing keys.
+* **Traversals** (`fold`, `forIn`, `toList`, …) scan a group at a time.
+* **`filter` and `map`** work in place: they mark slots or rewrite the value array.
+
+### Making it work in Lean, on a `ByteArray`
+
+**One load per group.** Core Lean only has byte-level `ByteArray.uget`. Eight of them at
+consecutive indices, shifted and OR'ed together, compile to one unaligned 64-bit load under
+Lake's default `-O3 -DNDEBUG`:
+
+```lean
+@[inline] def ctrlWord (c : @& ByteArray) (i : USize) (h : i.toNat + 8 ≤ c.size) : UInt64 :=
+  (c.uget i _).toUInt64 ||| ((c.uget (i + 1) _).toUInt64 <<< 8) ||| … |||
+  ((c.uget (i + 7) _).toUInt64 <<< 56)          -- arm64: a single `ldr x0, [x8, #24]`
+```
+
+**A mirrored tail, so a group never wraps.**
+* Bytes `cap .. cap+7` repeat bytes `0 .. 7`, so the 8 bytes from any slot are in the array.
+* `setCtrl` writes slot `i` and its copy at index `((i − 8) &&& mask) + 8`. That index is
+  `i + cap` for `i < 8` and `i` otherwise, so the second write needs no branch.
+
+**Matching 8 bytes at once (SWAR).** With `y = group ^^^ tag · 0x0101…01`:
+
+```lean
+matchTag g rep := let y := g ^^^ rep; ~~~(((y &&& 0x7F7F…7F) + 0x7F7F…7F) ||| y) &&& 0x8080…80
+matchEmpty g   := g &&& (g <<< 1) &&& 0x8080…80     -- bytes 0xFF
+matchFree g    := g &&& 0x8080…80                   -- bytes 0xFF or 0x80
+```
+
+* Bit `8j+7` of each result says whether byte `j` qualifies.
+* The tag match is exact: no byte's sum can carry into the next byte. hashbrown's cheaper form,
+  `(y − 0x0101…01) &&& ~~~y &&& 0x8080…80`, can borrow across bytes and wrongly flag a byte just
+  above a match. The exact form costs one more instruction per group and never makes a wasted key
+  comparison.
+* Because no carry crosses bytes, each fact has a one-byte proof that the kernel checks over all
+  256 byte values (`decide +kernel`). `bv_decide` is not used, because its proofs depend on an
+  extra axiom.
+
+**The lowest flagged byte, without a loop.** `UInt64.log2` compiles to a bit-by-bit loop, so it
+isn't used. Instead:
+
+```lean
+lowestLane m := (((m &&& (0 − m)) >>> 7) * 0x0001020304050607) >>> 56
+```
+
+* `m &&& (0 − m)` isolates the lowest flag, `2^(8j+7)`.
+* Shifting it right by 7 gives `256^j`.
+* Multiplying by `0x0001020304050607` moves the byte holding `j` to the top.
+* `m &&& (m − 1)` then clears that flag, so the next match comes out lowest first.
+
+**Allocation without `replicate` or `Inhabited`.**
+* Core Lean has no `ByteArray.replicate`, so a table's control bytes are built by repeatedly
+  appending an 8-byte all-empty group to itself, which is `memcpy` doubling.
+* The empty map (`∅`, `emptyWithCapacity`) allocates no array at all. Its control bytes are one
+  shared all-empty group with `mask = 0`, so every probe of it stops in its first group without
+  reading a key, and the queries need no special case.
+* The first insert allocates the table and fills the empty cells of `slotKeys`/`slotVals` with
+  its own key and value. Every rebuild refreshes that placeholder pair, which is why no
+  `Inhabited α` is needed.
+
+**Machine-word indices with a proof.**
+* Every operation runs on `USize` indices with `uget`/`uset` and bounds proofs, on tables of up to
+  `2^31` slots, where no index computation can wrap on any platform.
+* Beyond that it runs the same algorithms on `Nat` indices; one test per operation chooses.
+* Updates happen in place when the table is unshared.
+* The proofs are erased arguments, so the generated C is the same code as an unverified version.
+  `tools/check_c.py` checks it at `Nat` and `String` keys:
+  * no closure calls;
+  * no allocation on a lookup;
+  * no array shared just before its in-place update;
+  * the table cell reused on update.
+
+## Compared with `Std.HashMap`
+
+| | `Std.HashMap` | `SwissTable.HashMap` |
+|---|---|---|
+| layout | array of buckets, each a linked list of cells | control bytes + key array + value array |
+| per entry | one heap cell (key, value, next) | one key cell and one value cell in the arrays, plus 1 control byte |
+| collisions | walk the bucket's list, comparing every key | 8 slots per step, keys compared only on a 7-bit tag match |
+| growth | at 3/4 load, rehash every key | at 7/8 load, rebuild into a fresh table, rehash every key |
+| erase | unlink the cell | empty slot or tombstone |
+| freeing a map | one free per entry | three arrays |
+| iteration | bucket order | slot order, a group at a time |
+| `Inhabited` needed | no | no |
+
+**Speed.** The benchmark covers:
+* 16 workloads;
+* 5 key types: random `Nat`, a flat 8-field structure, an 8-field structure behind an array,
+  `String`, and the consecutive `Nat`s `0 .. n−1`;
+* 8 sizes from 10³ to 10⁷;
+* one process per cell, taking the minimum ns per operation over repetitions, on an Apple M5 Pro.
+
+Ratios are SwissTable/Std; below 1 means faster. The middle column is the geometric mean over the
+4 non-consecutive key types at all 8 sizes:
+
+| workload | SwissTable / Std | worst cell |
+|---|---|---|
+| lookup hit, shuffled (`getD` / `get?`) | 0.68 / 0.50 | 1.08 / 0.74 |
+| lookup hit, insertion order (`getD` / `get?`) | 0.76 / 0.48 | 1.65 / 0.72 |
+| lookup miss | 0.58 | 1.20 |
+| insert into `∅` / into `emptyWithCapacity n` | 0.69 / 0.84 | 0.94 / 1.11 |
+| update existing keys | 0.52 | 0.85 |
+| lookup-or-insert (`getThenInsertIfNew?`) | 0.57 | 0.78 |
+| erase half / erase all | 0.66 / 0.72 | 1.29 / 1.63 |
+| lookups after erasing half | 0.85 | 1.37 |
+| insert-and-erase churn / lookups after churn | 0.75 / 0.82 | 1.25 / 1.21 |
+| `fold` | 0.20 | 0.59 |
+| freeing the map | 0.10 | 0.39 |
+| **all 512 cells** | **0.55** | 23 cells above 1.10 |
+
+For example, at 10⁶ random `Nat` keys (ns per operation, Std → SwissTable):
+
+| operation | Std | SwissTable |
+|---|---|---|
+| shuffled `getD` | 14.8 | 9.3 |
+| miss | 11.0 | 2.4 |
+| insert | 44.9 | 23.5 |
+| erase | 46.4 | 23.8 |
+| `fold` | 9.2 | 1.6 |
+
+Where Std is faster:
+* **Consecutive `Nat` keys** (`0 .. n−1`). Std's bucket index keeps them in sequential buckets.
+  SwissTable's multiplicative hash spreads them, which costs locality. Over all such cells the two
+  are even (1.00), but at 10⁶ entries and more, in-order lookups and pre-sized inserts are
+  4–12× slower.
+* **A few small in-cache cells:** erasing from a map at load 3/4 (up to 1.63×), lookups after many
+  erases with no insert in between (up to 1.37×), and in-order `getD` at about 1000 entries (up
+  to 1.65×, under 1 ns more per lookup).
+* **Expensive keys during growth.** Hashes are not stored, so a rebuild hashes every key again, as
+  Std does. For keys whose hash is expensive, cache it in the key.
+
+**Memory** per entry, at 10⁵ entries and more:
+
+| map | SwissTable / Std |
 |---|---|
-| `CoreSpec` | the selected core provides the 23 definitions and 22 lemmas of the contract (§3.4) |
-| `CoreSpecListRef` | the same text against the reference core `SwissTable.Core.ListRef` (a separate root of the test library: the two cores define the same names) |
-| `AuditListRef` | `Audit`'s checks on the reference core, which the library no longer imports (a third root, for the same reason) |
-| `SealCheck` | modules above the core use only the 45 contract names, import no core directly, and never `import all` |
-| `Audit` | every constant of `SwissTable` uses only `propext`, `Classical.choice`, `Quot.sound`; no axiom, `opaque`, `partial`, `unsafe`, `implemented_by`, `extern` (the compiler's `f._unsafe_rec` helper of a safe definition `f` by well-founded recursion, in the same module, is exempt from the `partial`/`unsafe` test only; the checks are `AuditLib.lean`'s) |
-| `ParityRun` | statement, attribute and axiom parity with `Std.HashMap`/`Std.HashSet` |
-| `Cbv` | `by cbv` closes the same goals as on Std |
-| `Unverified` | `#guard` tests for the functions without Std lemmas, and the exact slot counts (`Internal.numBuckets`) of the Swiss core |
-| `Semantics` | `#guard` tests of the key and value each operation keeps, one traversal order, and the scoping of `~m` |
-| `SwissGroupUse` | a lookup step and an erase step proved from another module with the exported lemmas of `SwissTable.Core.Swiss.Group` only |
+| built with `emptyWithCapacity n` | 0.63× (e.g. 30 against 46 bytes at 10⁷) |
+| grown from `∅` | 1.03× |
 
-**Gates (on since the Merge).** `ParityRun` fails on any difference from Std outside its `ignore`
-list: errors, warnings and extras (`failOnWarning := true`). The list has 30 names: the 16 iterator
-declarations (checked by `tools/srccheck.py` instead) and the 14 structure internals of `HashMap`
-and `HashMap.Equiv` that mention `inner`, a core table rather than a `DHashMap`. Only `Raw` is
-excluded; `Internal` and the other structure internals are checked. `Audit` fails on any dependency
-on `sorryAx` (`failOnSorry := true`).
+A map that is shared when updated is copied first, as with Std. With `String` keys such a copy
+costs 3–5× Std's: copying the arrays touches every key and value object to raise its reference
+count, placeholders included, and these objects are scattered in memory. With `Nat` keys a copy
+is cheaper than Std's.
 
-## Performance
+`lake exe swisstable-bench` runs a smaller version of this benchmark (`rand` and `String` keys,
+10³–10⁶, under a minute); `swisstable-bench compare --keys … --sizes … --workloads …` selects cells.
 
-`SwissTable.HashMap` against `Std.HashMap` on the bake-off's full matrix: the bake-off harness
-`oabench2` (outside this repository; `bench/` has its workloads, below), 16 timed workloads × 5 key
-types × 8 sizes from 1000 to 10^7, one process per cell, the minimum ns per operation over at least
-5 repetitions (3 at n ≥ 4·10^6), Apple M5 Pro at 4.25–4.67 GHz on every cell, 1480 cells with 0
-checksum mismatches (`docs/bakeoff/lib-results.csv`; the harness's tables are in `lib-summary.txt`).
-Ratios below 1 are faster than Std. Per workload: the geometric mean of SwissTable/Std over the 32
-non-dense cells (`rand`, `flat`, `struct`, `string` keys × 8 sizes), split n ≤ 10^5 / n > 10^5; the
-worst cell; the cells above 1.10; the dense keys `0 .. n-1` (geometric mean and maximum); and the
-bake-off prototype `swiss` on the same cells (`docs/bakeoff/fullrun-results.csv`; without the fixes
-of the decision, and without its 4 cells of churn at n = 100000, where it was 3.7–10x Std).
-
-| workload | SwissTable/Std (small/large) | worst cell | > 1.10 | dense (max) | `swiss` |
-|---|---|---|---|---|---|
-| getd-shuf | 0.68 (0.68/0.68) | 1.08 flat 10^7 | 0 | 1.14 (1.8) | 0.70 |
-| getopt-shuf | 0.50 (0.54/0.46) | 0.74 struct 100000 | 0 | 0.51 (0.6) | 0.49 |
-| getd (in order) | 0.76 (0.91/0.64) | 1.65 rand 1000 | 6 | 3.82 (11.8) | 0.78 |
-| getopt (in order) | 0.48 (0.53/0.44) | 0.72 struct 100000 | 0 | 1.49 (4.5) | 0.47 |
-| miss | 0.58 (0.66/0.50) | 1.20 rand 100000 | 2 | 0.52 (1.6) | 0.58 |
-| insert | 0.69 (0.75/0.65) | 0.94 struct 1000 | 0 | 1.74 (3.7) | 0.70 |
-| insert-cap | 0.84 (0.96/0.73) | 1.11 string 100000 | 2 | 2.22 (5.9) | 0.90 |
-| reinsert | 0.52 (0.54/0.51) | 0.85 string 10^7 | 0 | 1.95 (6.5) | 0.52 |
-| hashcons | 0.57 (0.60/0.54) | 0.78 struct 98304 | 0 | 0.55 (1.0) | 0.57 |
-| erase-alt | 0.66 (0.76/0.58) | 1.29 rand 1536 | 1 | 0.63 (0.8) | 0.63 |
-| erase-all | 0.72 (0.87/0.61) | 1.63 rand 1536 | 3 | 0.66 (0.8) | 0.68 |
-| erase-alt-get | 0.85 (1.04/0.69) | 1.37 rand 1536 | 6 | 1.09 (1.3) | 0.87 |
-| churn | 0.75 (0.86/0.66) | 1.25 flat 1536 | 2 | 2.12 (7.3) | 0.77 |
-| churn-get | 0.82 (0.91/0.73) | 1.21 string 1536 | 1 | 1.03 (1.5) | 0.90 |
-| fold | 0.20 (0.32/0.13) | 0.59 struct 1536 | 0 | 0.68 (0.8) | 0.28 |
-| free | 0.10 (0.18/0.05) | 0.39 struct 1000 | 0 | 0.21 (0.3) | 0.10 |
-| **all timed** | **0.55** (512 cells) | | 23 (3 above 1.5) | 1.00 | 0.56 (35, 5 above 1.5) |
-
-By key type: rand 0.49, flat 0.60, struct 0.54, string 0.56, dense 1.00. Some absolute
-figures (ns per operation, Std → SwissTable): rand at 10^6, `getD` shuffled 14.8 → 9.3, miss
-11.0 → 2.4, insert 44.9 → 23.5, erase 46.4 → 23.8, `fold` 9.2 → 1.6; string at 10^6, `getD`
-shuffled 29.8 → 22.4, insert 104.6 → 63.4.
-
-* **The slower cells** are the ones the bake-off decision predicted: in-cache erasing at load 0.75
-  (rand 1536: erase-all 1.63, erase-alt 1.29), lookups over tombstones with no insert after them
-  (erase-alt-get, 6 cells at 1.15–1.37), in-order `getD` (rand and flat at n ≤ 1536: 1.23–1.65,
-  0.7–1.1 ns more per lookup; rand at 100000 and 10^6, string at 1536: 1.10–1.14), and misses at
-  n = 100000 (1.12–1.20; the table is at load 0.76 there, Std's buckets at 0.38).
-* **Dense keys** (`0 .. n-1`, consecutive `Nat`s) are Std's best case (its bucket index is
-  collision-free and sequential) and cost SwissTable's multiplicative hash its locality: 3.9–11.8x
-  Std on in-order `getD`, `insert-cap`, reinsert and churn at n ≥ 10^6, and 1.00 over all dense
-  cells.
-* **Against the frozen core.** On the 16 cells per workload of the freeze run
-  (`docs/bakeoff/freeze-results.csv`: rand, flat, struct, string × 1000, 98304, 10^6, 10^7) the
-  frozen core `final` measured 0.55 and the library measures 0.56, every workload within 0.04
-  (churn-get 0.77 vs 0.81 is the largest gap, across two runs whose Std times also differ). The
-  instructions per operation are the same (ratio 1.0002 over 36 cells, at most 1.0028): the
-  public API adds nothing to the core's code.
-* **Memory** (maximum RSS of a cell above that of its keys, per entry, n ≥ 98304): 1.03x Std for
-  a map grown from empty (0.68–1.36x; e.g. 55 against 46 bytes at 10^7) and 0.63x for one created
-  with `emptyWithCapacity n` (0.51–0.82x; 30 against 46 bytes at 10^7), as the prototype measured.
-* Not measured here: updating a map that is shared (persistent use) first copies its arrays, as
-  Std copies its bucket array; the bake-off measured 3–5x Std per such copy-on-write update with
-  `String` keys, and less than Std with `Nat` keys.
-
-`lake exe swisstable-bench` runs the same workloads in the repository (`bench/Main.lean`, the
-harness's modules in `bench/Bench/` without its hardware counters): with no arguments, 13 workloads
-at `rand` and `string` keys for n = 1000, 100000, 1000000, each cell in its own process, printing
-Std's and SwissTable's ns per operation and the geometric means (under a minute; on the machine
-above, 0.63 over its 78 cells, with 0 checksum mismatches); `compare` takes `--keys`, `--sizes`,
-`--workloads`, `--reps` and `--min-ms`, and `swisstable-bench <std|swisstable> <key> <n> <workload>`
-runs one cell and prints the harness's `RESULT` line.
-
-## Parity
+## Building and checking
 
 ```sh
-lake build SwissTable Parity && lake env lean test/SwissTableTest/ParityRun.lean
+lake build                 # the library and every proof
+lake test                  # parity with Std, contract, axiom audit, seal, #guard tests
+lake exe swisstable-bench  # SwissTable.HashMap against Std.HashMap
+tools/ci.sh                # all of the above, plus the source audit, the lemma-generator check
+                           # and the generated-C check
 ```
 
-runs the checker alone (about 1 s) and writes `.lake/parity.json`. For a to-do list, set
-`showMissingStatements := true` in the configuration (see `docs/parity.md`).
-
-## Selecting the core
-
-`SwissTable/Core/Table.lean` selects the core with one `public import` line:
-
-```sh
-tools/select-core.sh                # print the current core
-tools/select-core.sh swiss          # the Swiss core (the selection)
-tools/select-core.sh listref        # the list-backed reference core
-lake build SwissTableTest.CoreSpec  # the acceptance test for the selected core
-```
-
-With `listref` selected everything builds and passes except the exact slot counts in
-`Unverified.lean`, which are the Swiss core's.
-
-### The Swiss core
-
-`SwissTable/Core/Swiss/` (9,756 lines: 1,779 of code, the 1,349-line control-byte library
-`Group.lean`, 6,610 of proofs) is hashbrown's generic (non-SIMD) layout, as
-`docs/bakeoff/decision.md` fixes it: a control byte per slot (EMPTY, DELETED, or FULL with a 7-bit
-tag of the hash) in groups of 8 read as one word, keys and values in two arrays, load 7/8,
-triangular probing over groups, insertion fast path at the home slot, tombstones by hashbrown's
-window rule, every rebuild into a fresh table with no key comparison, an empty map that allocates no
-array, and at most one erased pair kept alive (the placeholder of free cells) until the next
-rebuild. `Table.lean`'s docstring records the layout, the algorithms, the code shape chosen by
-measurement and the proof structure.
-
-* Code (`Defs`, `Loops`, `Build`, `Table`), with no `sorry`: every array bound and termination
-  measure is a lemma, and every table carries its invariant `Swiss.WF` as the erased field
-  `Table.wf`. Every operation runs on `USize` indices on tables of at most `2 ^ 31` slots and on
-  `Nat` indices beyond (the same algorithms, executable too).
-* `Group.lean`: the SWAR groups (word read through the mirrored tail, the exact per-lane tag match,
-  `matchEmpty`/`matchFree`/`matchFull`, lowest lane, the triangular probe's coverage, the erase
-  rule), proved without `bv_decide`.
-* Proofs, eight files under `Proofs/`: `Bounds`, `Probe`, `Rebuild`, `Write`, `Bulk` (the lemmas the
-  code and the contract proofs build on), and `Query`, `Update`, `Traverse` (the 22 contract
-  lemmas). Each file's header describes its proof.
-* The proofs ride along as erased arguments, so the generated code is the frozen version's: on the
-  bake-off harness `SwissTable.HashMap` executes the same instructions per operation as the frozen
-  core (ratio 1.0002 over 36 cells, at most 1.0028), and `tools/check_c.py` checks the C of the API
-  at `Nat` and `String` keys.
-
-## Tools
-
-* `tools/ci.sh`, `tools/select-core.sh`: above.
-* `tools/audit.py`: text-level audit of `SwissTable/` (every file is a `module`; no `sorry`,
-  `admit`, `native_decide`, `bv_decide`, `implemented_by`, `extern`, `unsafe`, `partial`, `opaque`,
-  `axiom`, `import all` outside comments and strings).
-* `tools/port.py`, `split.py`, `portcheck.py`: the porting pipeline of `docs/proofs.md` §6 and
-  ARCHITECTURE.md §6.2.
-  * `python3 -I tools/port.py lemmas` regenerates `SwissTable/HashMap/Lemmas/*.lean`,
-    `SwissTable/HashMap/Lemmas.lean` and `SwissTable/HashSet/{Basic,Lemmas,DecidableEquiv}.lean`
-    from Std's sources (the toolchain's `src/lean/Std/Data`). `split.py` cuts Std's
-    `HashMap/Lemmas.lean` at the line numbers of ARCHITECTURE.md §2.2 and gives every file the
-    scopes and `variable`s active at its cut; `port.py` keeps Std's statements and commands as text
-    and lists candidate proofs for every theorem from Std's proof chain.
-  * `python3 -I tools/portcheck.py [MODULE ...]` builds the generated modules in order and, for each
-    theorem whose proof fails, moves to its next candidate or to a `-- REVIEW` `sorry`. Its choices
-    are recorded in `tools/data/review.json`, which `port.py lemmas` reads.
-  * Hand proofs (56) live in `tools/data/hand.json` (Std name ↦ the text after the statement), never
-    in the generated files; `port.py` emits them and lists them in each file's docstring.
-    `python3 -I tools/port.py lemmas --check` fails when a generated file differs from what
-    `port.py` produces, and `tools/ci.sh` runs it, so the files are always reproducible from Std's
-    sources, `tools/data/` and `hand.json`. To change a proof, edit `hand.json` and run
-    `port.py lemmas --force`.
-  * The original study scripts (`chain.py`, `extract.py`, `extract2.py`, `classify.py`,
-    `classify2.py`, `secdeps.py`) and their JSON inputs (`tools/data/`) are kept; from
-    `tools/data/`, `python3 -I ../port.py hmchain.json dhm.json raw0.json hm.json all_hm.json
-    OUT.lean` still reproduces the study's `auto_all.lean` exactly.
-* `tools/gen_basic.py`: generates `SwissTable/HashMap/Basic.lean` and `AdditionalOperations.lean`
-  from Std's text (`python3 -I tools/gen_basic.py STD_DATA_DIR tools/inventory.json
-  SwissTable/HashMap`; it reproduces the committed files exactly, which `tools/ci.sh` checks).
-* `tools/srccheck.py`: checks the source text and attributes of the 16 iterator declarations that
-  parity ignores against `inventory.json`.
-* `tools/check_c.py`: checks the C that Lean generates for the API at `Nat` and `String` keys
-  (`bench/Bench/CCheck.lean`, one monomorphic function per operation; `lake build Bench.CCheck`
-  first). From each function it follows the direct calls and fails on a closure call
-  (`lean_apply_*`), on an allocation in a lookup (outside the `Nat`-indexed probes of tables of
-  more than `2 ^ 31` slots), on an array shared right before its in-place update (the bake-off's
-  "bug A"), and on an update that does not reuse its unshared table cell.
-* `tools/inventory.json`: the API to reproduce, with Std's exact signatures and attributes.
+The design notes, the proof architecture and the raw benchmark data are in `docs/`.
