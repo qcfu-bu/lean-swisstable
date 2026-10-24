@@ -1,6 +1,7 @@
 module
 
 public import OAMap.Core.Derived
+import Std.Data.DHashMap.Internal.WF
 
 /-!
 # Std's bulk algorithms on the core
@@ -18,15 +19,20 @@ Table-level twins of Std's structural equalities (`docs/ARCHITECTURE.md` §4.2, 
 * `union`, `inter` and `diff` keep Std's size branches (merge the smaller map into the larger);
   `beq` is Std's size check followed by `all`/`get?`; `partition` is Std's fold.
 
-Layout-free: uses only the contract names of `OAMap.Core.Table` and the definitions and lemmas of
-`OAMap.Core.Derived`. Not exposed. The twins of Std's `ext DHashMap.X` equalities take all their
+Layout-free: uses only the contract names of `OAMap.Core.Table`, the definitions and lemmas of
+`OAMap.Core.Derived` and, in proofs, Std's own hash map internals. Not exposed. The twins of Std's `ext DHashMap.X` equalities take all their
 arguments implicitly (except where Std's take them explicitly), so that `ext Core.Table.X` and
 `apply Core.Table.X` elaborate as in Std.
 
-Two statements are left as `sorry` because the public API of `Std.Internal.List` cannot prove
-them: `toListModel_insertMany_list` needs the defining equations of `insertListConst`, and
-`beq_eq_beqModel` needs the definition of `Const.beqModel`. Neither definition is `@[expose]`d,
-and `import all` is forbidden here. The docstrings of the two lemmas give the details.
+`insertListConst` is not `@[expose]`d, and the public lemmas of `Std.Internal.List` describe it
+only on lists with distinct keys. `toListModel_insertMany_list` therefore goes through Std's own
+hash map: `Raw₀.Const.toListModel_insertMany_list` holds for every list, and a one-bucket
+`Raw₀` built from the model (`rawOf`) turns it into a statement about any list with distinct
+keys. That is why this file imports `Std.Data.DHashMap.Internal.WF` (privately, for proofs only).
+
+`beq_eq_beqModel` is left as `sorry`: no public statement of Std pins down `Const.beqModel` for an
+arbitrary `BEq β`, so it cannot be proved without `import all`, which is forbidden here. Its
+docstring gives the details.
 
 Owner: GEN, Wave 1.
 -/
@@ -115,6 +121,90 @@ def beq [BEq β] (t₁ t₂ : Table α β) : Bool :=
     (emptyWithCapacity 8, emptyWithCapacity 8)
 
 end Defs
+
+/-! ## Std's raw maps as a model of `insertListConst`
+
+`insertListConst` is not `@[expose]`d, and the lemmas of `Std.Internal.List` describe it only on
+lists with distinct keys. Std's `Raw₀.Const.toListModel_insertMany_list` describes it on every
+list, for a first argument of the form `toListModel m.1.buckets` with `m` well-formed. `rawOf L`
+is the one-bucket `Raw₀` whose model is exactly `L`, so `insertListConst L l` is folding
+`insertEntry` over `l` for every `L` with distinct keys (`insertListConst_perm_foldl`). -/
+
+section StdModel
+
+variable {α : Type u} {β : Type v}
+
+/-- The association list with the entries of `L`, in order. -/
+private def assocOf (L : List ((_ : α) × β)) : Std.DHashMap.Internal.AssocList α (fun _ => β) :=
+  L.foldr (fun p acc => .cons p.1 p.2 acc) .nil
+
+private theorem toList_assocOf (L : List ((_ : α) × β)) : (assocOf L).toList = L := by
+  induction L with
+  | nil => simp [assocOf]
+  | cons p L ih =>
+    simp only [assocOf, List.foldr_cons, Std.DHashMap.Internal.AssocList.toList_cons] at ih ⊢
+    rw [ih]
+
+/-- Std's raw map with one bucket holding the entries of `L`. -/
+private def rawOf (L : List ((_ : α) × β)) : Std.DHashMap.Internal.Raw₀ α (fun _ => β) :=
+  ⟨⟨L.length, #[assocOf L]⟩, by simp⟩
+
+private theorem toListModel_rawOf (L : List ((_ : α) × β)) :
+    Std.DHashMap.Internal.toListModel (rawOf L).1.buckets = L := by
+  have h := Std.DHashMap.Internal.Raw.fold_cons (l := (rawOf L).1) (acc := [])
+  rw [Std.DHashMap.Internal.Raw.fold_eq] at h
+  simp only [rawOf, List.append_nil] at h
+  simp only [rawOf]
+  rw [← List.reverse_inj, ← h]
+  simp [Std.DHashMap.Internal.AssocList.foldl_eq, toList_assocOf]
+
+private theorem wfImp_rawOf [BEq α] [Hashable α] (L : List ((_ : α) × β)) (hL : DistinctKeys L) :
+    Std.DHashMap.Internal.Raw.WFImp (rawOf L).1 where
+  buckets_hash_self := ⟨fun i hi => ⟨fun hs p _ => by
+    have h1 := (Std.DHashMap.Internal.mkIdx _ hs (hash p.1)).2
+    simp only [rawOf, List.size_toArray, List.length_cons, List.length_nil] at h1 hi ⊢
+    omega⟩⟩
+  size_eq := by rw [toListModel_rawOf]; rfl
+  distinct := by rw [toListModel_rawOf]; exact hL
+
+/-- Folding `insertEntry` respects permutations of a list with distinct keys. -/
+private theorem foldl_insertEntry_perm [BEq α] [EquivBEq α] (l : List (α × β))
+    {A B : List ((_ : α) × β)} (h : A.Perm B) (hA : DistinctKeys A) :
+    (l.foldl (fun acc p => insertEntry p.1 p.2 acc) A).Perm
+      (l.foldl (fun acc p => insertEntry p.1 p.2 acc) B) := by
+  induction l generalizing A B with
+  | nil => exact h
+  | cons p l ih => exact ih (insertEntry_of_perm hA h) hA.insertEntry
+
+/-- On Std's raw maps, folding `insert` is folding `insertEntry` on the model. -/
+private theorem toListModel_foldl_insert_raw [BEq α] [Hashable α] [EquivBEq α] [LawfulHashable α]
+    (l : List (α × β)) (m : Std.DHashMap.Internal.Raw₀ α (fun _ => β))
+    (hm : Std.DHashMap.Internal.Raw.WFImp m.1) :
+    (Std.DHashMap.Internal.toListModel (l.foldl (fun a b => a.insert b.1 b.2) m).1.buckets).Perm
+      (l.foldl (fun acc p => insertEntry p.1 p.2 acc)
+        (Std.DHashMap.Internal.toListModel m.1.buckets)) := by
+  induction l generalizing m with
+  | nil => exact List.Perm.refl _
+  | cons p l ih =>
+    rw [List.foldl_cons, List.foldl_cons]
+    exact (ih _ (Std.DHashMap.Internal.Raw₀.wfImp_insert hm)).trans
+      (foldl_insertEntry_perm l (Std.DHashMap.Internal.Raw₀.toListModel_insert hm)
+        (Std.DHashMap.Internal.Raw₀.wfImp_insert hm).distinct)
+
+/-- `insertListConst L l` is folding `insertEntry` over `l`, for every `L` with distinct keys and
+every `l` (duplicate keys included). -/
+private theorem insertListConst_perm_foldl [BEq α] [Hashable α] [EquivBEq α] [LawfulHashable α]
+    (L : List ((_ : α) × β)) (hL : DistinctKeys L) (l : List (α × β)) :
+    (insertListConst L l).Perm (l.foldl (fun acc p => insertEntry p.1 p.2 acc) L) := by
+  have hwf := wfImp_rawOf L hL
+  have h := Std.DHashMap.Internal.Raw₀.Const.toListModel_insertMany_list (l := l) hwf
+  rw [Std.DHashMap.Internal.Raw₀.Const.insertMany_list_eq_foldl, toListModel_rawOf] at h
+  refine h.symm.trans ?_
+  have h2 := toListModel_foldl_insert_raw l (rawOf L) hwf
+  rw [toListModel_rawOf] at h2
+  exact h2
+
+end StdModel
 
 /-! ## Lemmas -/
 
@@ -320,15 +410,25 @@ private theorem getEntry?_foldl_erase [EquivBEq α] [LawfulHashable α]
 
 /-! ### Model lemmas (L) -/
 
-/-- **Blocked (`sorry`).** Std proves this by unfolding `insertListConst` and `insertList`.
-Neither is `@[expose]`d, and this module may not `import all Std.Data.Internal.List.Associative`
-(`tools/audit.py`), so their defining equations are out of reach. The public lemmas about
-`insertListConst` describe a key only when it does not occur in `l` or when the keys of `l` are
-pairwise distinct, so they cannot settle a list with duplicate keys. -/
+/-- Folding `insert` over tables is folding `insertEntry` on the model. -/
+private theorem toListModel_foldl_insert [EquivBEq α] [LawfulHashable α] (l : List (α × β))
+    (t : Table α β) :
+    (l.foldl (fun acc p => acc.insert p.1 p.2) t).toListModel.Perm
+      (l.foldl (fun acc p => insertEntry p.1 p.2 acc) t.toListModel) := by
+  induction l generalizing t with
+  | nil => exact List.Perm.refl _
+  | cons p l ih =>
+    rw [List.foldl_cons, List.foldl_cons]
+    exact (ih _).trans (foldl_insertEntry_perm l (toListModel_insert t p.1 p.2) (distinctKeys _))
+
+/-- Std proves this by unfolding `insertListConst`, which is not `@[expose]`d; here both sides
+are compared with the fold of `insertEntry` (`insertListConst_perm_foldl`). -/
 theorem toListModel_insertMany_list [EquivBEq α] [LawfulHashable α] (t : Table α β)
     (l : List (α × β)) :
     (t.insertMany l).1.toListModel.Perm (insertListConst t.toListModel l) := by
-  sorry
+  rw [insertMany_list_eq_foldl]
+  exact (toListModel_foldl_insert l t).trans
+    (insertListConst_perm_foldl t.toListModel (distinctKeys t) l).symm
 
 theorem toListModel_insertManyIfNewUnit_list [EquivBEq α] [LawfulHashable α]
     (t : Table α Unit) (l : List α) :
@@ -393,7 +493,11 @@ theorem beq_eq_all_getValue? [EquivBEq α] [LawfulHashable α] [BEq β] (t₁ t�
   simp only [get?_eq_getValue?]
 
 /-- **Blocked (`sorry`).** `Const.beqModel` is not `@[expose]`d and no public lemma states its
-definition; with it, this lemma is `beq_eq_all_getValue?` followed by unfolding. The three lemmas
+definition; with it, this lemma is `beq_eq_all_getValue?` followed by unfolding. Every public
+statement about `Const.beqModel` or `Raw₀.Const.beq` assumes `ReflBEq β` or `LawfulBEq β`, or is a
+congruence, so they cannot tell Std's definition apart from one with the two sides of `==`
+swapped, and for a non-symmetric `BEq β` the two differ. Under `[LawfulBEq α] [LawfulBEq β]` the
+lemma follows from `Const.beqModel_iff_perm`, `perm_of_beq` and `beq_of_perm`. The three lemmas
 below, `beq_of_perm`, `perm_of_beq` and `beq_congr`, are proved without it and give what Std's user
 lemmas take from `Const.beqModel_eq_true_of_perm`, `Const.perm_of_beqModel` and
 `Const.beqModel_congr`. Std's `Raw₀` version needs only `[PartialEquivBEq α]`; this one takes
