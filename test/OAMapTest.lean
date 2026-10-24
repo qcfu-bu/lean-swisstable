@@ -24,6 +24,10 @@ check fails (`docs/ARCHITECTURE.md` §9.2):
 | `Semantics`     | `#guard` tests of kept keys/values, traversal order, `~m` scope                |
 | `SwissGroupUse` | a lookup and an erase step from the Swiss group lemmas, as an importing module |
 
+The library has a second root, `OAMapTest.CoreSpecListRef` (not imported here, because the
+reference core `OAMap.Core.ListRef` and the selected core define the same names): `CoreSpec`'s
+text against the reference core.
+
 Since the Merge, `ParityRun` fails on any difference from Std outside its `ignore` list, and
 `Audit` on any dependency on `sorryAx`.
 -/

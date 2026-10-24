@@ -1,7 +1,5 @@
 import Lean
 import OAMap
--- The Swiss bake-off core's modules are not imported by `OAMap` yet; audit them too.
-import OAMap.Core.Swiss.Group
 
 /-!
 # Kernel-level audit of the library
@@ -14,6 +12,13 @@ auxiliary declarations Lean generates for them), this check fails (logs an error
 * the constant is an `axiom`, an `opaque` constant or the result of a `partial def`, or is
   `unsafe`;
 * the constant carries `@[implemented_by]` or `@[extern]`.
+
+One kind of generated constant is exempt from the `partial`/`unsafe` test: `f._unsafe_rec`, the
+helper that the compiler generates for every definition `f` by well-founded recursion (the loops
+of the core) and runs in place of `f`. It is exempt only when `f` itself is a safe definition, so
+the helpers of a `partial def` (whose `f` is an `opaque` constant) are still reported, through
+`f`. The exempt helpers are counted in the report, and their axioms are checked like every other
+constant's.
 
 It complements Parity's axiom check, which only sees the declarations that have a Std
 counterpart, and the text-level audit `tools/audit.py`.
@@ -37,19 +42,27 @@ def failOnSorry : Bool := true
   let mut errors : Array MessageData := #[]
   let mut sorries : Array Name := #[]
   let mut nConsts : Nat := 0
+  let mut nUnsafeRec : Nat := 0
   for h : i in [0:names.size] do
     let m := names[i]
     unless (`OAMap).isPrefixOf m do continue
     for c in env.header.moduleData[i]!.constNames do
       let some ci := env.find? c | continue
       nConsts := nConsts + 1
+      -- the compiler's helper for a safe definition by well-founded recursion (see above)
+      let exempt := match Compiler.isUnsafeRecName? c with
+        | some base => match env.find? base with
+          | some (.defnInfo b) => b.safety == .safe
+          | _ => false
+        | none => false
+      if exempt then nUnsafeRec := nUnsafeRec + 1
       match ci with
       | .axiomInfo _ => errors := errors.push m!"{c} (in {m}) is an axiom"
       | .opaqueInfo _ =>
         errors := errors.push m!"{c} (in {m}) is an opaque constant (`opaque` or `partial def`)"
       | _ => pure ()
-      if ci.isUnsafe then errors := errors.push m!"{c} (in {m}) is unsafe"
-      if ci.isPartial then errors := errors.push m!"{c} (in {m}) is partial"
+      if ci.isUnsafe && !exempt then errors := errors.push m!"{c} (in {m}) is unsafe"
+      if ci.isPartial && !exempt then errors := errors.push m!"{c} (in {m}) is partial"
       if (Compiler.implementedByAttr.getParam? env c).isSome then
         errors := errors.push m!"{c} (in {m}) has @[implemented_by]"
       if isExtern env c then errors := errors.push m!"{c} (in {m}) has @[extern]"
@@ -66,6 +79,8 @@ def failOnSorry : Bool := true
   else if failOnSorry && !sorries.isEmpty then
     logError m!"audit failed: {sorryMsg}"
   else
-    logInfo m!"audit ok: {nConsts} constants in OAMap use only {standardAxioms}; {sorryMsg}"
+    logInfo m!"audit ok: {nConsts} constants in OAMap use only {standardAxioms} \
+      ({nUnsafeRec} of them the compiler's `_unsafe_rec` helpers of safe definitions by \
+      well-founded recursion); {sorryMsg}"
 
 end OAMapTest.Audit

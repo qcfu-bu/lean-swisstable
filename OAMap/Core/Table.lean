@@ -1,6 +1,6 @@
 module
 
-public import OAMap.Core.ListRef
+public import OAMap.Core.Swiss
 
 /-!
 # Core selector

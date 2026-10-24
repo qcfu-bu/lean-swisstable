@@ -26,8 +26,9 @@ the empty map), which here depends on the selected core.
 Not tested: goals `cbv` does not prove on Std, such as `size`, `toList`, `keys`, `iter`, `alter`,
 `modify` and `insertIfNew` of an insertion, `getKey?` (also through `map` and `filter`),
 `size` and `isEmpty` of `map`, and `HashSet.get?` of an insertion. Against the list-backed
-reference core `OAMap.Core.ListRef`, `cbv` proves those too, because this plain file can unfold
-the core's list operations; that depends on the core and is not Std's behaviour.
+reference core `OAMap.Core.ListRef`, `cbv` proved those too, because this plain file can unfold
+the core's list operations; that depends on the core and is not Std's behaviour, so none is
+tested.
 
 Owner: ITER, Wave 3.
 -/
@@ -119,12 +120,13 @@ cbv_example ((HashSet.ofList [1, 2]).erase 1).contains 1 = false
 cbv_example (HashSet.ofArray #[1, 2, 3]).contains 4 = false
 cbv_example ((∅ : HashSet Nat).insertMany [1, 2]).contains 2 = true
 
-/-! ## Through the table (revisit at INTEG)
+/-! ## Through the table
 
 Std's `cbv` proves this goal by unfolding `isEmpty` down to the size field of its table, as
 there is no `@[cbv_eval]` lemma for it. Ours unfolds `isEmpty` through `OAMap.Core.Derived` to
-`Core.Table.size` of the selected core, which this plain file can see. The example holds against
-`OAMap.Core.ListRef` and must be re-checked when the real core is selected. -/
+`Core.Table.size` of the selected core, which this plain file can see: for the SwissTable core,
+the `size` field of the unallocated table `Swiss.emptyImpl 8`, which is `0`. (It also held against
+the reference core `OAMap.Core.ListRef`.) -/
 
 cbv_example (∅ : HashMap Nat Nat).isEmpty = true
 

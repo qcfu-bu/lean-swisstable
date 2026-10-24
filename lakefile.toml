@@ -8,11 +8,11 @@ testDriver = "OAMapTest"
 autoImplicit = false
 relaxedAutoImplicit = false
 
-# The library: every module reachable from OAMap.lean, and the modules of OAMap/Core/Swiss (a
-# bake-off core in progress, not imported by OAMap.lean yet), so that `lake build` checks them.
+# The library: every module reachable from OAMap.lean (with the SwissTable core selected by
+# OAMap/Core/Table.lean, that is all of OAMap/ except the reference core OAMap/Core/ListRef.lean,
+# which the test library checks against the contract).
 [[lean_lib]]
 name = "OAMap"
-globs = ["OAMap", "OAMap.Core.Swiss.+"]
 
 # The statement-parity checker (imports only Lean).
 [[lean_lib]]
@@ -20,13 +20,25 @@ name = "Parity"
 srcDir = "test"
 roots = ["Parity"]
 
-# Conformance, seal, axiom, parity, cbv and #guard tests (run by `lake test`).
+# Conformance, seal, axiom, parity, cbv and #guard tests (run by `lake test`). The second root
+# checks the reference core OAMap.Core.ListRef against the contract; it is a separate root
+# because ListRef and the selected core define the same names and cannot be imported together.
 [[lean_lib]]
 name = "OAMapTest"
 srcDir = "test"
-roots = ["OAMapTest"]
+roots = ["OAMapTest", "OAMapTest.CoreSpecListRef"]
+
+# The benchmark (bench/Main.lean, `lake exe oamap-bench`): the bake-off harness's workloads for
+# OAMap.HashMap and Std.HashMap, compiled with the harness's flags. Not built by `lake build`.
+[[lean_lib]]
+name = "Bench"
+srcDir = "bench"
+roots = ["Bench", "Bench.CCheck"]
+moreLeancArgs = ["-O3", "-march=native", "-fno-plt", "-flto"]
 
 [[lean_exe]]
 name = "oamap-bench"
 srcDir = "bench"
 root = "Main"
+moreLeancArgs = ["-O3", "-march=native", "-fno-plt", "-flto"]
+moreLinkArgs = ["-flto"]

@@ -2,8 +2,10 @@
 # Select the table core that OAMap is built on (docs/ARCHITECTURE.md §2.2, §3.6, §9.3).
 #
 #   tools/select-core.sh                   print the current selection
+#   tools/select-core.sh swiss             the SwissTable core OAMap.Core.Swiss (the selection)
 #   tools/select-core.sh listref           the list-backed reference core OAMap.Core.ListRef
-#   tools/select-core.sh linear|swiss|dense    a bake-off core OAMap.Core.Linear/Swiss/Dense
+#   tools/select-core.sh linear|dense      other bake-off cores, OAMap.Core.Linear/Dense (not in
+#                                          the repository)
 #   tools/select-core.sh OAMap.Core.<X>    any other core module
 #
 # It rewrites the one `public import OAMap.Core.<X>` line of OAMap/Core/Table.lean. A core is

@@ -6,9 +6,11 @@ public import Std.Data.Internal.List.Associative
 # The list-backed reference core
 
 This module implements the core contract of `docs/ARCHITECTURE.md` §3 (23 definitions and 22
-lemmas in namespace `OAMap.Core.Table`) on an association list. It is the core that
-`OAMap.Core.Table` selects until the layout chosen by the bake-off passes
-`test/OAMapTest/CoreSpec.lean`, and every layer above the core is developed and proved against it.
+lemmas in namespace `OAMap.Core.Table`) on an association list. Every layer above the core was
+developed and proved against it, and `OAMap.Core.Table` selected it until the SwissTable core
+`OAMap.Core.Swiss` passed `test/OAMapTest/CoreSpec.lean`. It is kept as the reference
+implementation of the contract: `test/OAMapTest/CoreSpecListRef.lean` checks it, and
+`tools/select-core.sh listref` selects it again.
 
 Design rules (ARCHITECTURE.md §2.3, §3.6):
 

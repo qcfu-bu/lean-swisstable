@@ -1,6 +1,9 @@
 # OAMap: architecture of a verified drop-in for `Std.HashMap` and `Std.HashSet`
 
-Status: design, 2026-10-24. Target: Lean v4.35.0, core and Std only (no Mathlib).
+Status: implemented, 2026-10-24. Target: Lean v4.35.0, core and Std only (no Mathlib). The design
+below is what was built; the bake-off chose the SwissTable layout (`docs/bakeoff/decision.md`),
+whose core `OAMap.Core.Swiss` is selected (section 3.7), and the measured performance is in
+section 9.4. Where the text says a step is still to come, section 3.7 and 9.4 give the outcome.
 Inputs: `inventory.md`/`inventory.json` (the API to reproduce), `proofs.md` (the proof
 architecture and its mock experiments), `parity.md` (the statement checker). All three are in
 this directory. Small module-system experiments made for this document are in `modtest/` (their
@@ -108,7 +111,7 @@ OAMap.lean                         aggregator: HashMap, HashSet                 
 OAMap/
   Core/
     Table.lean                     selector, ONE line: public import OAMap.Core.<X>     3
-    Linear/  Swiss/  Dense/        bake-off candidates (only the winner is selected) 4500-6000
+    Swiss/, Swiss.lean             the selected core: the bake-off winner (§3.7)      10125
     ListRef.lean                   reference core: list-backed, satisfies the contract 350
     Derived.lean                   queries and traversals from the primitives         450
     Bulk.lean                      Std's algorithms: insertMany/ofList/union/inter/
@@ -145,7 +148,7 @@ test/
   OAMapTest/ParityRun.lean         Parity.run against Std                              40
   OAMapTest/Cbv.lean               `by cbv` examples, same as on Std                    60
   OAMapTest/Unverified.lean        #guard tests for partition, values, valuesArray, Repr 60
-bench/Main.lean                    OAMap vs Std timing                                 300
+bench/Main.lean, Bench/            OAMap vs Std timing (the bake-off harness's workloads) 1043
 tools/                             port.py, chain.py, extract2.py, split.py, srccheck.py,
                                    select-core.sh, ci.sh, inventory.json (copied from here)
 ```
@@ -531,6 +534,48 @@ operations other than `getThenInsertIfNew?`, key replacement, and the `Inhabited
 `unfold`, never `rfl` (the module system forces this anyway, section 2.3). It is the default
 selection in `Core/Table.lean` until the real core passes `CoreSpec`. A full build against it
 takes seconds, which is what lets eight agents port lemmas at once.
+
+Since the SwissTable core is selected (§3.7), ListRef stays in the repository as the reference
+implementation of the contract: `test/OAMapTest/CoreSpecListRef.lean` (CoreSpec's text, importing
+`OAMap.Core.ListRef` directly; `tools/ci.sh` checks the text is the same) is a second root of the
+test library, so `lake test` keeps checking it. `tools/select-core.sh listref` selects it again.
+
+### 3.7 The selected core `OAMap.Core.Swiss`
+
+The bake-off (`docs/bakeoff/`) chose hashbrown's generic layout: a byte array of control bytes
+(EMPTY `0xFF`, DELETED `0x80`, FULL `0b0hhhhhhh` with a 7-bit tag), `cap + 8` long with the first
+group mirrored at the end, and two arrays of `cap + 1` key and value cells; load 7/8; groups of 8
+control bytes read as one little-endian word with exact per-lane tag matching; triangular probing
+over groups; one insertion probe with a fast path at an EMPTY home slot; tombstones by the 8-window
+rule; every rebuild into a fresh table, moving each entry to the first free slot of its probe
+(rehashing its key, comparing none). Its 23 definitions stay sealed and are one-liners: most wrap
+an exposed `Swiss.*Impl` definition, and the fused ones are defined from each other as §3.5 item 3
+asks; each has an equation lemma `Table.*_def` for the proof files. The invariant `Swiss.WF` is the
+erased field `Table.wf`, with the probe and distinctness parts under
+`[EquivBEq α] [LawfulHashable α]` (§3.1). Section 3.5 is met as follows:
+
+1. `filter`, `filterMap` and `map` erase or rewrite in place and compare no keys, and neither does
+   the rebuild. The U lemmas hold with no lawfulness.
+2. `erase` returns its argument when the probe misses; the unallocated table (`cap = 0`) always
+   misses.
+3. `insert := (containsThenInsert ..).2` and `insertIfNew`, `containsThenInsertIfNew` from
+   `getThenInsertIfNew?`, each one probe and one write.
+4. A hit writes the argument key (the tag matched, so `TagInv` holds unconditionally).
+5. No `Inhabited`: the empty map allocates nothing (a shared group of 8 EMPTY bytes, `#[]`
+   arrays); the first insert, and every rebuild, takes the inserted pair as the placeholder of the
+   free cells; `filterMap` and `map` take the first mapped value. At most one erased pair stays
+   referenced, until the next rebuild.
+6. `toListModel` is the full slots in slot order, and every traversal goes in slot order a group
+   at a time (`foldRev` in reverse).
+7. `markLinear` marks the three arrays.
+8. Lookups, inserts and erases specialise to scalar code (`tools/check_c.py`, §9.3).
+
+Every operation runs on `USize` indices below `2 ^ 31` slots and on `Nat` indices beyond (the same
+algorithms; one guard at the top of each operation). The proofs (6,977 lines in
+`OAMap/Core/Swiss/Proofs/`, plus the 1,364-line SWAR library `Group.lean`) only add erased
+arguments, so the code is the frozen version measured in the bake-off: instructions per operation
+of `OAMap.HashMap` on the bake-off harness equal the frozen core's (ratio 1.0002 over 36 cells).
+The layers above the core needed no change when it was selected.
 
 ## 4. The layout-free layers
 
@@ -1116,10 +1161,13 @@ and the checker falls back to matching by type otherwise.
 | module | check | fails when |
 |---|---|---|
 | `CoreSpec` | the 45-name contract (section 3.4) | the selected core lacks a name or has a less general type |
+| `CoreSpecListRef` | the same text against the reference core (a second root of the library, §3.6) | ListRef stops satisfying the contract |
+| `Audit` | every constant of `OAMap`: only the three standard axioms; no axiom, `opaque`, `partial`, `unsafe`, `implemented_by`, `extern` (the compiler's `_unsafe_rec` helpers of safe definitions by well-founded recursion are exempt from the `partial`/`unsafe` test) | anything else, or `sorry` |
+| `SwissGroupUse` | a lookup step and an erase step proved from another module with `Swiss.Group`'s exported lemmas only | the SWAR library's statements stop being usable without unfolding |
 | `SealCheck` | layers above the core use only contract names | a proof reaches into a layout module |
 | `ParityRun` | statement, attribute and axiom parity with Std | any parity error, or `sorry` |
 | `Cbv` | `by cbv` examples copied from Std usage | `cbv` behaves differently |
-| `Unverified` | `#guard` on `partition`, `values`, `valuesArray`, `Repr`, `Internal.numBuckets` | these unverified functions (no Std lemmas) misbehave |
+| `Unverified` | `#guard` on `partition`, `values`, `valuesArray`, `Repr`, `Internal.numBuckets` (the SwissTable core's exact slot counts) | these unverified functions (no Std lemmas) misbehave |
 | `Semantics` | `#guard` on the kept key and value of `insert`, `modify`, `alter`, `union`, `inter`, `diff`, `ofList`, `insertMany`; one traversal order; `~m` scoping | a core reads the contract differently from Std (mostly also pinned by Std lemmas) |
 
 Correctness of everything with Std lemmas comes from the proofs and from parity (identical
@@ -1131,22 +1179,55 @@ statements), not from output tests.
 #!/bin/sh
 set -eu
 lake build OAMap                      # every proof, against the selected core
-lake test                             # OAMapTest: CoreSpec, SealCheck, Audit, ParityRun, Cbv, Unverified, Semantics
+lake test                             # OAMapTest (§9.2), CoreSpecListRef included
 python3 -I tools/srccheck.py tools/inventory.json OAMap   # source text of the 16 ignored iterator decls
 python3 -I tools/audit.py OAMap OAMap.lean                # spec-integrity audit: no escape hatches
 python3 -I tools/port.py lemmas --check                   # the generated files are reproduced exactly
-# ... and tools/gen_basic.py's output equals OAMap/HashMap/{Basic,AdditionalOperations}.lean
+# ... tools/gen_basic.py's output equals OAMap/HashMap/{Basic,AdditionalOperations}.lean,
+# ... CoreSpecListRef.lean is CoreSpec.lean's text below its header,
+lake build oamap-bench Bench.CCheck   # the benchmark compiles (it is not run)
+python3 -I tools/check_c.py           # the generated C of the API (below)
 ```
 
-A second job runs the same with `tools/select-core.sh listref` in a separate worktree, so the
-reference core and the real core both keep satisfying the contract.
+The reference core keeps satisfying the contract through `CoreSpecListRef` (§3.6), so no second
+job with `tools/select-core.sh listref` is needed. (With it selected, everything passes but the
+SwissTable core's exact slot counts in `Unverified.lean`.)
+
+`tools/check_c.py` reads the C of `bench/Bench/CCheck.lean`, one monomorphic function per
+operation at `Nat` and `String` keys (`getD`, `get!`, `contains`, `getKeyD`, `HashSet.contains`,
+`insert`, `insertIfNew`, `getThenInsertIfNew?`, `containsThenInsert`, `erase`, `modify`, `alter`,
+`HashSet.insert`, `fold`), follows the direct calls from each, and fails on a closure call, on an
+allocation in a lookup (outside the `Nat`-indexed probes of tables of `2 ^ 31` slots or more,
+which return an `Option`), on an array shared (`lean_inc`) in the same block before its in-place
+update (the bake-off's "bug A": the update then copies the array), and on an update whose
+unshared table cell is not reused. It prints, as a note, that `containsThenInsertN` (the
+`Nat`-indexed insert, tables of `2 ^ 31` slots or more) allocates a fresh table cell on a hit; its
+arrays are still updated in place.
 
 ### 9.4 Benchmarks (`bench/Main.lean`, not gating)
 
-OAMap against Std on: insert of fresh keys, insert of existing keys, lookup hit and miss
+Planned: OAMap against Std on: insert of fresh keys, insert of existing keys, lookup hit and miss
 (`get?`, `contains`, `getD`), erase, `alter`/`modify` counters, `fold`/`toList`/`for`,
 `ofList`, `union`/`inter`, and HashSet insert/contains; `Nat` and `String` keys; small (10²)
 and large (10⁶) maps. Rough timings are enough. The bake-off's own harness can be reused.
+
+Built: the bake-off harness was reused. `bench/Bench/` holds its modules (keys, the `BenchMap`
+class and `bench_map` command, the `@[specialize]`d workload loops, timing and cells) without the
+hardware counters, and `bench/Main.lean` instantiates them at `Std.HashMap` and `OAMap.HashMap`:
+`lake exe oamap-bench` compares the two on 13 workloads (insert from empty and pre-sized, shuffled
+`getD` and `get?`, misses, reinsert, `getThenInsertIfNew?` hash-consing, `fold`, the four erase
+workloads) at `Nat` and `String` keys for n = 10³, 10⁵, 10⁶, one process per cell. `alter`,
+`modify`, the bulk operations and HashSet are not timed (HashSet is `HashMap α Unit`).
+
+Measured on the harness itself (`oabench2`, `docs/bakeoff/lib-results.csv`, README
+"Performance"): over its full matrix (16 workloads, 5 key types, 8 sizes from 10³ to 10⁷, 1480
+cells, 0 checksum mismatches) `OAMap.HashMap` takes 0.55 of `Std.HashMap`'s time per operation
+(geometric mean over the 512 cells with non-dense keys; rand 0.49, flat 0.60, struct 0.54, string
+0.56; dense keys 1.00), with 23 cells above 1.10x and 3 above 1.5x (worst: rand 1000 in-order
+`getD` 1.65, rand 1536 erase-all 1.63). Memory per entry is 1.03x Std grown from empty and 0.63x
+pre-sized. The bake-off prototype `swiss` measured 0.56 with 35 cells above 1.10x before the
+decision's fixes. The library's figures are the frozen core's: it executes the same instructions
+per operation (ratio 1.0002 over 36 cells).
 
 ## 10. Order of work
 
@@ -1199,7 +1280,10 @@ and a green parity run, except the 16 ignored iterator declarations.
 | BENCH | `bench/Main.lean`, IR inspection of `lookup`/`insert` at `Nat` keys | INTEG |
 
 If the seal holds, INTEG has nothing to fix: every proof above the core is already checked
-against the contract.
+against the contract. (So it went: selecting the SwissTable core changed no file above the
+core. INTEG adjusted only tests: the `Unverified` slot-count guards, the second test root for
+ListRef, and an `Audit` exemption for the compiler's `_unsafe_rec` helpers of the core's
+well-founded loops.)
 
 **Wave 4: performance (optional, after measurement)**: single-probe fast paths that the first
 core version left derived, the lazy `SlotIter`, a value-less set core if `Array Unit` costs

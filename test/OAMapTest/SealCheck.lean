@@ -6,8 +6,9 @@ import OAMap
 
 `docs/ARCHITECTURE.md` §3.4. A *layout module* is any module under `OAMap.Core` other than the
 selector `OAMap.Core.Table` and the layout-free `OAMap.Core.Derived` and `OAMap.Core.Bulk`
-(today `OAMap.Core.ListRef`; later the bake-off cores). Every other `OAMap` module is *above the
-core*. The check fails (logs an error) when
+(the selected SwissTable core `OAMap.Core.Swiss` and its modules, and the reference core
+`OAMap.Core.ListRef`). Every other `OAMap` module is *above the core*. The check fails (logs an
+error) when
 
 1. a declaration above the core mentions, in its type or its value (theorem bodies included), a
    constant defined in a layout module that is not one of the 45 contract names of §3.2/§3.3

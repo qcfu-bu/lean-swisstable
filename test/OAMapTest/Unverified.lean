@@ -13,7 +13,7 @@ evaluates to `false`. Everything else is covered by the proofs and by parity.
 The checks do not depend on the iteration order, which is the core's: they compare with Std's
 maps through queries and sorted lists, and with the other traversals of the same map (`values`
 enumerates the order of `toList`, §1). The only guards that depend on the selected core are in
-the last section, marked to revisit at INTEG.
+the last section: the exact slot counts of the SwissTable core.
 
 Owner: ITER, Wave 3.
 -/
@@ -168,18 +168,45 @@ def ss : Std.HashSet Nat := .ofList [1, 2, 3, 4, 5, 8, 2]
 #guard OAMap.HashSet.Internal.numBuckets (∅ : OAMap.HashSet Nat) ==
   OAMap.HashMap.Internal.numBuckets (∅ : OAMap.HashMap Nat Unit)
 
-/-! ### Revisit at INTEG
+/-! ### The SwissTable core's slot count
 
-`numBuckets` is the core's own count, and the list-backed reference core
-`OAMap.Core.ListRef` returns `1` for every table, so only positivity is checked. Std's is the
-length of its bucket array, a power of two: `16` for `∅`, `1` for `emptyWithCapacity 0`, `256`
-for `emptyWithCapacity 100`, doubling as the map grows (`32` from 13 entries inserted into `∅`).
-When the real core is selected, add guards on its exact values (for instance `numBuckets ∅`,
-`numBuckets (emptyWithCapacity 100)`, and `numBuckets big ≥ big.size` for an open-addressing
-table). -/
+`numBuckets` is the core's own count. For the SwissTable core (`OAMap.Core.Swiss`) it is the
+number of slots, a power of two of at least 8, filled to at most 7/8 (`capacity = cap / 8 * 7`).
+The empty map allocates nothing and reports the slots its first insert allocates: the least such
+table holding `capacity` entries, `16` for `∅` (as Std's `16` buckets) and `8` for
+`emptyWithCapacity 0`. The table doubles when an insert finds no room: `16` slots hold 14 entries,
+`32` hold 28. Erasing never shrinks it, as in Std. (Std counts buckets at load 3/4: `256` for
+`emptyWithCapacity 100`, `32` from 13 entries.) -/
 
-#guard 0 < OAMap.HashMap.Internal.numBuckets (∅ : OAMap.HashMap Nat Nat)
-#guard 0 < OAMap.HashMap.Internal.numBuckets big
-#guard 0 < OAMap.HashSet.Internal.numBuckets s
+/-- The map of the keys `0, …, n - 1`, inserted into `∅`. -/
+def upTo (n : Nat) : OAMap.HashMap Nat Nat :=
+  (List.range n).foldl (fun (acc : OAMap.HashMap Nat Nat) i => acc.insert i i) ∅
+
+#guard OAMap.HashMap.Internal.numBuckets (∅ : OAMap.HashMap Nat Nat) == 16
+#guard OAMap.HashMap.Internal.numBuckets (∅ : OAMap.HashMap Nat Nat) ==
+  Std.HashMap.Internal.numBuckets (∅ : Std.HashMap Nat Nat)
+#guard OAMap.HashMap.Internal.numBuckets (OAMap.HashMap.emptyWithCapacity 0 : OAMap.HashMap Nat Nat) == 8
+#guard OAMap.HashMap.Internal.numBuckets (OAMap.HashMap.emptyWithCapacity 7 : OAMap.HashMap Nat Nat) == 8
+#guard OAMap.HashMap.Internal.numBuckets (OAMap.HashMap.emptyWithCapacity 8 : OAMap.HashMap Nat Nat) == 16
+#guard OAMap.HashMap.Internal.numBuckets (OAMap.HashMap.emptyWithCapacity 100 : OAMap.HashMap Nat Nat) ==
+  128
+-- the first insert allocates the count reported before it
+#guard OAMap.HashMap.Internal.numBuckets ((∅ : OAMap.HashMap Nat Nat).insert 1 1) == 16
+#guard OAMap.HashMap.Internal.numBuckets
+  ((OAMap.HashMap.emptyWithCapacity 100 : OAMap.HashMap Nat Nat).insert 1 1) == 128
+-- growth at 7/8 of the slots
+#guard OAMap.HashMap.Internal.numBuckets (upTo 14) == 16
+#guard OAMap.HashMap.Internal.numBuckets (upTo 15) == 32
+#guard OAMap.HashMap.Internal.numBuckets (upTo 28) == 32
+#guard OAMap.HashMap.Internal.numBuckets (upTo 29) == 64
+#guard (List.range 200).all fun n =>
+  let b := OAMap.HashMap.Internal.numBuckets (upTo n)
+  8 ≤ b && b &&& (b - 1) == 0 && n ≤ b / 8 * 7
+#guard OAMap.HashMap.Internal.numBuckets big == 512
+-- erasing never shrinks the table
+#guard OAMap.HashMap.Internal.numBuckets
+  ((List.range 300).foldl (fun (acc : OAMap.HashMap Nat Nat) i => acc.erase i) big) == 512
+#guard OAMap.HashSet.Internal.numBuckets (∅ : OAMap.HashSet Nat) == 16
+#guard OAMap.HashSet.Internal.numBuckets s == 16
 
 end OAMapTest.Unverified
