@@ -12,8 +12,9 @@ change the code only to make it provable (then re-measuring it against this vers
 
 **Not proved yet.** Every array bound is `by sorry`, and every loop terminates by a measure whose
 `decreasing_by` is `sorry`. The measures are the intended ones; their proofs need the invariant's
-facts (`mask < 2 ^ 31` on the machine-word paths, `stride ≤ mask`, a free slot), which the proof
-phase threads in as erased hypotheses. Nothing here is `partial`, and no other proof is missing.
+facts (at most `2 ^ 31` slots on the machine-word paths, `stride ≤ mask`, a free slot), which the
+proof phase threads in as erased hypotheses. Nothing here is `partial`, and no other proof is
+missing.
 
 ## Layout
 
@@ -34,9 +35,9 @@ product: the home slot is `q >>> 7` (masked), the tag `q &&& 0x7F`. Hashes are n
 rebuild recomputes them, as Std does.
 
 The empty map (`emptyWithCapacity c`, hence `∅`) allocates nothing: its `ctrl` is a shared group
-of 8 EMPTY bytes (`emptyGroup`), `mask = 0`, both arrays `#[]`, and `reqCap = c`. Every probe of
-it ends in its first group without reading a key, so the queries need no special case. The first
-insert allocates `lgFor (max c 1)` and takes its own pair as the placeholder.
+of 8 EMPTY bytes (`emptyGroup`), `mask = 0`, `shift = 57`, both arrays `#[]`, and `reqCap = c`.
+Every probe of it ends in its first group without reading a key, so the queries need no special
+case. The first insert allocates `lgFor (max c 1)` and takes its own pair as the placeholder.
 
 ## Algorithms
 
@@ -71,11 +72,12 @@ insert allocates `lgFor (max c 1)` and takes its own pair as the placeholder.
 
 ## Machine words
 
-Every operation runs on `USize` indices when `mask < 2 ^ 31` (the `…U` loops), and on `Nat`
-indices beyond (the `…N` loops, the same algorithms; also executable), following the `slotFor`
-pattern of the earlier verified linear-probing map: below `2 ^ 31` slots no index computation wraps
-on any platform. The bulk operations `filter`, `filterMap` and `map` and the out-of-line slow
-paths use `Nat` indices at every size.
+Every operation runs on `USize` indices on tables of at most `2 ^ 31` slots (the `…U` loops), and
+on `Nat` indices beyond (the `…N` loops, the same algorithms; also executable), following the
+`slotFor` pattern of the earlier verified linear-probing map: below `2 ^ 31` slots no index
+computation wraps on any platform. Each operation tests this once, at its top, with `smallShift`
+or `smallMask` (equivalent on every table). The bulk operations `filter`, `filterMap` and `map`
+use `Nat` indices at every size.
 
 ## Fused operations
 
@@ -89,11 +91,22 @@ no candidate and an EMPTY byte, where the lookup probe stops with a miss.
 
 ## Code shape
 
-The hit and the miss of each insertion probe are written out at each exit (the miss through the
-top-level `@[inline] insertNewU`), not passed as continuations: a continuation used at two exits
-becomes a join point, and the table cell taken apart at the top is then reused at only one of
-them (measured: a fresh allocation on every new key). Each operation tests `mask < 2 ^ 31` once,
-at its top, and keeps its `Nat` path out of line (`lookupN`, `eraseN`, …).
+The code was shaped by measurement against the SwissF prototype (instructions and ns per op in
+the bake-off harness), and these choices are deliberate:
+
+* The hit and the miss of each insertion probe are written out at each exit (the miss through the
+  top-level `@[inline] insertNewU`), not passed as continuations: a continuation used at two
+  exits becomes a join point, and the table cell taken apart at the top is then reused at only
+  one of them (measured: a fresh allocation on every new key).
+* The `2 ^ 31` guard is the one change against SwissF that clang does not absorb: its cold `Nat`
+  branch changes the register allocation of the caller's loop. Spilled loop-carried values were
+  then reloaded by one `ldp` from two separately stored stack slots, which this core cannot
+  forward from the store buffer, so iterations stopped overlapping (string `getD` 2.5x slower,
+  flat `insert-cap` at 10^6 1.3x; with clang's pairing pass disabled the gap disappeared). Of the
+  equivalent guard forms, `smallShift` (`shift ≥ 26`) avoids it for the lookups, `erase`,
+  `modify` and `getThenInsertIfNew?`, and `smallMask` (bit 31 of `mask`) for `containsThenInsert`
+  and `alter`; the lookup keeps its `Nat` path inline (one call to `findN`), which measured fewer
+  instructions than an out-of-line `lookupN`. This is fragile: re-measure after any change.
 -/
 
 set_option cleanup.letToHave false
@@ -180,6 +193,16 @@ slots. -/
 @[inline] def setCtrlN (c : ByteArray) (cap i : Nat) (b : UInt8) (hi : i < c.size)
     (hm : cap + 8 ≤ c.size) : ByteArray :=
   (c.set i b hi).set (((i + cap - 8) % cap) + 8) b (by sorry)
+
+/-- The machine-word guard read off `shift = 57 - log₂ cap` (`57` for the unallocated table): at
+most `2 ^ 31` slots. The lookups, `erase`, `modify`, `getThenInsertIfNew?` and the traversals test
+this form. -/
+@[inline] def smallShift (shift : UInt64) : Bool := shift ≥ 26
+
+/-- The machine-word guard read off `mask = cap - 1`: bit 31 clear, i.e. at most `2 ^ 31` slots.
+`containsThenInsert`, `alter`, `insertFresh` and `rebuild` test this form. (The two forms are
+equivalent on every table; each operation uses the one that measured best, see "Code shape".) -/
+@[inline] def smallMask (mask : USize) : Bool := mask &&& 0x80000000 == 0
 
 /-- The capacity of a table of `cap` slots: `7/8` of them. -/
 @[inline] def capacityOf (cap : Nat) : Nat := cap / 8 * 7
@@ -394,7 +417,7 @@ and `v0` (the pair being inserted). -/
   let nk := keys.propagateMark (Array.replicate (cap + 1) k0)
   let nv := vals.propagateMark (Array.replicate (cap + 1) v0)
   let (nc, nk, nv) :=
-    if nmask < 0x80000000 then moveLoop ctrl keys vals mask 0 nc nk nv nmask nshift
+    if smallMask nmask then moveLoop ctrl keys vals mask 0 nc nk nv nmask nshift
     else moveLoopN ctrl keys vals (ctrl.size - 8) 0 nc nk nv cap nshift
   ⟨nc, nk, nv, size, capacityOf cap - size, nmask, nshift, req⟩
 
@@ -403,7 +426,7 @@ and `v0` (the pair being inserted). -/
     Table α β :=
   let ⟨ctrl, keys, vals, size, gl, mask, shift, req⟩ := t
   let q := hashBits shift a
-  if mask < 0x80000000 then
+  if smallMask mask then
     let i := findFree ctrl mask (homeU q mask) 0
     let old := ctrl.uget i (by sorry)
     ⟨setCtrl ctrl mask i (tagOf q) (by sorry) (by sorry), keys.uset i a (by sorry),
@@ -518,13 +541,6 @@ first, so that `f` sees it unshared). -/
   ⟨ctrl, keys.set i a (by sorry), vals.set i (f v) (by sorry), size, gl, mask, shift, req⟩
 
 /-! ## Operations on `Nat` indices (out of line) -/
-
-/-- `Table.lookup` on `Nat` indices. -/
-@[specialize] def lookupN [BEq α] [Hashable α] {σ : Type w} (t : Table α β) (a : α)
-    (found : α → β → σ) (missing : Unit → σ) : σ :=
-  match findN t.ctrl t.slotKeys (t.ctrl.size - 8) t.shift a with
-  | some i => found (t.slotKeys[i]'(by sorry)) (t.slotVals[i]'(by sorry))
-  | none => missing ()
 
 /-- `Table.erase` on `Nat` indices. -/
 @[specialize] def eraseN [BEq α] [Hashable α] (t : Table α β) (a : α) : Table α β :=
@@ -773,7 +789,7 @@ def toListModel (t : Table α β) : List ((_ : α) × β) :=
 /-- The empty table, with room for `capacity` entries once the first insert allocates it: it
 allocates nothing (a shared group of 8 EMPTY control bytes, no slots). -/
 def emptyWithCapacity (capacity : Nat) : Table α β :=
-  ⟨emptyGroup, #[], #[], 0, 0, 0, 0, capacity⟩
+  ⟨emptyGroup, #[], #[], 0, 0, 0, 57, capacity⟩
 
 /-- The number of slots, counting for the unallocated table the slots its first insert allocates
 (so it is positive, as Std's bucket count is). -/
@@ -790,11 +806,14 @@ def numBuckets (t : Table α β) : Nat :=
 there is none. -/
 @[inline] def lookup {σ : Type w} (t : Table α β) (a : α) (found : α → β → σ)
     (missing : Unit → σ) : σ :=
-  if t.mask < 0x80000000 then
+  if smallShift t.shift then
     let i := findU t.ctrl t.slotKeys t.mask t.shift a
     if i ≤ t.mask then found (t.slotKeys.uget i (by sorry)) (t.slotVals.uget i (by sorry))
     else missing ()
-  else lookupN t a found missing
+  else
+    match findN t.ctrl t.slotKeys (t.ctrl.size - 8) t.shift a with
+    | some i => found (t.slotKeys[i]'(by sorry)) (t.slotVals[i]'(by sorry))
+    | none => missing ()
 
 /-- Whether a stored key is `==` to `a`. -/
 @[inline] def contains (t : Table α β) (a : α) : Bool :=
@@ -802,15 +821,15 @@ there is none. -/
 
 /-- `lookupMem` on `Nat` indices (tables beyond `2 ^ 31` slots). -/
 @[specialize] def lookupMemN {σ : Type w} (t : Table α β) (a : α)
-    (hm : ¬t.mask < 0x80000000) (h : t.contains a = true) (found : α → β → σ) : σ :=
+    (hm : ¬smallShift t.shift = true) (h : t.contains a = true) (found : α → β → σ) : σ :=
   match he : findN t.ctrl t.slotKeys (t.ctrl.size - 8) t.shift a with
   | some i => found (t.slotKeys[i]'(by sorry)) (t.slotVals[i]'(by sorry))
-  | none => absurd h (by simp [contains, lookup, lookupN, hm, he])
+  | none => absurd h (by simp [contains, lookup, hm, he])
 
 /-- One probe for a key known to be present: `found k v` on the stored key and its value. -/
 @[inline] def lookupMem {σ : Type w} (t : Table α β) (a : α) (h : t.contains a = true)
     (found : α → β → σ) : σ :=
-  if hm : t.mask < 0x80000000 then
+  if hm : smallShift t.shift then
     let i := findU t.ctrl t.slotKeys t.mask t.shift a
     if hi : i ≤ t.mask then found (t.slotKeys.uget i (by sorry)) (t.slotVals.uget i (by sorry))
     else absurd h (by simp [contains, lookup, hm, i, hi])
@@ -820,7 +839,7 @@ there is none. -/
 and its value by `b`. One probe. -/
 @[inline] def containsThenInsert (t : Table α β) (a : α) (b : β) : Bool × Table α β :=
   let ⟨ctrl, keys, vals, size, gl, mask, shift, req⟩ := t
-  if mask < 0x80000000 then
+  if smallMask mask then
     let q := hashBits shift a
     let pos := homeU q mask
     let rep := repTag (tagOf q)
@@ -855,7 +874,7 @@ and its value by `b`. One probe. -/
 table with `a ↦ b` inserted. One probe. -/
 @[inline] def getThenInsertIfNew? (t : Table α β) (a : α) (b : β) : Option β × Table α β :=
   let ⟨ctrl, keys, vals, size, gl, mask, shift, req⟩ := t
-  if mask < 0x80000000 then
+  if smallShift shift then
     let q := hashBits shift a
     let pos := homeU q mask
     let rep := repTag (tagOf q)
@@ -878,7 +897,7 @@ table with `a ↦ b` inserted. One probe. -/
 
 /-- Remove the entry of the stored key `== a`; the table itself when there is none. -/
 @[inline] def erase (t : Table α β) (a : α) : Table α β :=
-  if t.mask < 0x80000000 then
+  if smallShift t.shift then
     let i := findU t.ctrl t.slotKeys t.mask t.shift a
     if i ≤ t.mask then eraseAtU t i else t
   else eraseN t a
@@ -887,7 +906,7 @@ table with `a ↦ b` inserted. One probe. -/
 `a` (replacing the stored key, as `Const.alterKey`), `none` removes the entry. One probe. -/
 @[inline] def alter (t : Table α β) (a : α) (f : Option β → Option β) : Table α β :=
   let ⟨ctrl, keys, vals, size, gl, mask, shift, req⟩ := t
-  if mask < 0x80000000 then
+  if smallMask mask then
     let q := hashBits shift a
     let pos := homeU q mask
     let rep := repTag (tagOf q)
@@ -910,7 +929,7 @@ table with `a ↦ b` inserted. One probe. -/
 /-- Apply `f` to the value of the stored key `== a`, if any, replacing that key by `a` (as
 `Const.modifyKey`); the table itself when there is none. -/
 @[inline] def modify (t : Table α β) (a : α) (f : β → β) : Table α β :=
-  if t.mask < 0x80000000 then
+  if smallShift t.shift then
     let i := findU t.ctrl t.slotKeys t.mask t.shift a
     if i ≤ t.mask then modifyAtU t i a f else t
   else modifyN t a f
@@ -947,7 +966,7 @@ get the first mapped value). -/
 /-- Monadic left fold over the entries, in slot order. -/
 @[inline] def foldM {ε : Type w} {m : Type w → Type w'} [Monad m] (f : ε → α → β → m ε)
     (init : ε) (t : Table α β) : m ε :=
-  if t.mask < 0x80000000 then
+  if smallShift t.shift then
     let cap := t.ctrl.usize - 8
     if 0 < cap then
       foldMLoop f t.ctrl t.slotKeys t.slotVals cap 0 (matchFull (ctrlWord t.ctrl 0 (by sorry)))
@@ -960,7 +979,7 @@ get the first mapped value). -/
 
 /-- Right fold over the entries: `f` sees them in reverse slot order. -/
 @[inline] def foldRev {ε : Type w} (f : ε → α → β → ε) (init : ε) (t : Table α β) : ε :=
-  if t.mask < 0x80000000 then
+  if smallShift t.shift then
     foldRevLoop f t.ctrl t.slotKeys t.slotVals (t.ctrl.usize - 8) init
   else
     foldRevLoopN f t.ctrl t.slotKeys t.slotVals (t.ctrl.size - 8) init
@@ -968,7 +987,7 @@ get the first mapped value). -/
 /-- Monadic loop over the entries in slot order, with early exit. -/
 @[inline] def forIn {ε : Type w} {m : Type w → Type w'} [Monad m]
     (f : α → β → ε → m (ForInStep ε)) (init : ε) (t : Table α β) : m ε :=
-  if t.mask < 0x80000000 then
+  if smallShift t.shift then
     let cap := t.ctrl.usize - 8
     if 0 < cap then
       forInLoop f t.ctrl t.slotKeys t.slotVals cap 0 (matchFull (ctrlWord t.ctrl 0 (by sorry)))
