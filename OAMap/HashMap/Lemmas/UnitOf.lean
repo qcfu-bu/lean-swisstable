@@ -248,64 +248,18 @@ theorem getElem?_ofList_of_mem [EquivBEq α] [LawfulHashable α]
     {l : List (α × β)} {k k' : α} (k_beq : k == k') {v : β}
     (distinct : l.Pairwise (fun a b => (a.1 == b.1) = false))
     (mem : ⟨k, v⟩ ∈ l) :
-    (ofList l)[k']? = some v :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `Raw.WF.emptyWithCapacity₀`
-  -- Std (HashMap): DHashMap.Const.get?_ofList_of_mem k_beq distinct mem
-  -- Std (DHashMap.Const.get?_ofList_of_mem): Raw₀.Const.get?_insertMany_emptyWithCapacity_list_of_mem k_beq distinct mem
-  -- Std (DHashMap.Internal.Raw₀.Const.get?_insertMany_emptyWithCapacity_list_of_mem): by
-  --   rw [get?_insertMany_list_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq distinct mem]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   rw [getElem?_insertMany_list_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq distinct mem]
-  -- tried 1 (from sibling getElem?_insertMany_list_of_mem): by simp_to_model [ofList, getElem?] at * using List.getValue?_insertListConst_of_mem
-  --   error 1: unsolved goals
-  -- tried 2 (from sibling getElem?_insertMany_list_of_mem): by
-  --   simp_to_model [ofList, getElem?] at *
-  --   apply List.getValue?_insertListConst_of_mem <;> simp_all
-  --   error 2: simp_all made no progress
-  -- tried 3 (from sibling getElem?_insertMany_list_of_mem): by simp_to_model [ofList, getElem?] using List.getValue?_insertListConst_of_mem
-  --   error 3: unsolved goals
-  -- tried 4 (from sibling getElem?_insertMany_list_of_mem): by
-  --   simp_to_model [ofList, getElem?]
-  --   apply List.getValue?_insertListConst_of_mem <;> simp_all
-  --   error 4: simp_all made no progress
-  -- tried 5 (via ofList_eq_insertMany_empty): by
-  --   rw [ofList_eq_insertMany_empty]
-  --   simp_all [getElem?_insertMany_list_of_mem]
-  --   error 5: simp_all made no progress
-  sorry
+    (ofList l)[k']? = some v := by
+  rw [ofList_eq_insertMany_empty]
+  exact getElem?_insertMany_list_of_mem k_beq distinct mem
 
 theorem getElem_ofList_of_mem [EquivBEq α] [LawfulHashable α]
     {l : List (α × β)} {k k' : α} (k_beq : k == k') {v : β}
     (distinct : l.Pairwise (fun a b => (a.1 == b.1) = false))
     (mem : ⟨k, v⟩ ∈ l)
     {h} :
-    (ofList l)[k'] = v :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `Raw.WF.emptyWithCapacity₀`
-  -- Std (HashMap): DHashMap.Const.get_ofList_of_mem k_beq distinct mem
-  -- Std (DHashMap.Const.get_ofList_of_mem): Raw₀.Const.get_insertMany_emptyWithCapacity_list_of_mem k_beq distinct mem
-  -- Std (DHashMap.Internal.Raw₀.Const.get_insertMany_emptyWithCapacity_list_of_mem): by
-  --   rw [get_insertMany_list_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq distinct mem]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   rw [getElem_insertMany_list_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq distinct mem]
-  -- tried 1 (from sibling getElem_insertMany_list_of_mem): by simp_to_model [ofList, getElem] at * using List.getValue_insertListConst_of_mem
-  --   error 1: unsolved goals
-  -- tried 2 (from sibling getElem_insertMany_list_of_mem): by
-  --   simp_to_model [ofList, getElem] at *
-  --   apply List.getValue_insertListConst_of_mem <;> simp_all
-  --   error 2: unsolved goals
-  -- tried 3 (from sibling getElem_insertMany_list_of_mem): by simp_to_model [ofList, getElem] using List.getValue_insertListConst_of_mem
-  --   error 3: unsolved goals
-  -- tried 4 (from sibling getElem_insertMany_list_of_mem): by
-  --   simp_to_model [ofList, getElem]
-  --   apply List.getValue_insertListConst_of_mem <;> simp_all
-  --   error 4: unsolved goals
-  -- tried 5 (via ofList_eq_insertMany_empty): by
-  --   rw [ofList_eq_insertMany_empty]
-  --   simp_all [getElem_insertMany_list_of_mem]
-  --   error 5: Tactic `rewrite` failed: motive is not type correct:
-  sorry
+    (ofList l)[k'] = v := by
+  simp only [ofList_eq_insertMany_empty]
+  exact getElem_insertMany_list_of_mem k_beq distinct mem
 
 theorem getElem!_ofList_of_contains_eq_false [EquivBEq α] [LawfulHashable α]
     {l : List (α × β)} {k : α} [Inhabited β]
@@ -317,32 +271,9 @@ theorem getElem!_ofList_of_mem [EquivBEq α] [LawfulHashable α]
     {l : List (α × β)} {k k' : α} (k_beq : k == k') {v : β} [Inhabited β]
     (distinct : l.Pairwise (fun a b => (a.1 == b.1) = false))
     (mem : ⟨k, v⟩ ∈ l) :
-    (ofList l)[k']! = v :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `Raw.WF.emptyWithCapacity₀`
-  -- Std (HashMap): DHashMap.Const.get!_ofList_of_mem k_beq distinct mem
-  -- Std (DHashMap.Const.get!_ofList_of_mem): Raw₀.Const.get!_insertMany_emptyWithCapacity_list_of_mem k_beq distinct mem
-  -- Std (DHashMap.Internal.Raw₀.Const.get!_insertMany_emptyWithCapacity_list_of_mem): by
-  --   rw [get!_insertMany_list_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq distinct mem]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   rw [getElem!_insertMany_list_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq distinct mem]
-  -- tried 1 (from sibling getElem!_insertMany_list_of_mem): by simp_to_model [ofList, getElem!] at * using List.getValue!_insertListConst_of_mem
-  --   error 1: unsolved goals
-  -- tried 2 (from sibling getElem!_insertMany_list_of_mem): by
-  --   simp_to_model [ofList, getElem!] at *
-  --   apply List.getValue!_insertListConst_of_mem <;> simp_all
-  --   error 2: simp_all made no progress
-  -- tried 3 (from sibling getElem!_insertMany_list_of_mem): by simp_to_model [ofList, getElem!] using List.getValue!_insertListConst_of_mem
-  --   error 3: unsolved goals
-  -- tried 4 (from sibling getElem!_insertMany_list_of_mem): by
-  --   simp_to_model [ofList, getElem!]
-  --   apply List.getValue!_insertListConst_of_mem <;> simp_all
-  --   error 4: simp_all made no progress
-  -- tried 5 (via ofList_eq_insertMany_empty): by
-  --   rw [ofList_eq_insertMany_empty]
-  --   simp_all [getElem!_insertMany_list_of_mem]
-  --   error 5: simp_all made no progress
-  sorry
+    (ofList l)[k']! = v := by
+  rw [ofList_eq_insertMany_empty]
+  exact getElem!_insertMany_list_of_mem k_beq distinct mem
 
 theorem getD_ofList_of_contains_eq_false [EquivBEq α] [LawfulHashable α]
     {l : List (α × β)} {k : α} {fallback : β}
@@ -354,68 +285,16 @@ theorem getD_ofList_of_mem [EquivBEq α] [LawfulHashable α]
     {l : List (α × β)} {k k' : α} (k_beq : k == k') {v : β} {fallback : β}
     (distinct : l.Pairwise (fun a b => (a.1 == b.1) = false))
     (mem : ⟨k, v⟩ ∈ l) :
-    getD (ofList l) k' fallback = v :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `Raw.WF.emptyWithCapacity₀`
-  -- Std (HashMap): DHashMap.Const.getD_ofList_of_mem k_beq distinct mem
-  -- Std (DHashMap.Const.getD_ofList_of_mem): Raw₀.Const.getD_insertMany_emptyWithCapacity_list_of_mem k_beq distinct mem
-  -- Std (DHashMap.Internal.Raw₀.Const.getD_insertMany_emptyWithCapacity_list_of_mem): by
-  --   rw [getD_insertMany_list_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq distinct mem]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   rw [getD_insertMany_list_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq distinct mem]
-  -- tried 1 (from sibling getD_insertMany_list_of_mem): by simp_to_model [ofList, getD] at * using List.getValueD_insertListConst_of_mem
-  --   error 1: unsolved goals
-  -- tried 2 (from sibling getD_insertMany_list_of_mem): by
-  --   simp_to_model [ofList, getD] at *
-  --   apply List.getValueD_insertListConst_of_mem <;> simp_all
-  --   error 2: simp_all made no progress
-  -- tried 3 (from sibling getD_insertMany_list_of_mem): by simp_to_model [ofList, getD] using List.getValueD_insertListConst_of_mem
-  --   error 3: unsolved goals
-  -- tried 4 (from sibling getD_insertMany_list_of_mem): by
-  --   simp_to_model [ofList, getD]
-  --   apply List.getValueD_insertListConst_of_mem <;> simp_all
-  --   error 4: simp_all made no progress
-  -- tried 5 (via ofList_eq_insertMany_empty): by
-  --   rw [ofList_eq_insertMany_empty]
-  --   simp_all [getD_insertMany_list_of_mem]
-  --   error 5: simp_all made no progress
-  sorry
+    getD (ofList l) k' fallback = v := by
+  rw [ofList_eq_insertMany_empty]
+  exact getD_insertMany_list_of_mem k_beq distinct mem
 
 theorem getKey?_ofList_of_contains_eq_false [EquivBEq α] [LawfulHashable α]
     {l : List (α × β)} {k : α}
     (contains_eq_false : (l.map Prod.fst).contains k = false) :
-    (ofList l).getKey? k = none :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Function expected at
-  -- Std (HashMap): DHashMap.Const.getKey?_ofList_of_contains_eq_false contains_eq_false
-  -- Std (DHashMap.Const.getKey?_ofList_of_contains_eq_false): Raw₀.Const.getKey?_insertMany_emptyWithCapacity_list_of_contains_eq_false contains_eq_false
-  -- Std (DHashMap.Internal.Raw₀.Const.getKey?_insertMany_emptyWithCapacity_list_of_contains_eq_false): by
-  --   rw [getKey?_insertMany_list_of_contains_eq_false _ Raw.WF.emptyWithCapacity₀ h]
-  --   apply getKey?_emptyWithCapacity
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   rw [getKey?_insertMany_list_of_contains_eq_false _ Raw.WF.emptyWithCapacity₀ h]
-  --   apply getKey?_emptyWithCapacity
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   rw [getKey?_insertMany_list_of_contains_eq_false _ Raw.WF.emptyWithCapacity₀ contains_eq_false]
-  --   apply getKey?_emptyWithCapacity
-  --   error 1: Function expected at
-  -- tried 2 (from sibling getKey?_insertMany_list_of_contains_eq_false): by simp_to_model [ofList, getKey?] at * using List.getKey?_insertListConst_of_contains_eq_false
-  --   error 2: Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListConst_of_contains_eq_false`
-  -- tried 3 (from sibling getKey?_insertMany_list_of_contains_eq_false): by
-  --   simp_to_model [ofList, getKey?] at *
-  --   apply List.getKey?_insertListConst_of_contains_eq_false <;> simp_all
-  --   error 3: Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListConst_of_contains_eq_false`
-  -- tried 4 (from sibling getKey?_insertMany_list_of_contains_eq_false): by simp_to_model [ofList, getKey?] using List.getKey?_insertListConst_of_contains_eq_false
-  --   error 4: Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListConst_of_contains_eq_false`
-  -- tried 5 (from sibling getKey?_insertMany_list_of_contains_eq_false): by
-  --   simp_to_model [ofList, getKey?]
-  --   apply List.getKey?_insertListConst_of_contains_eq_false <;> simp_all
-  --   error 5: Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListConst_of_contains_eq_false`
-  -- tried 6 (via ofList_eq_insertMany_empty): by
-  --   rw [ofList_eq_insertMany_empty]
-  --   simp_all [getKey?_insertMany_list_of_contains_eq_false]
-  --   error 6: unsolved goals
-  sorry
+    (ofList l).getKey? k = none := by
+  rw [ofList_eq_insertMany_empty, getKey?_insertMany_list_of_contains_eq_false contains_eq_false]
+  exact getKey?_empty
 
 theorem getKey?_ofList_of_mem [EquivBEq α] [LawfulHashable α]
     {l : List (α × β)}
@@ -439,38 +318,9 @@ theorem getKey_ofList_of_mem [EquivBEq α] [LawfulHashable α]
 theorem getKey!_ofList_of_contains_eq_false [EquivBEq α] [LawfulHashable α]
     [Inhabited α] {l : List (α × β)} {k : α}
     (contains_eq_false : (l.map Prod.fst).contains k = false) :
-    (ofList l).getKey! k = default :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Function expected at
-  -- Std (HashMap): DHashMap.Const.getKey!_ofList_of_contains_eq_false contains_eq_false
-  -- Std (DHashMap.Const.getKey!_ofList_of_contains_eq_false): Raw₀.Const.getKey!_insertMany_emptyWithCapacity_list_of_contains_eq_false contains_eq_false
-  -- Std (DHashMap.Internal.Raw₀.Const.getKey!_insertMany_emptyWithCapacity_list_of_contains_eq_false): by
-  --   rw [getKey!_insertMany_list_of_contains_eq_false _ Raw.WF.emptyWithCapacity₀ h]
-  --   apply getKey!_emptyWithCapacity
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   rw [getKey!_insertMany_list_of_contains_eq_false _ Raw.WF.emptyWithCapacity₀ h]
-  --   apply getKey!_emptyWithCapacity
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   rw [getKey!_insertMany_list_of_contains_eq_false _ Raw.WF.emptyWithCapacity₀ contains_eq_false]
-  --   apply getKey!_emptyWithCapacity
-  --   error 1: Function expected at
-  -- tried 2 (from sibling getKey!_insertMany_list_of_contains_eq_false): by simp_to_model [ofList, getKey!] at * using List.getKey!_insertListConst_of_contains_eq_false
-  --   error 2: Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListConst_of_contains_eq_false`
-  -- tried 3 (from sibling getKey!_insertMany_list_of_contains_eq_false): by
-  --   simp_to_model [ofList, getKey!] at *
-  --   apply List.getKey!_insertListConst_of_contains_eq_false <;> simp_all
-  --   error 3: Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListConst_of_contains_eq_false`
-  -- tried 4 (from sibling getKey!_insertMany_list_of_contains_eq_false): by simp_to_model [ofList, getKey!] using List.getKey!_insertListConst_of_contains_eq_false
-  --   error 4: Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListConst_of_contains_eq_false`
-  -- tried 5 (from sibling getKey!_insertMany_list_of_contains_eq_false): by
-  --   simp_to_model [ofList, getKey!]
-  --   apply List.getKey!_insertListConst_of_contains_eq_false <;> simp_all
-  --   error 5: Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListConst_of_contains_eq_false`
-  -- tried 6 (via ofList_eq_insertMany_empty): by
-  --   rw [ofList_eq_insertMany_empty]
-  --   simp_all [getKey!_insertMany_list_of_contains_eq_false]
-  --   error 6: unsolved goals
-  sorry
+    (ofList l).getKey! k = default := by
+  rw [ofList_eq_insertMany_empty, getKey!_insertMany_list_of_contains_eq_false contains_eq_false]
+  exact getKey!_empty
 
 theorem getKey!_ofList_of_mem [EquivBEq α] [LawfulHashable α] [Inhabited α]
     {l : List (α × β)}
@@ -484,38 +334,9 @@ theorem getKey!_ofList_of_mem [EquivBEq α] [LawfulHashable α] [Inhabited α]
 theorem getKeyD_ofList_of_contains_eq_false [EquivBEq α] [LawfulHashable α]
     {l : List (α × β)} {k fallback : α}
     (contains_eq_false : (l.map Prod.fst).contains k = false) :
-    (ofList l).getKeyD k fallback = fallback :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Function expected at
-  -- Std (HashMap): DHashMap.Const.getKeyD_ofList_of_contains_eq_false contains_eq_false
-  -- Std (DHashMap.Const.getKeyD_ofList_of_contains_eq_false): Raw₀.Const.getKeyD_insertMany_emptyWithCapacity_list_of_contains_eq_false contains_eq_false
-  -- Std (DHashMap.Internal.Raw₀.Const.getKeyD_insertMany_emptyWithCapacity_list_of_contains_eq_false): by
-  --   rw [getKeyD_insertMany_list_of_contains_eq_false _ Raw.WF.emptyWithCapacity₀ h]
-  --   apply getKeyD_emptyWithCapacity
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   rw [getKeyD_insertMany_list_of_contains_eq_false _ Raw.WF.emptyWithCapacity₀ h]
-  --   apply getKeyD_emptyWithCapacity
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   rw [getKeyD_insertMany_list_of_contains_eq_false _ Raw.WF.emptyWithCapacity₀ contains_eq_false]
-  --   apply getKeyD_emptyWithCapacity
-  --   error 1: Function expected at
-  -- tried 2 (from sibling getKeyD_insertMany_list_of_contains_eq_false): by simp_to_model [ofList, getKeyD] at * using List.getKeyD_insertListConst_of_contains_eq_false
-  --   error 2: Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListConst_of_contains_eq_false`
-  -- tried 3 (from sibling getKeyD_insertMany_list_of_contains_eq_false): by
-  --   simp_to_model [ofList, getKeyD] at *
-  --   apply List.getKeyD_insertListConst_of_contains_eq_false <;> simp_all
-  --   error 3: Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListConst_of_contains_eq_false`
-  -- tried 4 (from sibling getKeyD_insertMany_list_of_contains_eq_false): by simp_to_model [ofList, getKeyD] using List.getKeyD_insertListConst_of_contains_eq_false
-  --   error 4: Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListConst_of_contains_eq_false`
-  -- tried 5 (from sibling getKeyD_insertMany_list_of_contains_eq_false): by
-  --   simp_to_model [ofList, getKeyD]
-  --   apply List.getKeyD_insertListConst_of_contains_eq_false <;> simp_all
-  --   error 5: Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListConst_of_contains_eq_false`
-  -- tried 6 (via ofList_eq_insertMany_empty): by
-  --   rw [ofList_eq_insertMany_empty]
-  --   simp_all [getKeyD_insertMany_list_of_contains_eq_false]
-  --   error 6: unsolved goals
-  sorry
+    (ofList l).getKeyD k fallback = fallback := by
+  rw [ofList_eq_insertMany_empty, getKeyD_insertMany_list_of_contains_eq_false contains_eq_false]
+  exact getKeyD_empty
 
 theorem getKeyD_ofList_of_mem [EquivBEq α] [LawfulHashable α]
     {l : List (α × β)}
@@ -534,34 +355,9 @@ theorem size_ofList [EquivBEq α] [LawfulHashable α]
 
 theorem size_ofList_le [EquivBEq α] [LawfulHashable α]
     {l : List (α × β)} :
-    (ofList l).size ≤ l.length :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Function expected at
-  -- Std (HashMap): DHashMap.Const.size_ofList_le
-  -- Std (DHashMap.Const.size_ofList_le): Raw₀.Const.size_insertMany_emptyWithCapacity_list_le
-  -- Std (DHashMap.Internal.Raw₀.Const.size_insertMany_emptyWithCapacity_list_le): by
-  --   rw [← Nat.zero_add l.length]
-  --   apply (size_insertMany_list_le _ Raw.WF.emptyWithCapacity₀)
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   rw [← Nat.zero_add l.length]
-  --   apply (size_insertMany_list_le _ Raw.WF.emptyWithCapacity₀)
-  -- tried 1 (from sibling size_insertMany_list_le): by simp_to_model [ofList, size] using List.length_insertListConst_le
-  --   error 1: Tactic `apply` failed: could not unify the conclusion of `@length_insertListConst_le`
-  -- tried 2 (from sibling size_insertMany_list_le): by
-  --   simp_to_model [ofList, size]
-  --   apply List.length_insertListConst_le <;> simp_all
-  --   error 2: Tactic `apply` failed: could not unify the conclusion of `@length_insertListConst_le`
-  -- tried 3 (from sibling size_insertMany_list_le): by simp_to_model [ofList, size] at * using List.length_insertListConst_le
-  --   error 3: Tactic `apply` failed: could not unify the conclusion of `@length_insertListConst_le`
-  -- tried 4 (from sibling size_insertMany_list_le): by
-  --   simp_to_model [ofList, size] at *
-  --   apply List.length_insertListConst_le <;> simp_all
-  --   error 4: Tactic `apply` failed: could not unify the conclusion of `@length_insertListConst_le`
-  -- tried 5 (via ofList_eq_insertMany_empty): by
-  --   rw [ofList_eq_insertMany_empty]
-  --   simp_all [size_insertMany_list_le]
-  --   error 5: simp_all made no progress
-  sorry
+    (ofList l).size ≤ l.length := by
+  rw [ofList_eq_insertMany_empty]
+  exact Nat.le_trans size_insertMany_list_le (Nat.le_of_eq (by rw [size_empty, Nat.zero_add]))
 
 grind_pattern size_ofList_le => (ofList l).size
 
@@ -640,194 +436,58 @@ theorem getD_unitOfList
 
 theorem getKey?_unitOfList_of_contains_eq_false [EquivBEq α] [LawfulHashable α]
     {l : List α} {k : α} (contains_eq_false : l.contains k = false) :
-    getKey? (unitOfList l) k = none :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `getKey?_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false`
-  -- Std (HashMap): DHashMap.Const.getKey?_unitOfList_of_contains_eq_false contains_eq_false
-  -- Std (DHashMap.Const.getKey?_unitOfList_of_contains_eq_false): Raw₀.Const.getKey?_insertManyIfNewUnit_emptyWithCapacity_list_of_contains_eq_false contains_eq_false
-  -- Std (DHashMap.Internal.Raw₀.Const.getKey?_insertManyIfNewUnit_emptyWithCapacity_list_of_contains_eq_false): by
-  --   exact getKey?_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false _ Raw.WF.emptyWithCapacity₀
-  --     contains_emptyWithCapacity h'
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   exact getKey?_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false _ Raw.WF.emptyWithCapacity₀
-  --     contains_emptyWithCapacity h'
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   exact getKey?_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false _ Raw.WF.emptyWithCapacity₀
-  --     contains_emptyWithCapacity contains_eq_false
-  --   error 1: Unknown identifier `getKey?_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false`
-  sorry
+    getKey? (unitOfList l) k = none := by
+  rw [unitOfList_eq_insertManyIfNewUnit_empty]
+  exact getKey?_insertManyIfNewUnit_list_of_not_mem_of_contains_eq_false not_mem_empty
+    contains_eq_false
 
 theorem getKey?_unitOfList_of_mem [EquivBEq α] [LawfulHashable α]
     {l : List α} {k k' : α} (k_beq : k == k')
     (distinct : l.Pairwise (fun a b => (a == b) = false)) (mem : k ∈ l) :
-    getKey? (unitOfList l) k' = some k :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `getKey?_insertManyIfNewUnit_list_of_contains_eq_false_of_mem`
-  -- Std (HashMap): DHashMap.Const.getKey?_unitOfList_of_mem k_beq distinct mem
-  -- Std (DHashMap.Const.getKey?_unitOfList_of_mem): Raw₀.Const.getKey?_insertManyIfNewUnit_emptyWithCapacity_list_of_mem k_beq distinct mem
-  -- Std (DHashMap.Internal.Raw₀.Const.getKey?_insertManyIfNewUnit_emptyWithCapacity_list_of_mem): by
-  --   exact getKey?_insertManyIfNewUnit_list_of_contains_eq_false_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq
-  --     contains_emptyWithCapacity distinct mem
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   exact getKey?_insertManyIfNewUnit_list_of_contains_eq_false_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq
-  --     contains_emptyWithCapacity distinct mem
-  -- tried 1 (from sibling getKey?_insertManyIfNewUnit_list_of_mem): by simp_to_model [unitOfList, getKey?, contains, mem] at * using List.getKey?_insertListIfNewUnit_of_contains
-  --   error 1: Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListIfNewUnit_of_contains`
-  -- tried 2 (from sibling getKey?_insertManyIfNewUnit_list_of_mem): by
-  --   simp_to_model [unitOfList, getKey?, contains, mem] at *
-  --   apply List.getKey?_insertListIfNewUnit_of_contains <;> simp_all
-  --   error 2: Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListIfNewUnit_of_contains`
-  -- tried 3 (from sibling getKey?_insertManyIfNewUnit_list_of_mem): by simp_to_model [unitOfList, getKey?, contains, mem] using List.getKey?_insertListIfNewUnit_of_contains
-  --   error 3: Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListIfNewUnit_of_contains`
-  -- tried 4 (from sibling getKey?_insertManyIfNewUnit_list_of_mem): by
-  --   simp_to_model [unitOfList, getKey?, contains, mem]
-  --   apply List.getKey?_insertListIfNewUnit_of_contains <;> simp_all
-  --   error 4: Tactic `apply` failed: could not unify the conclusion of `@getKey?_insertListIfNewUnit_of_contains`
-  -- tried 5 (via unitOfList_eq_insertManyIfNewUnit_empty): by
-  --   rw [unitOfList_eq_insertManyIfNewUnit_empty]
-  --   simp_all [getKey?_insertManyIfNewUnit_list_of_mem]
-  --   error 5: simp_all made no progress
-  sorry
+    getKey? (unitOfList l) k' = some k := by
+  rw [unitOfList_eq_insertManyIfNewUnit_empty]
+  exact getKey?_insertManyIfNewUnit_list_of_not_mem_of_mem k_beq not_mem_empty distinct mem
 
 theorem getKey_unitOfList_of_mem [EquivBEq α] [LawfulHashable α]
     {l : List α}
     {k k' : α} (k_beq : k == k')
     (distinct : l.Pairwise (fun a b => (a == b) = false))
     (mem : k ∈ l) {h} :
-    getKey (unitOfList l) k' h = k :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `getKey_insertManyIfNewUnit_list_of_contains_eq_false_of_mem`
-  -- Std (HashMap): DHashMap.Const.getKey_unitOfList_of_mem k_beq distinct mem
-  -- Std (DHashMap.Const.getKey_unitOfList_of_mem): Raw₀.Const.getKey_insertManyIfNewUnit_emptyWithCapacity_list_of_mem k_beq distinct mem
-  -- Std (DHashMap.Internal.Raw₀.Const.getKey_insertManyIfNewUnit_emptyWithCapacity_list_of_mem): by
-  --   exact getKey_insertManyIfNewUnit_list_of_contains_eq_false_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq
-  --     contains_emptyWithCapacity distinct mem
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   exact getKey_insertManyIfNewUnit_list_of_contains_eq_false_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq
-  --     contains_emptyWithCapacity distinct mem
-  -- tried 1 (from sibling getKey_insertManyIfNewUnit_list_of_mem): by simp_to_model [unitOfList, getKey] at * using List.getKey_insertListIfNewUnit_of_contains
-  --   error 1: Tactic `apply` failed: could not unify the conclusion of `@getKey_insertListIfNewUnit_of_contains`
-  -- tried 2 (from sibling getKey_insertManyIfNewUnit_list_of_mem): by
-  --   simp_to_model [unitOfList, getKey] at *
-  --   apply List.getKey_insertListIfNewUnit_of_contains <;> simp_all
-  --   error 2: Tactic `apply` failed: could not unify the conclusion of `@getKey_insertListIfNewUnit_of_contains`
-  -- tried 3 (from sibling getKey_insertManyIfNewUnit_list_of_mem): by simp_to_model [unitOfList, getKey] using List.getKey_insertListIfNewUnit_of_contains
-  --   error 3: Tactic `apply` failed: could not unify the conclusion of `@getKey_insertListIfNewUnit_of_contains`
-  -- tried 4 (from sibling getKey_insertManyIfNewUnit_list_of_mem): by
-  --   simp_to_model [unitOfList, getKey]
-  --   apply List.getKey_insertListIfNewUnit_of_contains <;> simp_all
-  --   error 4: Tactic `apply` failed: could not unify the conclusion of `@getKey_insertListIfNewUnit_of_contains`
-  -- tried 5 (via unitOfList_eq_insertManyIfNewUnit_empty): by
-  --   rw [unitOfList_eq_insertManyIfNewUnit_empty]
-  --   simp_all [getKey_insertManyIfNewUnit_list_of_mem]
-  --   error 5: Tactic `rewrite` failed: motive is not type correct:
-  sorry
+    getKey (unitOfList l) k' h = k := by
+  simp only [unitOfList_eq_insertManyIfNewUnit_empty]
+  exact getKey_insertManyIfNewUnit_list_of_not_mem_of_mem k_beq not_mem_empty distinct mem
 
 theorem getKey!_unitOfList_of_contains_eq_false [EquivBEq α] [LawfulHashable α]
     [Inhabited α] {l : List α} {k : α}
     (contains_eq_false : l.contains k = false) :
-    getKey! (unitOfList l) k = default :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `getKey!_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false`
-  -- Std (HashMap): DHashMap.Const.getKey!_unitOfList_of_contains_eq_false contains_eq_false
-  -- Std (DHashMap.Const.getKey!_unitOfList_of_contains_eq_false): Raw₀.Const.getKey!_insertManyIfNewUnit_emptyWithCapacity_list_of_contains_eq_false contains_eq_false
-  -- Std (DHashMap.Internal.Raw₀.Const.getKey!_insertManyIfNewUnit_emptyWithCapacity_list_of_contains_eq_false): by
-  --   exact getKey!_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false _ Raw.WF.emptyWithCapacity₀
-  --     contains_emptyWithCapacity h'
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   exact getKey!_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false _ Raw.WF.emptyWithCapacity₀
-  --     contains_emptyWithCapacity h'
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   exact getKey!_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false _ Raw.WF.emptyWithCapacity₀
-  --     contains_emptyWithCapacity contains_eq_false
-  --   error 1: Unknown identifier `getKey!_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false`
-  sorry
+    getKey! (unitOfList l) k = default := by
+  rw [unitOfList_eq_insertManyIfNewUnit_empty]
+  exact getKey!_insertManyIfNewUnit_list_of_not_mem_of_contains_eq_false not_mem_empty
+    contains_eq_false
 
 theorem getKey!_unitOfList_of_mem [EquivBEq α] [LawfulHashable α]
     [Inhabited α] {l : List α} {k k' : α} (k_beq : k == k')
     (distinct : l.Pairwise (fun a b => (a == b) = false))
     (mem : k ∈ l) :
-    getKey! (unitOfList l) k' = k :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `getKey!_insertManyIfNewUnit_list_of_contains_eq_false_of_mem`
-  -- Std (HashMap): DHashMap.Const.getKey!_unitOfList_of_mem k_beq distinct mem
-  -- Std (DHashMap.Const.getKey!_unitOfList_of_mem): Raw₀.Const.getKey!_insertManyIfNewUnit_emptyWithCapacity_list_of_mem k_beq distinct mem
-  -- Std (DHashMap.Internal.Raw₀.Const.getKey!_insertManyIfNewUnit_emptyWithCapacity_list_of_mem): by
-  --   exact getKey!_insertManyIfNewUnit_list_of_contains_eq_false_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq
-  --     contains_emptyWithCapacity distinct mem
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   exact getKey!_insertManyIfNewUnit_list_of_contains_eq_false_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq
-  --     contains_emptyWithCapacity distinct mem
-  -- tried 1 (from sibling getKey!_insertManyIfNewUnit_list_of_mem): by simp_to_model [unitOfList, contains, mem, getKey!] at * using List.getKey!_insertListIfNewUnit_of_contains
-  --   error 1: Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListIfNewUnit_of_contains`
-  -- tried 2 (from sibling getKey!_insertManyIfNewUnit_list_of_mem): by
-  --   simp_to_model [unitOfList, contains, mem, getKey!] at *
-  --   apply List.getKey!_insertListIfNewUnit_of_contains <;> simp_all
-  --   error 2: Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListIfNewUnit_of_contains`
-  -- tried 3 (from sibling getKey!_insertManyIfNewUnit_list_of_mem): by simp_to_model [unitOfList, contains, mem, getKey!] using List.getKey!_insertListIfNewUnit_of_contains
-  --   error 3: Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListIfNewUnit_of_contains`
-  -- tried 4 (from sibling getKey!_insertManyIfNewUnit_list_of_mem): by
-  --   simp_to_model [unitOfList, contains, mem, getKey!]
-  --   apply List.getKey!_insertListIfNewUnit_of_contains <;> simp_all
-  --   error 4: Tactic `apply` failed: could not unify the conclusion of `@getKey!_insertListIfNewUnit_of_contains`
-  -- tried 5 (via unitOfList_eq_insertManyIfNewUnit_empty): by
-  --   rw [unitOfList_eq_insertManyIfNewUnit_empty]
-  --   simp_all [getKey!_insertManyIfNewUnit_list_of_mem]
-  --   error 5: simp_all made no progress
-  sorry
+    getKey! (unitOfList l) k' = k := by
+  rw [unitOfList_eq_insertManyIfNewUnit_empty]
+  exact getKey!_insertManyIfNewUnit_list_of_not_mem_of_mem k_beq not_mem_empty distinct mem
 
 theorem getKeyD_unitOfList_of_contains_eq_false [EquivBEq α] [LawfulHashable α]
     {l : List α} {k fallback : α}
     (contains_eq_false : l.contains k = false) :
-    getKeyD (unitOfList l) k fallback = fallback :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `getKeyD_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false`
-  -- Std (HashMap): DHashMap.Const.getKeyD_unitOfList_of_contains_eq_false contains_eq_false
-  -- Std (DHashMap.Const.getKeyD_unitOfList_of_contains_eq_false): Raw₀.Const.getKeyD_insertManyIfNewUnit_emptyWithCapacity_list_of_contains_eq_false contains_eq_false
-  -- Std (DHashMap.Internal.Raw₀.Const.getKeyD_insertManyIfNewUnit_emptyWithCapacity_list_of_contains_eq_false): by
-  --   exact getKeyD_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false
-  --     _ Raw.WF.emptyWithCapacity₀ contains_emptyWithCapacity h'
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   exact getKeyD_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false
-  --     _ Raw.WF.emptyWithCapacity₀ contains_emptyWithCapacity h'
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   exact getKeyD_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false
-  --     _ Raw.WF.emptyWithCapacity₀ contains_emptyWithCapacity contains_eq_false
-  --   error 1: Unknown identifier `getKeyD_insertManyIfNewUnit_list_of_contains_eq_false_of_contains_eq_false`
-  sorry
+    getKeyD (unitOfList l) k fallback = fallback := by
+  rw [unitOfList_eq_insertManyIfNewUnit_empty]
+  exact getKeyD_insertManyIfNewUnit_list_of_not_mem_of_contains_eq_false not_mem_empty
+    contains_eq_false
 
 theorem getKeyD_unitOfList_of_mem [EquivBEq α] [LawfulHashable α]
     {l : List α} {k k' fallback : α} (k_beq : k == k')
     (distinct : l.Pairwise (fun a b => (a == b) = false))
     (mem : k ∈ l) :
-    getKeyD (unitOfList l) k' fallback = k :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `getKeyD_insertManyIfNewUnit_list_of_contains_eq_false_of_mem`
-  -- Std (HashMap): DHashMap.Const.getKeyD_unitOfList_of_mem k_beq distinct mem
-  -- Std (DHashMap.Const.getKeyD_unitOfList_of_mem): Raw₀.Const.getKeyD_insertManyIfNewUnit_emptyWithCapacity_list_of_mem k_beq distinct mem
-  -- Std (DHashMap.Internal.Raw₀.Const.getKeyD_insertManyIfNewUnit_emptyWithCapacity_list_of_mem): by
-  --   exact getKeyD_insertManyIfNewUnit_list_of_contains_eq_false_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq
-  --     contains_emptyWithCapacity distinct mem
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   exact getKeyD_insertManyIfNewUnit_list_of_contains_eq_false_of_mem _ Raw.WF.emptyWithCapacity₀ k_beq
-  --     contains_emptyWithCapacity distinct mem
-  -- tried 1 (from sibling getKeyD_insertManyIfNewUnit_list_of_mem): by simp_to_model [unitOfList, contains, mem, getKeyD] at * using List.getKeyD_insertListIfNewUnit_of_contains
-  --   error 1: Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListIfNewUnit_of_contains`
-  -- tried 2 (from sibling getKeyD_insertManyIfNewUnit_list_of_mem): by
-  --   simp_to_model [unitOfList, contains, mem, getKeyD] at *
-  --   apply List.getKeyD_insertListIfNewUnit_of_contains <;> simp_all
-  --   error 2: Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListIfNewUnit_of_contains`
-  -- tried 3 (from sibling getKeyD_insertManyIfNewUnit_list_of_mem): by simp_to_model [unitOfList, contains, mem, getKeyD] using List.getKeyD_insertListIfNewUnit_of_contains
-  --   error 3: Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListIfNewUnit_of_contains`
-  -- tried 4 (from sibling getKeyD_insertManyIfNewUnit_list_of_mem): by
-  --   simp_to_model [unitOfList, contains, mem, getKeyD]
-  --   apply List.getKeyD_insertListIfNewUnit_of_contains <;> simp_all
-  --   error 4: Tactic `apply` failed: could not unify the conclusion of `@getKeyD_insertListIfNewUnit_of_contains`
-  -- tried 5 (via unitOfList_eq_insertManyIfNewUnit_empty): by
-  --   rw [unitOfList_eq_insertManyIfNewUnit_empty]
-  --   simp_all [getKeyD_insertManyIfNewUnit_list_of_mem]
-  --   error 5: simp_all made no progress
-  sorry
+    getKeyD (unitOfList l) k' fallback = k := by
+  rw [unitOfList_eq_insertManyIfNewUnit_empty]
+  exact getKeyD_insertManyIfNewUnit_list_of_not_mem_of_mem k_beq not_mem_empty distinct mem
 
 theorem size_unitOfList [EquivBEq α] [LawfulHashable α]
     {l : List α}
@@ -838,34 +498,10 @@ theorem size_unitOfList [EquivBEq α] [LawfulHashable α]
 
 theorem size_unitOfList_le [EquivBEq α] [LawfulHashable α]
     {l : List α} :
-    (unitOfList l).size ≤ l.length :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Function expected at
-  -- Std (HashMap): DHashMap.Const.size_unitOfList_le
-  -- Std (DHashMap.Const.size_unitOfList_le): Raw₀.Const.size_insertManyIfNewUnit_emptyWithCapacity_list_le
-  -- Std (DHashMap.Internal.Raw₀.Const.size_insertManyIfNewUnit_emptyWithCapacity_list_le): by
-  --   apply Nat.le_trans (size_insertManyIfNewUnit_list_le _ Raw.WF.emptyWithCapacity₀)
-  --   simp
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   apply Nat.le_trans (size_insertManyIfNewUnit_list_le _ Raw.WF.emptyWithCapacity₀)
-  --   simp
-  -- tried 1 (from sibling size_insertManyIfNewUnit_list_le): by simp_to_model [unitOfList, size] using List.length_insertListIfNewUnit_le
-  --   error 1: Tactic `apply` failed: could not unify the conclusion of `@length_insertListIfNewUnit_le`
-  -- tried 2 (from sibling size_insertManyIfNewUnit_list_le): by
-  --   simp_to_model [unitOfList, size]
-  --   apply List.length_insertListIfNewUnit_le <;> simp_all
-  --   error 2: Tactic `apply` failed: could not unify the conclusion of `@length_insertListIfNewUnit_le`
-  -- tried 3 (from sibling size_insertManyIfNewUnit_list_le): by simp_to_model [unitOfList, size] at * using List.length_insertListIfNewUnit_le
-  --   error 3: Tactic `apply` failed: could not unify the conclusion of `@length_insertListIfNewUnit_le`
-  -- tried 4 (from sibling size_insertManyIfNewUnit_list_le): by
-  --   simp_to_model [unitOfList, size] at *
-  --   apply List.length_insertListIfNewUnit_le <;> simp_all
-  --   error 4: Tactic `apply` failed: could not unify the conclusion of `@length_insertListIfNewUnit_le`
-  -- tried 5 (via unitOfList_eq_insertManyIfNewUnit_empty): by
-  --   rw [unitOfList_eq_insertManyIfNewUnit_empty]
-  --   simp_all [size_insertManyIfNewUnit_list_le]
-  --   error 5: simp_all made no progress
-  sorry
+    (unitOfList l).size ≤ l.length := by
+  rw [unitOfList_eq_insertManyIfNewUnit_empty]
+  exact Nat.le_trans size_insertManyIfNewUnit_list_le
+    (Nat.le_of_eq (by rw [size_empty, Nat.zero_add]))
 
 @[simp, grind =]
 theorem unitOfArray_eq_unitOfList (a : Array α) :
