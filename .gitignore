@@ -1,0 +1,6 @@
+/.lake
+/lake-packages
+*.olean
+*.ilean
+*.trace
+__pycache__/

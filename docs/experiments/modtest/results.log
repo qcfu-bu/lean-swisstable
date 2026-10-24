@@ -1,0 +1,73 @@
+# modtest results (Lean v4.35.0), run from this directory with LEAN_PATH=$PWD
+
+## ModRfl.lean: rfl vs unfold for a non-exposed def in the same module
+ModRfl.lean:7:0: error: Not a definitional equality: the left-hand side
+  g n
+is not definitionally equal to the right-hand side
+  n + 2
+
+Note: This theorem is exported from the current module. This requires that all definitions that need to be unfolded to prove this theorem must be exposed.
+
+## ModA.lean (core-like module: non-exposed @[inline]/@[specialize] defs) -> ModA.olean
+exit 0
+
+## ModB.lean: importer IR shows inlining and specialisation
+    def T.app._at_.useF.spec_0 (x_1 : @& tobj) : tobj :=
+    def useF (x_1 : @& tobj) : tobj :=
+      let x_3 : tobj := Nat.add x_1 x_2;
+    def useF._boxed (x_1 : tobj) : tobj :=
+
+## ModC.lean: a module importer cannot unfold a non-exposed def
+ModC.lean:7:51: error: Tactic `unfold` failed to unfold `T.g` in
+  t.g = t.x + 2
+
+## ModD.lean: a plain importer can
+exit 0
+
+## ModTac.lean + ModTacUse.lean: meta-table tactic in a module
+exit 0
+
+## ModS.lean + ModSUse.lean: collectAxioms through a module import
+'barS' depends on axioms: [sorryAx]
+value? present: false
+collectAxioms: [sorryAx]
+
+## ModSUse3.lean: theorem bodies via value? (allowOpaque := true)
+value?(allowOpaque) present: true
+thm value uses: [Eq, Nat, HAdd.hAdd, instHAdd, instAddNat, OfNat.ofNat, instOfNatNat, rfl, fooS]
+
+## DefeqList.lean: Std theorems tagged @[defeq]
+12: [Std.HashMap.forIn_eq_forIn,
+ Std.HashMap.forM_eq_forM,
+ Std.HashMap.get!_eq_getElem!,
+ Std.HashMap.get?_eq_getElem?,
+ Std.HashMap.get_eq_getElem,
+ Std.HashMap.insert_eq_insert,
+ Std.HashMap.markLinear_eq,
+ Std.HashMap.singleton_eq_insert,
+ Std.HashSet.forIn_eq_forIn,
+ Std.HashSet.forM_eq_forM,
+ Std.HashSet.insert_eq_insert,
+ Std.HashSet.singleton_eq_insert]
+
+## StdDecide.lean: decide/rfl/cbv on concrete Std maps (line 5 = cbv, no error)
+StdDecide.lean:2:73: error: Tactic `decide` failed to reduce
+StdDecide.lean:3:70: error: Type mismatch
+StdDecide.lean:4:68: error: Tactic `decide` failed to reduce
+StdDecide.lean:6:64: error: Tactic `decide` failed to reduce
+StdDecide.lean:7:69: error: Tactic `decide` failed to reduce
+
+## SealSketch.lean / SealSketch2.lean: seal-check loop on Std as stand-in
+0 uses of layout constants outside the contract, e.g. []
+658 uses of layout constants outside the contract, e.g. [(Std.HashMap.getD_filterMap_of_getKey?_eq_some,
+
+## SpecCheck.lean: CoreSpec examples against a stub core
+exit 0 (only sorry warnings)
+
+## ModM.lean: term proofs through a non-exposed and an @[expose] wrapper in the same module
+exit 0: both succeed; only `rfl` proofs (candidates for @[defeq]) need exposure (compare ModRfl.lean)
+
+## ModTac2.lean + ModTac2Use.lean: Mock2-shaped simp_to_model (location, using, discharger) in a module
+Only `public meta import Std.Data.HashMap.Basic` is needed. Both build with exit 0 when the quotation keeps
+Mock2's layout (`$[apply ...];*` on its own line inside the parenthesised tactic block); a one-line
+variant fails to parse ("unexpected token '$'; expected ')'").

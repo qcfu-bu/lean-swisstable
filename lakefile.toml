@@ -1,0 +1,30 @@
+name = "oamap"
+version = "0.1.0"
+defaultTargets = ["OAMap"]
+# `lake test` builds this library: "A library will just be built" (Lake's PackageConfig doc).
+testDriver = "OAMapTest"
+
+[leanOptions]
+autoImplicit = false
+relaxedAutoImplicit = false
+
+# The library: every module reachable from OAMap.lean.
+[[lean_lib]]
+name = "OAMap"
+
+# The statement-parity checker (imports only Lean).
+[[lean_lib]]
+name = "Parity"
+srcDir = "test"
+roots = ["Parity"]
+
+# Conformance, seal, axiom, parity, cbv and #guard tests (run by `lake test`).
+[[lean_lib]]
+name = "OAMapTest"
+srcDir = "test"
+roots = ["OAMapTest"]
+
+[[lean_exe]]
+name = "oamap-bench"
+srcDir = "bench"
+root = "Main"

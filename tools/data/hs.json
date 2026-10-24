@@ -1,0 +1,2570 @@
+[
+{
+"line": 36,
+"ns": "Std.HashSet",
+"name": "ext",
+"full": "Std.HashSet.ext",
+"attrs": "",
+"body": "private theorem ext {m m' : HashSet \u03b1} : m.inner = m'.inner \u2192 m = m' := by\n  cases m; cases m'; rintro rfl; rfl\n"
+},
+{
+"line": 40,
+"ns": "Std.HashSet",
+"name": "isEmpty_emptyWithCapacity",
+"full": "Std.HashSet.isEmpty_emptyWithCapacity",
+"attrs": "@[simp, grind =] ",
+"body": "theorem isEmpty_emptyWithCapacity {c} : (emptyWithCapacity c : HashSet \u03b1).isEmpty :=\n  HashMap.isEmpty_emptyWithCapacity\n"
+},
+{
+"line": 44,
+"ns": "Std.HashSet",
+"name": "isEmpty_empty",
+"full": "Std.HashSet.isEmpty_empty",
+"attrs": "@[simp, grind =] ",
+"body": "theorem isEmpty_empty : (\u2205 : HashSet \u03b1).isEmpty :=\n  HashMap.isEmpty_empty\n"
+},
+{
+"line": 48,
+"ns": "Std.HashSet",
+"name": "isEmpty_insert",
+"full": "Std.HashSet.isEmpty_insert",
+"attrs": "@[simp, grind =] ",
+"body": "theorem isEmpty_insert [EquivBEq \u03b1] [LawfulHashable \u03b1] {a : \u03b1} : (m.insert a).isEmpty = false :=\n  HashMap.isEmpty_insertIfNew\n"
+},
+{
+"line": 51,
+"ns": "Std.HashSet",
+"name": "mem_iff_contains",
+"full": "Std.HashSet.mem_iff_contains",
+"attrs": "",
+"body": "theorem mem_iff_contains {a : \u03b1} : a \u2208 m \u2194 m.contains a :=\n  HashMap.mem_iff_contains\n"
+},
+{
+"line": 55,
+"ns": "Std.HashSet",
+"name": "contains_iff_mem",
+"full": "Std.HashSet.contains_iff_mem",
+"attrs": "@[simp, grind _=_] ",
+"body": "theorem contains_iff_mem {a : \u03b1} : m.contains a \u2194 a \u2208 m :=\n  HashMap.contains_iff_mem\n"
+},
+{
+"line": 59,
+"ns": "Std.HashSet",
+"name": "contains_eq_false_iff_not_mem",
+"full": "Std.HashSet.contains_eq_false_iff_not_mem",
+"attrs": "",
+"body": "theorem contains_eq_false_iff_not_mem {k : \u03b1} : m.contains k = false \u2194 \u00ack \u2208 m :=\n  HashMap.contains_eq_false_iff_not_mem\n"
+},
+{
+"line": 62,
+"ns": "Std.HashSet",
+"name": "contains_congr",
+"full": "Std.HashSet.contains_congr",
+"attrs": "",
+"body": "theorem contains_congr [EquivBEq \u03b1] [LawfulHashable \u03b1] {a b : \u03b1} (hab : a == b) :\n    m.contains a = m.contains b :=\n  HashMap.contains_congr hab\n"
+},
+{
+"line": 66,
+"ns": "Std.HashSet",
+"name": "mem_congr",
+"full": "Std.HashSet.mem_congr",
+"attrs": "",
+"body": "theorem mem_congr [EquivBEq \u03b1] [LawfulHashable \u03b1] {a b : \u03b1} (hab : a == b) : a \u2208 m \u2194 b \u2208 m :=\n  HashMap.mem_congr hab\n"
+},
+{
+"line": 70,
+"ns": "Std.HashSet",
+"name": "contains_emptyWithCapacity",
+"full": "Std.HashSet.contains_emptyWithCapacity",
+"attrs": "@[simp, grind =, cbv_eval] ",
+"body": "theorem contains_emptyWithCapacity {a : \u03b1} {c} : (emptyWithCapacity c : HashSet \u03b1).contains a = false :=\n  HashMap.contains_emptyWithCapacity\n"
+},
+{
+"line": 73,
+"ns": "Std.HashSet",
+"name": "not_mem_emptyWithCapacity",
+"full": "Std.HashSet.not_mem_emptyWithCapacity",
+"attrs": "@[simp, grind \u2190]",
+"body": "@[simp, grind \u2190] theorem not_mem_emptyWithCapacity {a : \u03b1} {c} : \u00aca \u2208 (emptyWithCapacity c : HashSet \u03b1) :=\n  HashMap.not_mem_emptyWithCapacity\n"
+},
+{
+"line": 76,
+"ns": "Std.HashSet",
+"name": "contains_empty",
+"full": "Std.HashSet.contains_empty",
+"attrs": "@[simp, grind =]",
+"body": "@[simp, grind =] theorem contains_empty {a : \u03b1} : (\u2205 : HashSet \u03b1).contains a = false :=\n  HashMap.contains_empty\n"
+},
+{
+"line": 79,
+"ns": "Std.HashSet",
+"name": "not_mem_empty",
+"full": "Std.HashSet.not_mem_empty",
+"attrs": "@[simp]",
+"body": "@[simp] theorem not_mem_empty {a : \u03b1} : \u00aca \u2208 (\u2205 : HashSet \u03b1) :=\n  HashMap.not_mem_empty\n"
+},
+{
+"line": 82,
+"ns": "Std.HashSet",
+"name": "contains_of_isEmpty",
+"full": "Std.HashSet.contains_of_isEmpty",
+"attrs": "",
+"body": "theorem contains_of_isEmpty [EquivBEq \u03b1] [LawfulHashable \u03b1] {a : \u03b1} :\n    m.isEmpty \u2192 m.contains a = false :=\n  HashMap.contains_of_isEmpty\n"
+},
+{
+"line": 86,
+"ns": "Std.HashSet",
+"name": "not_mem_of_isEmpty",
+"full": "Std.HashSet.not_mem_of_isEmpty",
+"attrs": "",
+"body": "theorem not_mem_of_isEmpty [EquivBEq \u03b1] [LawfulHashable \u03b1] {a : \u03b1} :\n    m.isEmpty \u2192 \u00aca \u2208 m :=\n  HashMap.not_mem_of_isEmpty\n"
+},
+{
+"line": 90,
+"ns": "Std.HashSet",
+"name": "isEmpty_eq_false_iff_exists_contains_eq_true",
+"full": "Std.HashSet.isEmpty_eq_false_iff_exists_contains_eq_true",
+"attrs": "",
+"body": "theorem isEmpty_eq_false_iff_exists_contains_eq_true [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    m.isEmpty = false \u2194 \u2203 a, m.contains a = true :=\n  HashMap.isEmpty_eq_false_iff_exists_contains_eq_true\n"
+},
+{
+"line": 94,
+"ns": "Std.HashSet",
+"name": "isEmpty_eq_false_iff_exists_mem",
+"full": "Std.HashSet.isEmpty_eq_false_iff_exists_mem",
+"attrs": "",
+"body": "theorem isEmpty_eq_false_iff_exists_mem [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    m.isEmpty = false \u2194 \u2203 a, a \u2208 m :=\n  HashMap.isEmpty_eq_false_iff_exists_mem\n"
+},
+{
+"line": 98,
+"ns": "Std.HashSet",
+"name": "isEmpty_iff_forall_contains",
+"full": "Std.HashSet.isEmpty_iff_forall_contains",
+"attrs": "",
+"body": "theorem isEmpty_iff_forall_contains [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    m.isEmpty = true \u2194 \u2200 a, m.contains a = false :=\n  HashMap.isEmpty_iff_forall_contains\n"
+},
+{
+"line": 102,
+"ns": "Std.HashSet",
+"name": "isEmpty_iff_forall_not_mem",
+"full": "Std.HashSet.isEmpty_iff_forall_not_mem",
+"attrs": "",
+"body": "theorem isEmpty_iff_forall_not_mem [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    m.isEmpty = true \u2194 \u2200 a, \u00aca \u2208 m :=\n  HashMap.isEmpty_iff_forall_not_mem\n"
+},
+{
+"line": 106,
+"ns": "Std.HashSet",
+"name": "insert_eq_insert",
+"full": "Std.HashSet.insert_eq_insert",
+"attrs": "@[simp]",
+"body": "@[simp] theorem insert_eq_insert {a : \u03b1} : Insert.insert a m = m.insert a := rfl\n"
+},
+{
+"line": 108,
+"ns": "Std.HashSet",
+"name": "singleton_eq_insert",
+"full": "Std.HashSet.singleton_eq_insert",
+"attrs": "@[simp]",
+"body": "@[simp] theorem singleton_eq_insert {a : \u03b1} : Singleton.singleton a = (\u2205 : HashSet \u03b1).insert a := rfl\n"
+},
+{
+"line": 111,
+"ns": "Std.HashSet",
+"name": "contains_insert",
+"full": "Std.HashSet.contains_insert",
+"attrs": "@[simp, grind =, cbv_eval] ",
+"body": "theorem contains_insert [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} :\n    (m.insert k).contains a = (k == a || m.contains a) :=\n  HashMap.contains_insertIfNew\n"
+},
+{
+"line": 116,
+"ns": "Std.HashSet",
+"name": "mem_insert",
+"full": "Std.HashSet.mem_insert",
+"attrs": "@[simp, grind =] ",
+"body": "theorem mem_insert [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} : a \u2208 m.insert k \u2194 k == a \u2228 a \u2208 m :=\n  HashMap.mem_insertIfNew\n"
+},
+{
+"line": 119,
+"ns": "Std.HashSet",
+"name": "contains_of_contains_insert",
+"full": "Std.HashSet.contains_of_contains_insert",
+"attrs": "",
+"body": "theorem contains_of_contains_insert [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} :\n    (m.insert k).contains a \u2192 (k == a) = false \u2192 m.contains a :=\n  HashMap.contains_of_contains_insertIfNew\n"
+},
+{
+"line": 123,
+"ns": "Std.HashSet",
+"name": "mem_of_mem_insert",
+"full": "Std.HashSet.mem_of_mem_insert",
+"attrs": "",
+"body": "theorem mem_of_mem_insert [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} :\n    a \u2208 m.insert k \u2192 (k == a) = false \u2192 a \u2208 m :=\n  HashMap.mem_of_mem_insertIfNew\n"
+},
+{
+"line": 129,
+"ns": "Std.HashSet",
+"name": "contains_of_contains_insert'",
+"full": "Std.HashSet.contains_of_contains_insert'",
+"attrs": "",
+"body": "theorem contains_of_contains_insert' [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} :\n    (m.insert k).contains a \u2192 \u00ac((k == a) \u2227 m.contains k = false) \u2192 m.contains a :=\n  HashMap.contains_of_contains_insertIfNew'\n"
+},
+{
+"line": 135,
+"ns": "Std.HashSet",
+"name": "mem_of_mem_insert'",
+"full": "Std.HashSet.mem_of_mem_insert'",
+"attrs": "",
+"body": "theorem mem_of_mem_insert' [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} :\n    a \u2208 m.insert k \u2192 \u00ac((k == a) \u2227 \u00ack \u2208 m) \u2192 a \u2208 m :=\n  DHashMap.mem_of_mem_insertIfNew'\n"
+},
+{
+"line": 139,
+"ns": "Std.HashSet",
+"name": "contains_insert_self",
+"full": "Std.HashSet.contains_insert_self",
+"attrs": "",
+"body": "theorem contains_insert_self [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} : (m.insert k).contains k := by\n  simp\n"
+},
+{
+"line": 142,
+"ns": "Std.HashSet",
+"name": "mem_insert_self",
+"full": "Std.HashSet.mem_insert_self",
+"attrs": "",
+"body": "theorem mem_insert_self [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} : k \u2208 m.insert k := by simp\n"
+},
+{
+"line": 144,
+"ns": "Std.HashSet",
+"name": "mem_of_get_eq",
+"full": "Std.HashSet.mem_of_get_eq",
+"attrs": "",
+"body": "theorem mem_of_get_eq {k v : \u03b1} {w} (_ : m.get k w = v) : k \u2208 m := w\n"
+},
+{
+"line": 147,
+"ns": "Std.HashSet",
+"name": "size_emptyWithCapacity",
+"full": "Std.HashSet.size_emptyWithCapacity",
+"attrs": "@[simp, grind =] ",
+"body": "theorem size_emptyWithCapacity {c} : (emptyWithCapacity c : HashSet \u03b1).size = 0 :=\n  HashMap.size_emptyWithCapacity\n"
+},
+{
+"line": 151,
+"ns": "Std.HashSet",
+"name": "size_empty",
+"full": "Std.HashSet.size_empty",
+"attrs": "@[simp, grind =] ",
+"body": "theorem size_empty : (\u2205 : HashSet \u03b1).size = 0 :=\n  HashMap.size_empty\n"
+},
+{
+"line": 154,
+"ns": "Std.HashSet",
+"name": "isEmpty_eq_size_eq_zero",
+"full": "Std.HashSet.isEmpty_eq_size_eq_zero",
+"attrs": "",
+"body": "theorem isEmpty_eq_size_eq_zero : m.isEmpty = (m.size == 0) :=\n  HashMap.isEmpty_eq_size_eq_zero\n"
+},
+{
+"line": 158,
+"ns": "Std.HashSet",
+"name": "toList_emptyWithCapacity",
+"full": "Std.HashSet.toList_emptyWithCapacity",
+"attrs": "@[simp] ",
+"body": "theorem toList_emptyWithCapacity {c} : (emptyWithCapacity c : HashSet \u03b1).toList = [] :=\n  HashMap.keys_emptyWithCapacity\n"
+},
+{
+"line": 162,
+"ns": "Std.HashSet",
+"name": "toList_empty",
+"full": "Std.HashSet.toList_empty",
+"attrs": "@[simp] ",
+"body": "theorem toList_empty : (\u2205 : HashSet \u03b1).toList = [] :=\n  toList_emptyWithCapacity\n"
+},
+{
+"line": 165,
+"ns": "Std.HashSet",
+"name": "size_insert",
+"full": "Std.HashSet.size_insert",
+"attrs": "@[grind =]",
+"body": "@[grind =] theorem size_insert [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    (m.insert k).size = if k \u2208 m then m.size else m.size + 1 :=\n  HashMap.size_insertIfNew\n"
+},
+{
+"line": 169,
+"ns": "Std.HashSet",
+"name": "size_le_size_insert",
+"full": "Std.HashSet.size_le_size_insert",
+"attrs": "",
+"body": "theorem size_le_size_insert [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} : m.size \u2264 (m.insert k).size :=\n  HashMap.size_le_size_insertIfNew\n"
+},
+{
+"line": 172,
+"ns": "Std.HashSet",
+"name": "size_insert_le",
+"full": "Std.HashSet.size_insert_le",
+"attrs": "",
+"body": "theorem size_insert_le [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    (m.insert k).size \u2264 m.size + 1 :=\n  HashMap.size_insertIfNew_le\n"
+},
+{
+"line": 177,
+"ns": "Std.HashSet",
+"name": "erase_emptyWithCapacity",
+"full": "Std.HashSet.erase_emptyWithCapacity",
+"attrs": "@[simp, grind =, cbv_eval] ",
+"body": "theorem erase_emptyWithCapacity {a : \u03b1} {c : Nat} : (emptyWithCapacity c : HashSet \u03b1).erase a = emptyWithCapacity c :=\n  ext HashMap.erase_emptyWithCapacity\n"
+},
+{
+"line": 181,
+"ns": "Std.HashSet",
+"name": "erase_empty",
+"full": "Std.HashSet.erase_empty",
+"attrs": "@[simp, grind =] ",
+"body": "theorem erase_empty {a : \u03b1} : (\u2205 : HashSet \u03b1).erase a = \u2205 :=\n  ext HashMap.erase_empty\n"
+},
+{
+"line": 185,
+"ns": "Std.HashSet",
+"name": "isEmpty_erase",
+"full": "Std.HashSet.isEmpty_erase",
+"attrs": "@[simp, grind =] ",
+"body": "theorem isEmpty_erase [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    (m.erase k).isEmpty = (m.isEmpty || (m.size == 1 && m.contains k)) :=\n  HashMap.isEmpty_erase\n"
+},
+{
+"line": 190,
+"ns": "Std.HashSet",
+"name": "contains_erase",
+"full": "Std.HashSet.contains_erase",
+"attrs": "@[simp, grind =, cbv_eval] ",
+"body": "theorem contains_erase [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} :\n    (m.erase k).contains a = (!(k == a) && m.contains a) :=\n  HashMap.contains_erase\n"
+},
+{
+"line": 195,
+"ns": "Std.HashSet",
+"name": "mem_erase",
+"full": "Std.HashSet.mem_erase",
+"attrs": "@[simp, grind =] ",
+"body": "theorem mem_erase [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} :\n    a \u2208 m.erase k \u2194 (k == a) = false \u2227 a \u2208 m :=\n  HashMap.mem_erase\n"
+},
+{
+"line": 199,
+"ns": "Std.HashSet",
+"name": "contains_of_contains_erase",
+"full": "Std.HashSet.contains_of_contains_erase",
+"attrs": "",
+"body": "theorem contains_of_contains_erase [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} :\n    (m.erase k).contains a \u2192 m.contains a :=\n  HashMap.contains_of_contains_erase\n"
+},
+{
+"line": 203,
+"ns": "Std.HashSet",
+"name": "mem_of_mem_erase",
+"full": "Std.HashSet.mem_of_mem_erase",
+"attrs": "",
+"body": "theorem mem_of_mem_erase [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} : a \u2208 m.erase k \u2192 a \u2208 m :=\n  HashMap.mem_of_mem_erase\n"
+},
+{
+"line": 206,
+"ns": "Std.HashSet",
+"name": "size_erase",
+"full": "Std.HashSet.size_erase",
+"attrs": "@[grind =]",
+"body": "@[grind =] theorem size_erase [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    (m.erase k).size = if k \u2208 m then m.size - 1 else m.size :=\n  HashMap.size_erase\n"
+},
+{
+"line": 210,
+"ns": "Std.HashSet",
+"name": "size_erase_le",
+"full": "Std.HashSet.size_erase_le",
+"attrs": "",
+"body": "theorem size_erase_le [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} : (m.erase k).size \u2264 m.size :=\n  HashMap.size_erase_le\n"
+},
+{
+"line": 213,
+"ns": "Std.HashSet",
+"name": "size_le_size_erase",
+"full": "Std.HashSet.size_le_size_erase",
+"attrs": "",
+"body": "theorem size_le_size_erase [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    m.size \u2264 (m.erase k).size + 1 :=\n  HashMap.size_le_size_erase\n"
+},
+{
+"line": 218,
+"ns": "Std.HashSet",
+"name": "get?_emptyWithCapacity",
+"full": "Std.HashSet.get?_emptyWithCapacity",
+"attrs": "@[simp, grind =, cbv_eval] ",
+"body": "theorem get?_emptyWithCapacity {a : \u03b1} {c} : (emptyWithCapacity c : HashSet \u03b1).get? a = none :=\n  HashMap.getKey?_emptyWithCapacity\n"
+},
+{
+"line": 222,
+"ns": "Std.HashSet",
+"name": "get?_empty",
+"full": "Std.HashSet.get?_empty",
+"attrs": "@[simp, grind =] ",
+"body": "theorem get?_empty {a : \u03b1} : (\u2205 : HashSet \u03b1).get? a = none :=\n  HashMap.getKey?_empty\n"
+},
+{
+"line": 225,
+"ns": "Std.HashSet",
+"name": "get?_of_isEmpty",
+"full": "Std.HashSet.get?_of_isEmpty",
+"attrs": "",
+"body": "theorem get?_of_isEmpty [EquivBEq \u03b1] [LawfulHashable \u03b1] {a : \u03b1} :\n    m.isEmpty = true \u2192 m.get? a = none :=\n  HashMap.getKey?_of_isEmpty\n"
+},
+{
+"line": 229,
+"ns": "Std.HashSet",
+"name": "get?_insert",
+"full": "Std.HashSet.get?_insert",
+"attrs": "@[grind =, cbv_eval]",
+"body": "@[grind =, cbv_eval] theorem get?_insert [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} :\n    (m.insert k).get? a = if k == a \u2227 \u00ack \u2208 m then some k else m.get? a :=\n  HashMap.getKey?_insertIfNew\n"
+},
+{
+"line": 233,
+"ns": "Std.HashSet",
+"name": "contains_eq_isSome_get?",
+"full": "Std.HashSet.contains_eq_isSome_get?",
+"attrs": "",
+"body": "theorem contains_eq_isSome_get? [EquivBEq \u03b1] [LawfulHashable \u03b1] {a : \u03b1} :\n    m.contains a = (m.get? a).isSome :=\n  HashMap.contains_eq_isSome_getKey?\n"
+},
+{
+"line": 238,
+"ns": "Std.HashSet",
+"name": "isSome_get?_eq_contains",
+"full": "Std.HashSet.isSome_get?_eq_contains",
+"attrs": "@[simp, grind =] ",
+"body": "theorem isSome_get?_eq_contains [EquivBEq \u03b1] [LawfulHashable \u03b1] {a : \u03b1} :\n    (m.get? a).isSome = m.contains a :=\n  contains_eq_isSome_get?.symm\n"
+},
+{
+"line": 242,
+"ns": "Std.HashSet",
+"name": "mem_iff_isSome_get?",
+"full": "Std.HashSet.mem_iff_isSome_get?",
+"attrs": "",
+"body": "theorem mem_iff_isSome_get? [EquivBEq \u03b1] [LawfulHashable \u03b1] {a : \u03b1} :\n    a \u2208 m \u2194 (m.get? a).isSome :=\n  HashMap.mem_iff_isSome_getKey?\n"
+},
+{
+"line": 247,
+"ns": "Std.HashSet",
+"name": "isSome_get?_iff_mem",
+"full": "Std.HashSet.isSome_get?_iff_mem",
+"attrs": "@[simp] ",
+"body": "theorem isSome_get?_iff_mem [EquivBEq \u03b1] [LawfulHashable \u03b1] {a : \u03b1} :\n    (m.get? a).isSome \u2194 a \u2208 m :=\n  mem_iff_isSome_get?.symm\n"
+},
+{
+"line": 251,
+"ns": "Std.HashSet",
+"name": "get?_eq_some_iff",
+"full": "Std.HashSet.get?_eq_some_iff",
+"attrs": "",
+"body": "theorem get?_eq_some_iff [EquivBEq \u03b1] [LawfulHashable \u03b1] {k k' : \u03b1} :\n    m.get? k = some k' \u2194 \u2203 h : k \u2208 m, m.get k h = k' :=\n  HashMap.getKey?_eq_some_iff\n"
+},
+{
+"line": 255,
+"ns": "Std.HashSet",
+"name": "mem_of_get?_eq_some",
+"full": "Std.HashSet.mem_of_get?_eq_some",
+"attrs": "",
+"body": "theorem mem_of_get?_eq_some [EquivBEq \u03b1] [LawfulHashable \u03b1] {k k' : \u03b1}\n    (h : m.get? k = some k') : k' \u2208 m :=\n  HashMap.mem_of_getKey?_eq_some h\n"
+},
+{
+"line": 259,
+"ns": "Std.HashSet",
+"name": "get?_eq_none_of_contains_eq_false",
+"full": "Std.HashSet.get?_eq_none_of_contains_eq_false",
+"attrs": "",
+"body": "theorem get?_eq_none_of_contains_eq_false [EquivBEq \u03b1] [LawfulHashable \u03b1] {a : \u03b1} :\n    m.contains a = false \u2192 m.get? a = none :=\n  HashMap.getKey?_eq_none_of_contains_eq_false\n"
+},
+{
+"line": 263,
+"ns": "Std.HashSet",
+"name": "get?_eq_none",
+"full": "Std.HashSet.get?_eq_none",
+"attrs": "",
+"body": "theorem get?_eq_none [EquivBEq \u03b1] [LawfulHashable \u03b1] {a : \u03b1} : \u00aca \u2208 m \u2192 m.get? a = none :=\n  HashMap.getKey?_eq_none\n"
+},
+{
+"line": 266,
+"ns": "Std.HashSet",
+"name": "get?_erase",
+"full": "Std.HashSet.get?_erase",
+"attrs": "@[grind =, cbv_eval]",
+"body": "@[grind =, cbv_eval] theorem get?_erase [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} :\n    (m.erase k).get? a = if k == a then none else m.get? a :=\n  HashMap.getKey?_erase\n"
+},
+{
+"line": 271,
+"ns": "Std.HashSet",
+"name": "get?_erase_self",
+"full": "Std.HashSet.get?_erase_self",
+"attrs": "@[simp] ",
+"body": "theorem get?_erase_self [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} : (m.erase k).get? k = none :=\n  HashMap.getKey?_erase_self\n"
+},
+{
+"line": 274,
+"ns": "Std.HashSet",
+"name": "get?_beq",
+"full": "Std.HashSet.get?_beq",
+"attrs": "",
+"body": "theorem get?_beq [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} : (m.get? k).all (\u00b7 == k) :=\n  HashMap.getKey?_beq\n"
+},
+{
+"line": 277,
+"ns": "Std.HashSet",
+"name": "get?_congr",
+"full": "Std.HashSet.get?_congr",
+"attrs": "",
+"body": "theorem get?_congr [EquivBEq \u03b1] [LawfulHashable \u03b1] {k k' : \u03b1} (h : k == k') :\n    m.get? k = m.get? k' :=\n  HashMap.getKey?_congr h\n"
+},
+{
+"line": 281,
+"ns": "Std.HashSet",
+"name": "get?_eq_some_of_contains",
+"full": "Std.HashSet.get?_eq_some_of_contains",
+"attrs": "",
+"body": "theorem get?_eq_some_of_contains [LawfulBEq \u03b1] {k : \u03b1} (h : m.contains k) : m.get? k = some k :=\n  HashMap.getKey?_eq_some_of_contains h\n"
+},
+{
+"line": 284,
+"ns": "Std.HashSet",
+"name": "get?_eq_some",
+"full": "Std.HashSet.get?_eq_some",
+"attrs": "",
+"body": "theorem get?_eq_some [LawfulBEq \u03b1] {k : \u03b1} (h : k \u2208 m) : m.get? k = some k :=\n  HashMap.getKey?_eq_some h\n"
+},
+{
+"line": 287,
+"ns": "Std.HashSet",
+"name": "get_insert",
+"full": "Std.HashSet.get_insert",
+"attrs": "@[grind =]",
+"body": "@[grind =] theorem get_insert [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} {h\u2081} :\n    (m.insert k).get a h\u2081 =\n      if h\u2082 : k == a \u2227 \u00ack \u2208 m then k else m.get a (mem_of_mem_insert' h\u2081 h\u2082) :=\n  HashMap.getKey_insertIfNew (h\u2081 := h\u2081)\n"
+},
+{
+"line": 292,
+"ns": "Std.HashSet",
+"name": "toList_insert_perm",
+"full": "Std.HashSet.toList_insert_perm",
+"attrs": "",
+"body": "theorem toList_insert_perm [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    (m.insert k).toList.Perm (if k \u2208 m then m.toList else k :: m.toList) :=\n  HashMap.keys_insertIfNew_perm\n"
+},
+{
+"line": 297,
+"ns": "Std.HashSet",
+"name": "get_erase",
+"full": "Std.HashSet.get_erase",
+"attrs": "@[simp, grind =] ",
+"body": "theorem get_erase [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} {h'} :\n    (m.erase k).get a h' = m.get a (mem_of_mem_erase h') :=\n  HashMap.getKey_erase (h' := h')\n"
+},
+{
+"line": 301,
+"ns": "Std.HashSet",
+"name": "get?_eq_some_get",
+"full": "Std.HashSet.get?_eq_some_get",
+"attrs": "",
+"body": "theorem get?_eq_some_get [EquivBEq \u03b1] [LawfulHashable \u03b1] {a : \u03b1} (h' : a \u2208 m) :\n    m.get? a = some (m.get a h') :=\n  HashMap.getKey?_eq_some_getKey h'\n"
+},
+{
+"line": 305,
+"ns": "Std.HashSet",
+"name": "get_eq_get_get?",
+"full": "Std.HashSet.get_eq_get_get?",
+"attrs": "",
+"body": "theorem get_eq_get_get? [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} {h} :\n    m.get k h = (m.get? k).get (mem_iff_isSome_get?.mp h) :=\n  HashMap.getKey_eq_get_getKey?\n"
+},
+{
+"line": 309,
+"ns": "Std.HashSet",
+"name": "get_get?",
+"full": "Std.HashSet.get_get?",
+"attrs": "@[grind =]",
+"body": "@[grind =] theorem get_get? [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} {h} :\n    (m.get? k).get h = m.get k (mem_iff_isSome_get?.mpr h) :=\n  HashMap.get_getKey?\n"
+},
+{
+"line": 313,
+"ns": "Std.HashSet",
+"name": "get_beq",
+"full": "Std.HashSet.get_beq",
+"attrs": "",
+"body": "theorem get_beq [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} (h : k \u2208 m) : m.get k h == k :=\n  HashMap.getKey_beq h\n"
+},
+{
+"line": 316,
+"ns": "Std.HashSet",
+"name": "get_congr",
+"full": "Std.HashSet.get_congr",
+"attrs": "",
+"body": "theorem get_congr [EquivBEq \u03b1] [LawfulHashable \u03b1] {k\u2081 k\u2082 : \u03b1} (h : k\u2081 == k\u2082)\n    (h\u2081 : k\u2081 \u2208 m) : m.get k\u2081 h\u2081 = m.get k\u2082 ((mem_congr h).mp h\u2081) :=\n  HashMap.getKey_congr h h\u2081\n"
+},
+{
+"line": 321,
+"ns": "Std.HashSet",
+"name": "get_eq",
+"full": "Std.HashSet.get_eq",
+"attrs": "@[simp, grind =] ",
+"body": "theorem get_eq [LawfulBEq \u03b1] {k : \u03b1} (h : k \u2208 m) : m.get k h = k :=\n  HashMap.getKey_eq h\n"
+},
+{
+"line": 325,
+"ns": "Std.HashSet",
+"name": "get!_emptyWithCapacity",
+"full": "Std.HashSet.get!_emptyWithCapacity",
+"attrs": "@[simp, grind =, cbv_eval] ",
+"body": "theorem get!_emptyWithCapacity [Inhabited \u03b1] {a : \u03b1} {c} : (emptyWithCapacity c : HashSet \u03b1).get! a = default :=\n  HashMap.getKey!_emptyWithCapacity\n"
+},
+{
+"line": 329,
+"ns": "Std.HashSet",
+"name": "get!_empty",
+"full": "Std.HashSet.get!_empty",
+"attrs": "@[simp, grind =] ",
+"body": "theorem get!_empty [Inhabited \u03b1] {a : \u03b1} : (\u2205 : HashSet \u03b1).get! a = default :=\n  HashMap.getKey!_empty\n"
+},
+{
+"line": 332,
+"ns": "Std.HashSet",
+"name": "get!_of_isEmpty",
+"full": "Std.HashSet.get!_of_isEmpty",
+"attrs": "",
+"body": "theorem get!_of_isEmpty [Inhabited \u03b1] [EquivBEq \u03b1] [LawfulHashable \u03b1] {a : \u03b1} :\n    m.isEmpty = true \u2192 m.get! a = default :=\n  HashMap.getKey!_of_isEmpty\n"
+},
+{
+"line": 336,
+"ns": "Std.HashSet",
+"name": "get!_insert",
+"full": "Std.HashSet.get!_insert",
+"attrs": "@[grind =, cbv_eval]",
+"body": "@[grind =, cbv_eval] theorem get!_insert [Inhabited \u03b1] [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} :\n    (m.insert k).get! a = if k == a \u2227 \u00ack \u2208 m then k else m.get! a :=\n  HashMap.getKey!_insertIfNew\n"
+},
+{
+"line": 340,
+"ns": "Std.HashSet",
+"name": "get!_eq_default_of_contains_eq_false",
+"full": "Std.HashSet.get!_eq_default_of_contains_eq_false",
+"attrs": "",
+"body": "theorem get!_eq_default_of_contains_eq_false [Inhabited \u03b1] [EquivBEq \u03b1] [LawfulHashable \u03b1] {a : \u03b1} :\n    m.contains a = false \u2192 m.get! a = default :=\n  HashMap.getKey!_eq_default_of_contains_eq_false\n"
+},
+{
+"line": 344,
+"ns": "Std.HashSet",
+"name": "get!_eq_default",
+"full": "Std.HashSet.get!_eq_default",
+"attrs": "",
+"body": "theorem get!_eq_default [Inhabited \u03b1] [EquivBEq \u03b1] [LawfulHashable \u03b1] {a : \u03b1} :\n    \u00aca \u2208 m \u2192 m.get! a = default :=\n  HashMap.getKey!_eq_default\n"
+},
+{
+"line": 348,
+"ns": "Std.HashSet",
+"name": "get!_erase",
+"full": "Std.HashSet.get!_erase",
+"attrs": "@[grind =, cbv_eval]",
+"body": "@[grind =, cbv_eval] theorem get!_erase [Inhabited \u03b1] [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a : \u03b1} :\n    (m.erase k).get! a = if k == a then default else m.get! a :=\n  HashMap.getKey!_erase\n"
+},
+{
+"line": 353,
+"ns": "Std.HashSet",
+"name": "get!_erase_self",
+"full": "Std.HashSet.get!_erase_self",
+"attrs": "@[simp] ",
+"body": "theorem get!_erase_self [Inhabited \u03b1] [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    (m.erase k).get! k = default :=\n  HashMap.getKey!_erase_self\n"
+},
+{
+"line": 357,
+"ns": "Std.HashSet",
+"name": "get?_eq_some_get!_of_contains",
+"full": "Std.HashSet.get?_eq_some_get!_of_contains",
+"attrs": "",
+"body": "theorem get?_eq_some_get!_of_contains [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1]\n    {a : \u03b1} : m.contains a = true \u2192 m.get? a = some (m.get! a) :=\n  HashMap.getKey?_eq_some_getKey!_of_contains\n"
+},
+{
+"line": 361,
+"ns": "Std.HashSet",
+"name": "get?_eq_some_get!",
+"full": "Std.HashSet.get?_eq_some_get!",
+"attrs": "",
+"body": "theorem get?_eq_some_get! [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1] {a : \u03b1} :\n    a \u2208 m \u2192 m.get? a = some (m.get! a) :=\n  HashMap.getKey?_eq_some_getKey!\n"
+},
+{
+"line": 365,
+"ns": "Std.HashSet",
+"name": "get!_eq_get!_get?",
+"full": "Std.HashSet.get!_eq_get!_get?",
+"attrs": "",
+"body": "theorem get!_eq_get!_get? [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1] {a : \u03b1} :\n    m.get! a = (m.get? a).get! :=\n  HashMap.getKey!_eq_get!_getKey?\n"
+},
+{
+"line": 369,
+"ns": "Std.HashSet",
+"name": "get_eq_get!",
+"full": "Std.HashSet.get_eq_get!",
+"attrs": "",
+"body": "theorem get_eq_get! [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1] {a : \u03b1} {h'} :\n    m.get a h' = m.get! a :=\n  HashMap.getKey_eq_getKey!\n"
+},
+{
+"line": 373,
+"ns": "Std.HashSet",
+"name": "get!_congr",
+"full": "Std.HashSet.get!_congr",
+"attrs": "",
+"body": "theorem get!_congr [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1] {k k' : \u03b1} (h : k == k') :\n    m.get! k = m.get! k' :=\n  HashMap.getKey!_congr h\n"
+},
+{
+"line": 377,
+"ns": "Std.HashSet",
+"name": "get!_eq_of_contains",
+"full": "Std.HashSet.get!_eq_of_contains",
+"attrs": "",
+"body": "theorem get!_eq_of_contains [LawfulBEq \u03b1] [Inhabited \u03b1] {k : \u03b1} (h : m.contains k) : m.get! k = k :=\n  HashMap.getKey!_eq_of_contains h\n"
+},
+{
+"line": 380,
+"ns": "Std.HashSet",
+"name": "get!_eq_of_mem",
+"full": "Std.HashSet.get!_eq_of_mem",
+"attrs": "",
+"body": "theorem get!_eq_of_mem [LawfulBEq \u03b1] [Inhabited \u03b1] {k : \u03b1} (h : k \u2208 m) : m.get! k = k :=\n  HashMap.getKey!_eq_of_mem h\n"
+},
+{
+"line": 384,
+"ns": "Std.HashSet",
+"name": "getD_emptyWithCapacity",
+"full": "Std.HashSet.getD_emptyWithCapacity",
+"attrs": "@[simp, grind =, cbv_eval] ",
+"body": "theorem getD_emptyWithCapacity {a fallback : \u03b1} {c} : (emptyWithCapacity c : HashSet \u03b1).getD a fallback = fallback :=\n  HashMap.getKeyD_emptyWithCapacity\n"
+},
+{
+"line": 388,
+"ns": "Std.HashSet",
+"name": "getD_empty",
+"full": "Std.HashSet.getD_empty",
+"attrs": "@[simp, grind =] ",
+"body": "theorem getD_empty {a fallback : \u03b1} : (\u2205 : HashSet \u03b1).getD a fallback = fallback :=\n  HashMap.getKeyD_empty\n"
+},
+{
+"line": 391,
+"ns": "Std.HashSet",
+"name": "getD_of_isEmpty",
+"full": "Std.HashSet.getD_of_isEmpty",
+"attrs": "",
+"body": "theorem getD_of_isEmpty [EquivBEq \u03b1] [LawfulHashable \u03b1] {a fallback : \u03b1} :\n    m.isEmpty = true \u2192 m.getD a fallback = fallback :=\n  HashMap.getKeyD_of_isEmpty\n"
+},
+{
+"line": 395,
+"ns": "Std.HashSet",
+"name": "getD_insert",
+"full": "Std.HashSet.getD_insert",
+"attrs": "@[grind =, cbv_eval]",
+"body": "@[grind =, cbv_eval] theorem getD_insert [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a fallback : \u03b1} :\n    (m.insert k).getD a fallback = if k == a \u2227 \u00ack \u2208 m then k else m.getD a fallback :=\n  HashMap.getKeyD_insertIfNew\n"
+},
+{
+"line": 399,
+"ns": "Std.HashSet",
+"name": "getD_eq_fallback_of_contains_eq_false",
+"full": "Std.HashSet.getD_eq_fallback_of_contains_eq_false",
+"attrs": "",
+"body": "theorem getD_eq_fallback_of_contains_eq_false [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {a fallback : \u03b1} :\n    m.contains a = false \u2192 m.getD a fallback = fallback :=\n  HashMap.getKeyD_eq_fallback_of_contains_eq_false\n"
+},
+{
+"line": 404,
+"ns": "Std.HashSet",
+"name": "getD_eq_fallback",
+"full": "Std.HashSet.getD_eq_fallback",
+"attrs": "",
+"body": "theorem getD_eq_fallback [EquivBEq \u03b1] [LawfulHashable \u03b1] {a fallback : \u03b1} :\n    \u00aca \u2208 m \u2192 m.getD a fallback = fallback :=\n  HashMap.getKeyD_eq_fallback\n"
+},
+{
+"line": 408,
+"ns": "Std.HashSet",
+"name": "getD_erase",
+"full": "Std.HashSet.getD_erase",
+"attrs": "@[grind =, cbv_eval]",
+"body": "@[grind =, cbv_eval] theorem getD_erase [EquivBEq \u03b1] [LawfulHashable \u03b1] {k a fallback : \u03b1} :\n    (m.erase k).getD a fallback = if k == a then fallback else m.getD a fallback :=\n  HashMap.getKeyD_erase\n"
+},
+{
+"line": 413,
+"ns": "Std.HashSet",
+"name": "getD_erase_self",
+"full": "Std.HashSet.getD_erase_self",
+"attrs": "@[simp] ",
+"body": "theorem getD_erase_self [EquivBEq \u03b1] [LawfulHashable \u03b1] {k fallback : \u03b1} :\n    (m.erase k).getD k fallback = fallback :=\n  HashMap.getKeyD_erase_self\n"
+},
+{
+"line": 417,
+"ns": "Std.HashSet",
+"name": "get?_eq_some_getD_of_contains",
+"full": "Std.HashSet.get?_eq_some_getD_of_contains",
+"attrs": "",
+"body": "theorem get?_eq_some_getD_of_contains [EquivBEq \u03b1] [LawfulHashable \u03b1] {a fallback : \u03b1} :\n    m.contains a = true \u2192 m.get? a = some (m.getD a fallback) :=\n  HashMap.getKey?_eq_some_getKeyD_of_contains\n"
+},
+{
+"line": 421,
+"ns": "Std.HashSet",
+"name": "get?_eq_some_getD",
+"full": "Std.HashSet.get?_eq_some_getD",
+"attrs": "",
+"body": "theorem get?_eq_some_getD [EquivBEq \u03b1] [LawfulHashable \u03b1] {a fallback : \u03b1} :\n    a \u2208 m \u2192 m.get? a = some (m.getD a fallback) :=\n  HashMap.getKey?_eq_some_getKeyD\n"
+},
+{
+"line": 425,
+"ns": "Std.HashSet",
+"name": "getD_eq_getD_get?",
+"full": "Std.HashSet.getD_eq_getD_get?",
+"attrs": "",
+"body": "theorem getD_eq_getD_get? [EquivBEq \u03b1] [LawfulHashable \u03b1] {a fallback : \u03b1} :\n    m.getD a fallback = (m.get? a).getD fallback :=\n  HashMap.getKeyD_eq_getD_getKey?\n"
+},
+{
+"line": 429,
+"ns": "Std.HashSet",
+"name": "get_eq_getD",
+"full": "Std.HashSet.get_eq_getD",
+"attrs": "",
+"body": "theorem get_eq_getD [EquivBEq \u03b1] [LawfulHashable \u03b1] {a fallback : \u03b1} {h'} :\n    m.get a h' = m.getD a fallback :=\n  @HashMap.getKey_eq_getKeyD _ _ _ _ _ _ _ _ _ h'\n"
+},
+{
+"line": 433,
+"ns": "Std.HashSet",
+"name": "get!_eq_getD_default",
+"full": "Std.HashSet.get!_eq_getD_default",
+"attrs": "",
+"body": "theorem get!_eq_getD_default [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1] {a : \u03b1} :\n    m.get! a = m.getD a default :=\n  HashMap.getKey!_eq_getKeyD_default\n"
+},
+{
+"line": 437,
+"ns": "Std.HashSet",
+"name": "getD_congr",
+"full": "Std.HashSet.getD_congr",
+"attrs": "",
+"body": "theorem getD_congr [EquivBEq \u03b1] [LawfulHashable \u03b1] {k k' fallback : \u03b1}\n    (h : k == k') : m.getD k fallback = m.getD k' fallback :=\n  HashMap.getKeyD_congr h\n"
+},
+{
+"line": 441,
+"ns": "Std.HashSet",
+"name": "getD_eq_of_contains",
+"full": "Std.HashSet.getD_eq_of_contains",
+"attrs": "",
+"body": "theorem getD_eq_of_contains [LawfulBEq \u03b1] {k fallback : \u03b1} (h : m.contains k) :\n    m.getD k fallback = k :=\n  HashMap.getKeyD_eq_of_contains h\n"
+},
+{
+"line": 445,
+"ns": "Std.HashSet",
+"name": "getD_eq_of_mem",
+"full": "Std.HashSet.getD_eq_of_mem",
+"attrs": "",
+"body": "theorem getD_eq_of_mem [LawfulBEq \u03b1] {k fallback : \u03b1} (h : k \u2208 m) : m.getD k fallback = k :=\n  HashMap.getKeyD_eq_of_mem h\n"
+},
+{
+"line": 449,
+"ns": "Std.HashSet",
+"name": "containsThenInsert_fst",
+"full": "Std.HashSet.containsThenInsert_fst",
+"attrs": "@[simp, grind =] ",
+"body": "theorem containsThenInsert_fst {k : \u03b1} : (m.containsThenInsert k).1 = m.contains k :=\n  HashMap.containsThenInsertIfNew_fst\n"
+},
+{
+"line": 453,
+"ns": "Std.HashSet",
+"name": "containsThenInsert_snd",
+"full": "Std.HashSet.containsThenInsert_snd",
+"attrs": "@[simp, grind =] ",
+"body": "theorem containsThenInsert_snd {k : \u03b1} : (m.containsThenInsert k).2 = m.insert k :=\n  ext HashMap.containsThenInsertIfNew_snd\n"
+},
+{
+"line": 457,
+"ns": "Std.HashSet",
+"name": "length_toList",
+"full": "Std.HashSet.length_toList",
+"attrs": "@[simp, grind =] ",
+"body": "theorem length_toList [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    m.toList.length = m.size :=\n  HashMap.length_keys\n"
+},
+{
+"line": 462,
+"ns": "Std.HashSet",
+"name": "isEmpty_toList",
+"full": "Std.HashSet.isEmpty_toList",
+"attrs": "@[simp, grind =] ",
+"body": "theorem isEmpty_toList [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    m.toList.isEmpty = m.isEmpty :=\n  HashMap.isEmpty_keys\n"
+},
+{
+"line": 467,
+"ns": "Std.HashSet",
+"name": "contains_toList",
+"full": "Std.HashSet.contains_toList",
+"attrs": "@[simp, grind =] ",
+"body": "theorem contains_toList [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    m.toList.contains k = m.contains k :=\n  HashMap.contains_keys\n"
+},
+{
+"line": 472,
+"ns": "Std.HashSet",
+"name": "mem_toList",
+"full": "Std.HashSet.mem_toList",
+"attrs": "@[simp, grind =] ",
+"body": "theorem mem_toList [LawfulBEq \u03b1] {k : \u03b1} :\n    k \u2208 m.toList \u2194 k \u2208 m :=\n  HashMap.mem_keys\n"
+},
+{
+"line": 476,
+"ns": "Std.HashSet",
+"name": "mem_of_mem_toList",
+"full": "Std.HashSet.mem_of_mem_toList",
+"attrs": "",
+"body": "theorem mem_of_mem_toList [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    k \u2208 m.toList \u2192 k \u2208 m :=\n  HashMap.mem_of_mem_keys\n"
+},
+{
+"line": 480,
+"ns": "Std.HashSet",
+"name": "distinct_toList",
+"full": "Std.HashSet.distinct_toList",
+"attrs": "",
+"body": "theorem distinct_toList [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    m.toList.Pairwise (fun a b => (a == b) = false) :=\n  HashMap.distinct_keys\n"
+},
+{
+"line": 485,
+"ns": "Std.HashSet",
+"name": "toArray_toList",
+"full": "Std.HashSet.toArray_toList",
+"attrs": "@[simp] ",
+"body": "theorem toArray_toList :\n    m.toList.toArray = m.toArray :=\n  HashMap.toArray_keys\n"
+},
+{
+"line": 490,
+"ns": "Std.HashSet",
+"name": "toList_toArray",
+"full": "Std.HashSet.toList_toArray",
+"attrs": "@[simp] ",
+"body": "theorem toList_toArray :\n    m.toArray.toList = m.toList :=\n  HashMap.toList_keysArray\n"
+},
+{
+"line": 495,
+"ns": "Std.HashSet",
+"name": "size_toArray",
+"full": "Std.HashSet.size_toArray",
+"attrs": "@[simp] ",
+"body": "theorem size_toArray [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    m.toArray.size = m.size :=\n  HashMap.size_keysArray\n"
+},
+{
+"line": 500,
+"ns": "Std.HashSet",
+"name": "isEmpty_toArray",
+"full": "Std.HashSet.isEmpty_toArray",
+"attrs": "@[simp] ",
+"body": "theorem isEmpty_toArray [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    m.toArray.isEmpty = m.isEmpty :=\n  HashMap.isEmpty_keysArray\n"
+},
+{
+"line": 505,
+"ns": "Std.HashSet",
+"name": "contains_toArray",
+"full": "Std.HashSet.contains_toArray",
+"attrs": "@[simp] ",
+"body": "theorem contains_toArray [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k : \u03b1} :\n    m.toArray.contains k = m.contains k :=\n  HashMap.contains_keysArray\n"
+},
+{
+"line": 511,
+"ns": "Std.HashSet",
+"name": "mem_toArray",
+"full": "Std.HashSet.mem_toArray",
+"attrs": "@[simp] ",
+"body": "theorem mem_toArray [LawfulBEq \u03b1] {k : \u03b1} :\n    k \u2208 m.toArray \u2194 k \u2208 m :=\n  HashMap.mem_keysArray\n"
+},
+{
+"line": 515,
+"ns": "Std.HashSet",
+"name": "forall_mem_toArray_iff_forall_mem_get",
+"full": "Std.HashSet.forall_mem_toArray_iff_forall_mem_get",
+"attrs": "",
+"body": "theorem forall_mem_toArray_iff_forall_mem_get [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {p : \u03b1 \u2192 Prop} :\n    (\u2200 k \u2208 m.toArray, p k) \u2194 \u2200 (k : \u03b1) (h : k \u2208 m), p (m.get k h) :=\n  HashMap.forall_mem_keysArray_iff_forall_mem_getKey\n"
+},
+{
+"line": 520,
+"ns": "Std.HashSet",
+"name": "contains_of_mem_toArray",
+"full": "Std.HashSet.contains_of_mem_toArray",
+"attrs": "",
+"body": "theorem contains_of_mem_toArray [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1}\n    (h' : k \u2208 m.toArray) : m.contains k :=\n  HashMap.contains_of_mem_keysArray h'\n"
+},
+{
+"line": 528,
+"ns": "Std.HashSet",
+"name": "foldM_eq_foldlM_toList",
+"full": "Std.HashSet.foldM_eq_foldlM_toList",
+"attrs": "",
+"body": "theorem foldM_eq_foldlM_toList [Monad m'] [LawfulMonad m']\n    {f : \u03b4 \u2192 \u03b1 \u2192 m' \u03b4} {init : \u03b4} :\n    m.foldM f init = m.toList.foldlM f init :=\n  HashMap.foldM_eq_foldlM_keys\n"
+},
+{
+"line": 533,
+"ns": "Std.HashSet",
+"name": "fold_eq_foldl_toList",
+"full": "Std.HashSet.fold_eq_foldl_toList",
+"attrs": "",
+"body": "theorem fold_eq_foldl_toList {f : \u03b4 \u2192 \u03b1 \u2192 \u03b4} {init : \u03b4} :\n    m.fold f init = m.toList.foldl f init :=\n  HashMap.fold_eq_foldl_keys\n"
+},
+{
+"line": 538,
+"ns": "Std.HashSet",
+"name": "forM_eq_forM",
+"full": "Std.HashSet.forM_eq_forM",
+"attrs": "@[simp, grind =] ",
+"body": "theorem forM_eq_forM [Monad m'] [LawfulMonad m'] {f : \u03b1 \u2192 m' PUnit} :\n    m.forM f = ForM.forM m f := rfl\n"
+},
+{
+"line": 541,
+"ns": "Std.HashSet",
+"name": "forM_eq_forM_toList",
+"full": "Std.HashSet.forM_eq_forM_toList",
+"attrs": "",
+"body": "theorem forM_eq_forM_toList [Monad m'] [LawfulMonad m'] {f : \u03b1 \u2192 m' PUnit} :\n    ForM.forM m f = ForM.forM m.toList f :=\n  HashMap.forM_eq_forM_keys\n"
+},
+{
+"line": 546,
+"ns": "Std.HashSet",
+"name": "forIn_eq_forIn",
+"full": "Std.HashSet.forIn_eq_forIn",
+"attrs": "@[simp, grind =] ",
+"body": "theorem forIn_eq_forIn [Monad m'] [LawfulMonad m']\n    {f : \u03b1 \u2192 \u03b4 \u2192 m' (ForInStep \u03b4)} {init : \u03b4} :\n    ForIn.forIn m init f = ForIn.forIn m init f := rfl\n"
+},
+{
+"line": 550,
+"ns": "Std.HashSet",
+"name": "forIn_eq_forIn_toList",
+"full": "Std.HashSet.forIn_eq_forIn_toList",
+"attrs": "",
+"body": "theorem forIn_eq_forIn_toList [Monad m'] [LawfulMonad m']\n    {f : \u03b1 \u2192 \u03b4 \u2192 m' (ForInStep \u03b4)} {init : \u03b4} :\n    ForIn.forIn m init f = ForIn.forIn m.toList init f :=\n  HashMap.forIn_eq_forIn_keys\n"
+},
+{
+"line": 556,
+"ns": "Std.HashSet",
+"name": "forIn_toList",
+"full": "Std.HashSet.forIn_toList",
+"attrs": "@[simp, grind =] ",
+"body": "theorem forIn_toList (c : HashSet \u03b1) : ForIn.toList c = c.toList :=\n  Std.Internal.ForIn.toList_eq_of_forIn_eq fun _ _ => forIn_eq_forIn_toList\n"
+},
+{
+"line": 563,
+"ns": "Std.HashSet",
+"name": "foldM_eq_foldlM_toArray",
+"full": "Std.HashSet.foldM_eq_foldlM_toArray",
+"attrs": "",
+"body": "theorem foldM_eq_foldlM_toArray [Monad m'] [LawfulMonad m']\n    {f : \u03b4 \u2192 \u03b1 \u2192 m' \u03b4} {init : \u03b4} :\n    m.foldM (fun d a => f d a) init = m.toArray.foldlM f init :=\n  HashMap.foldM_eq_foldlM_keysArray\n"
+},
+{
+"line": 568,
+"ns": "Std.HashSet",
+"name": "fold_eq_foldl_toArray",
+"full": "Std.HashSet.fold_eq_foldl_toArray",
+"attrs": "",
+"body": "theorem fold_eq_foldl_toArray {f : \u03b4 \u2192 \u03b1 \u2192 \u03b4} {init : \u03b4} :\n    m.fold (fun d a => f d a) init = m.toArray.foldl f init :=\n  HashMap.fold_eq_foldl_keysArray\n"
+},
+{
+"line": 572,
+"ns": "Std.HashSet",
+"name": "forM_eq_forM_toArray",
+"full": "Std.HashSet.forM_eq_forM_toArray",
+"attrs": "",
+"body": "theorem forM_eq_forM_toArray [Monad m'] [LawfulMonad m'] {f : \u03b1 \u2192 m' PUnit} :\n    m.forM (fun a => f a) = m.toArray.forM f :=\n  HashMap.forM_eq_forM_keysArray\n"
+},
+{
+"line": 576,
+"ns": "Std.HashSet",
+"name": "forIn_eq_forIn_toArray",
+"full": "Std.HashSet.forIn_eq_forIn_toArray",
+"attrs": "",
+"body": "theorem forIn_eq_forIn_toArray [Monad m'] [LawfulMonad m']\n    {f : \u03b1 \u2192 \u03b4 \u2192 m' (ForInStep \u03b4)} {init : \u03b4} :\n    m.forIn (fun a d => f a d) init = ForIn.forIn m.toArray init f :=\n  HashMap.forIn_eq_forIn_keysArray\n"
+},
+{
+"line": 583,
+"ns": "Std.HashSet",
+"name": "all_eq_not_any_not",
+"full": "Std.HashSet.all_eq_not_any_not",
+"attrs": "",
+"body": "theorem all_eq_not_any_not {p : \u03b1 \u2192 Bool} :\n    m.all p = ! m.any (fun a => ! p a) := HashMap.all_eq_not_any_not\n"
+},
+{
+"line": 586,
+"ns": "Std.HashSet",
+"name": "any_eq_not_all_not",
+"full": "Std.HashSet.any_eq_not_all_not",
+"attrs": "",
+"body": "theorem any_eq_not_all_not {p : \u03b1 \u2192 Bool} :\n    m.any p = ! m.all (fun a => ! p a) := HashMap.any_eq_not_all_not\n"
+},
+{
+"line": 590,
+"ns": "Std.HashSet",
+"name": "any_toList",
+"full": "Std.HashSet.any_toList",
+"attrs": "@[simp] ",
+"body": "theorem any_toList [LawfulHashable \u03b1] [EquivBEq \u03b1] {p : \u03b1 \u2192 Bool} :\n    m.toList.any p = m.any p :=\n  HashMap.any_keys\n"
+},
+{
+"line": 594,
+"ns": "Std.HashSet",
+"name": "any_eq_true_iff_exists_mem_get",
+"full": "Std.HashSet.any_eq_true_iff_exists_mem_get",
+"attrs": "",
+"body": "theorem any_eq_true_iff_exists_mem_get [LawfulHashable \u03b1] [EquivBEq \u03b1]\n    {p : \u03b1 \u2192 Bool} :\n    m.any p = true \u2194 \u2203 (a : \u03b1) (h : a \u2208 m), p (m.get a h) :=\n  HashMap.any_eq_true_iff_exists_mem_getKey_getElem\n"
+},
+{
+"line": 599,
+"ns": "Std.HashSet",
+"name": "any_eq_true_iff_exists_mem",
+"full": "Std.HashSet.any_eq_true_iff_exists_mem",
+"attrs": "",
+"body": "theorem any_eq_true_iff_exists_mem [LawfulBEq \u03b1] {p : \u03b1 \u2192 Bool} :\n    m.any p = true \u2194 \u2203 (a : \u03b1), a \u2208 m \u2227 p a := by\n  simpa using! @HashMap.any_eq_true_iff_exists_mem_getElem _ _ _ _ _ _ (fun a b => p a)\n"
+},
+{
+"line": 603,
+"ns": "Std.HashSet",
+"name": "any_eq_false_iff_forall_mem_get",
+"full": "Std.HashSet.any_eq_false_iff_forall_mem_get",
+"attrs": "",
+"body": "theorem any_eq_false_iff_forall_mem_get [LawfulHashable \u03b1] [EquivBEq \u03b1]\n    {p : \u03b1 \u2192 Bool} :\n    m.any p = false \u2194\n      \u2200 (a : \u03b1) (h : a \u2208 m), p (m.get a h) = false :=\n  HashMap.any_eq_false_iff_forall_mem_getKey_getElem\n"
+},
+{
+"line": 609,
+"ns": "Std.HashSet",
+"name": "any_eq_false_iff_forall_mem",
+"full": "Std.HashSet.any_eq_false_iff_forall_mem",
+"attrs": "",
+"body": "theorem any_eq_false_iff_forall_mem [LawfulBEq \u03b1] {p : \u03b1 \u2192 Bool} :\n    m.any p = false \u2194\n      \u2200 (a : \u03b1), a \u2208 m \u2192 p a = false := by\n  simpa using! @HashMap.any_eq_false_iff_forall_mem_getElem _ _ _ _ _ _ (fun a b => p a)\n"
+},
+{
+"line": 615,
+"ns": "Std.HashSet",
+"name": "all_toList",
+"full": "Std.HashSet.all_toList",
+"attrs": "@[simp] ",
+"body": "theorem all_toList [LawfulHashable \u03b1] [EquivBEq \u03b1] {p : \u03b1 \u2192 Bool} :\n    m.toList.all p =m.all p :=\n  HashMap.all_keys\n"
+},
+{
+"line": 619,
+"ns": "Std.HashSet",
+"name": "all_eq_true_iff_forall_mem_get",
+"full": "Std.HashSet.all_eq_true_iff_forall_mem_get",
+"attrs": "",
+"body": "theorem all_eq_true_iff_forall_mem_get [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {p : \u03b1 \u2192 Bool} :\n    m.all p = true \u2194 \u2200 (a : \u03b1) (h : a \u2208 m), p (m.get a h) :=\n  HashMap.all_eq_true_iff_forall_mem_getKey_getElem\n"
+},
+{
+"line": 624,
+"ns": "Std.HashSet",
+"name": "all_eq_true_iff_forall_mem",
+"full": "Std.HashSet.all_eq_true_iff_forall_mem",
+"attrs": "",
+"body": "theorem all_eq_true_iff_forall_mem [LawfulBEq \u03b1] {p : \u03b1 \u2192 Bool} :\n    m.all p = true \u2194 \u2200 (a : \u03b1), a \u2208 m \u2192 p a :=\n  HashMap.all_eq_true_iff_forall_mem_getElem\n"
+},
+{
+"line": 628,
+"ns": "Std.HashSet",
+"name": "all_eq_false_iff_exists_mem_get",
+"full": "Std.HashSet.all_eq_false_iff_exists_mem_get",
+"attrs": "",
+"body": "theorem all_eq_false_iff_exists_mem_get [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {p : \u03b1 \u2192 Bool} :\n    m.all p = false \u2194 \u2203 (a : \u03b1) (h : a \u2208 m), p (m.get a h) = false :=\n  HashMap.all_eq_false_iff_exists_mem_getKey_getElem\n"
+},
+{
+"line": 633,
+"ns": "Std.HashSet",
+"name": "all_eq_false_iff_exists_mem",
+"full": "Std.HashSet.all_eq_false_iff_exists_mem",
+"attrs": "",
+"body": "theorem all_eq_false_iff_exists_mem [LawfulBEq \u03b1] {p : \u03b1 \u2192 Bool} :\n    m.all p = false \u2194 \u2203 (a : \u03b1), a \u2208 m \u2227 p a = false := by\n  simpa using! @HashMap.all_eq_false_iff_exists_mem_getElem _ _ _ _ _ _ (fun a b => p a)\n"
+},
+{
+"line": 640,
+"ns": "Std.HashSet",
+"name": "insertMany_nil",
+"full": "Std.HashSet.insertMany_nil",
+"attrs": "@[simp, grind =, cbv_eval] ",
+"body": "theorem insertMany_nil :\n    insertMany m [] = m :=\n  ext HashMap.insertManyIfNewUnit_nil\n"
+},
+{
+"line": 645,
+"ns": "Std.HashSet",
+"name": "insertMany_list_singleton",
+"full": "Std.HashSet.insertMany_list_singleton",
+"attrs": "@[simp, grind =] ",
+"body": "theorem insertMany_list_singleton {k : \u03b1} :\n    insertMany m [k] = m.insert k :=\n  ext HashMap.insertManyIfNewUnit_list_singleton\n"
+},
+{
+"line": 649,
+"ns": "Std.HashSet",
+"name": "insertMany_cons",
+"full": "Std.HashSet.insertMany_cons",
+"attrs": "@[grind _=_, cbv_eval]",
+"body": "@[grind _=_, cbv_eval] theorem insertMany_cons {l : List \u03b1} {k : \u03b1} :\n    insertMany m (k :: l) = insertMany (m.insert k) l :=\n  ext HashMap.insertManyIfNewUnit_cons\n"
+},
+{
+"line": 654,
+"ns": "Std.HashSet",
+"name": "insertMany_append",
+"full": "Std.HashSet.insertMany_append",
+"attrs": "@[grind _=_] ",
+"body": "theorem insertMany_append {l\u2081 l\u2082 : List \u03b1} :\n    insertMany m (l\u2081 ++ l\u2082) = insertMany (insertMany m l\u2081) l\u2082 := by\n  induction l\u2081 generalizing m with\n  | nil => simp\n  | cons hd tl ih =>\n    rw [List.cons_append, insertMany_cons, insertMany_cons, ih]\n"
+},
+{
+"line": 662,
+"ns": "Std.HashSet",
+"name": "insertMany_ind",
+"full": "Std.HashSet.insertMany_ind",
+"attrs": "@[elab_as_elim] ",
+"body": "theorem insertMany_ind {motive : HashSet \u03b1 \u2192 Prop} (m : HashSet \u03b1) {l : \u03c1}\n    (init : motive m) (insert : \u2200 m a, motive m \u2192 motive (m.insert a)) :\n    motive (m.insertMany l) :=\n  show motive \u27e8m.1.insertManyIfNewUnit l\u27e9 from\n    HashMap.insertManyIfNewUnit_ind m.inner l init fun m => insert \u27e8m\u27e9\n"
+},
+{
+"line": 669,
+"ns": "Std.HashSet",
+"name": "contains_insertMany_list",
+"full": "Std.HashSet.contains_insertMany_list",
+"attrs": "@[simp, grind =] ",
+"body": "theorem contains_insertMany_list [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} {k : \u03b1} :\n    (insertMany m l).contains k = (m.contains k || l.contains k) :=\n  HashMap.contains_insertManyIfNewUnit_list\n"
+},
+{
+"line": 675,
+"ns": "Std.HashSet",
+"name": "mem_insertMany_list",
+"full": "Std.HashSet.mem_insertMany_list",
+"attrs": "@[simp, grind =] ",
+"body": "theorem mem_insertMany_list [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} {k : \u03b1} :\n    k \u2208 insertMany m l \u2194 k \u2208 m \u2228 l.contains k :=\n  HashMap.mem_insertManyIfNewUnit_list\n"
+},
+{
+"line": 680,
+"ns": "Std.HashSet",
+"name": "mem_of_mem_insertMany_list",
+"full": "Std.HashSet.mem_of_mem_insertMany_list",
+"attrs": "",
+"body": "theorem mem_of_mem_insertMany_list [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} {k : \u03b1} (contains_eq_false : l.contains k = false) :\n    k \u2208 insertMany m l \u2192 k \u2208 m :=\n  HashMap.mem_of_mem_insertManyIfNewUnit_list contains_eq_false\n"
+},
+{
+"line": 685,
+"ns": "Std.HashSet",
+"name": "mem_insertMany_of_mem",
+"full": "Std.HashSet.mem_insertMany_of_mem",
+"attrs": "",
+"body": "theorem mem_insertMany_of_mem [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : \u03c1} {k : \u03b1} : k \u2208 m \u2192 k \u2208 m.insertMany l :=\n  HashMap.mem_insertManyIfNewUnit_of_mem\n"
+},
+{
+"line": 689,
+"ns": "Std.HashSet",
+"name": "get?_insertMany_list_of_not_mem_of_contains_eq_false",
+"full": "Std.HashSet.get?_insertMany_list_of_not_mem_of_contains_eq_false",
+"attrs": "",
+"body": "theorem get?_insertMany_list_of_not_mem_of_contains_eq_false\n    [EquivBEq \u03b1] [LawfulHashable \u03b1] {l : List \u03b1} {k : \u03b1}\n    (not_mem : \u00ac k \u2208 m) (contains_eq_false : l.contains k = false) :\n    get? (insertMany m l) k = none :=\n  HashMap.getKey?_insertManyIfNewUnit_list_of_not_mem_of_contains_eq_false\n    not_mem contains_eq_false\n"
+},
+{
+"line": 696,
+"ns": "Std.HashSet",
+"name": "get?_insertMany_list_of_not_mem_of_mem",
+"full": "Std.HashSet.get?_insertMany_list_of_not_mem_of_mem",
+"attrs": "",
+"body": "theorem get?_insertMany_list_of_not_mem_of_mem [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} {k k' : \u03b1} (k_beq : k == k')\n    (not_mem : \u00ac k \u2208 m)\n    (distinct : l.Pairwise (fun a b => (a == b) = false)) (mem : k \u2208 l) :\n    get? (insertMany m l) k' = some k :=\n  HashMap.getKey?_insertManyIfNewUnit_list_of_not_mem_of_mem\n    k_beq not_mem distinct mem\n"
+},
+{
+"line": 704,
+"ns": "Std.HashSet",
+"name": "get?_insertMany_list_of_mem",
+"full": "Std.HashSet.get?_insertMany_list_of_mem",
+"attrs": "",
+"body": "theorem get?_insertMany_list_of_mem [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} {k : \u03b1} (mem : k \u2208 m) :\n    get? (insertMany m l) k = get? m k :=\n  HashMap.getKey?_insertManyIfNewUnit_list_of_mem mem\n"
+},
+{
+"line": 709,
+"ns": "Std.HashSet",
+"name": "get_insertMany_list_of_not_mem_of_mem",
+"full": "Std.HashSet.get_insertMany_list_of_not_mem_of_mem",
+"attrs": "",
+"body": "theorem get_insertMany_list_of_not_mem_of_mem [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1}\n    {k k' : \u03b1} (k_beq : k == k')\n    (not_mem : \u00ac k \u2208 m)\n    (distinct : l.Pairwise (fun a b => (a == b) = false)) (mem : k \u2208 l) {h} :\n    get (insertMany m l) k' h = k :=\n  HashMap.getKey_insertManyIfNewUnit_list_of_not_mem_of_mem\n    k_beq not_mem distinct mem\n"
+},
+{
+"line": 718,
+"ns": "Std.HashSet",
+"name": "get_insertMany_list_of_mem",
+"full": "Std.HashSet.get_insertMany_list_of_mem",
+"attrs": "",
+"body": "theorem get_insertMany_list_of_mem [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} {k : \u03b1} (mem : k \u2208 m) {h} :\n    get (insertMany m l) k h = get m k mem :=\n  HashMap.getKey_insertManyIfNewUnit_list_of_mem mem\n"
+},
+{
+"line": 723,
+"ns": "Std.HashSet",
+"name": "get!_insertMany_list_of_not_mem_of_contains_eq_false",
+"full": "Std.HashSet.get!_insertMany_list_of_not_mem_of_contains_eq_false",
+"attrs": "",
+"body": "theorem get!_insertMany_list_of_not_mem_of_contains_eq_false\n    [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1] {l : List \u03b1} {k : \u03b1}\n    (not_mem : \u00ac k \u2208 m) (contains_eq_false : l.contains k = false) :\n    get! (insertMany m l) k = default :=\n  HashMap.getKey!_insertManyIfNewUnit_list_of_not_mem_of_contains_eq_false\n    not_mem contains_eq_false\n"
+},
+{
+"line": 730,
+"ns": "Std.HashSet",
+"name": "get!_insertMany_list_of_not_mem_of_mem",
+"full": "Std.HashSet.get!_insertMany_list_of_not_mem_of_mem",
+"attrs": "",
+"body": "theorem get!_insertMany_list_of_not_mem_of_mem [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    [Inhabited \u03b1] {l : List \u03b1} {k k' : \u03b1} (k_beq : k == k')\n    (not_mem : \u00ac k \u2208 m)\n    (distinct : l.Pairwise (fun a b => (a == b) = false)) (mem : k \u2208 l) :\n    get! (insertMany m l) k' = k :=\n  HashMap.getKey!_insertManyIfNewUnit_list_of_not_mem_of_mem\n    k_beq not_mem distinct mem\n"
+},
+{
+"line": 738,
+"ns": "Std.HashSet",
+"name": "get!_insertMany_list_of_mem",
+"full": "Std.HashSet.get!_insertMany_list_of_mem",
+"attrs": "",
+"body": "theorem get!_insertMany_list_of_mem [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    [Inhabited \u03b1] {l : List \u03b1} {k : \u03b1} (mem : k \u2208 m) :\n    get! (insertMany m l) k = get! m k :=\n  HashMap.getKey!_insertManyIfNewUnit_list_of_mem mem\n"
+},
+{
+"line": 743,
+"ns": "Std.HashSet",
+"name": "getD_insertMany_list_of_not_mem_of_contains_eq_false",
+"full": "Std.HashSet.getD_insertMany_list_of_not_mem_of_contains_eq_false",
+"attrs": "",
+"body": "theorem getD_insertMany_list_of_not_mem_of_contains_eq_false\n    [EquivBEq \u03b1] [LawfulHashable \u03b1] {l : List \u03b1} {k fallback : \u03b1}\n    (not_mem : \u00ac k \u2208 m) (contains_eq_false : l.contains k = false) :\n    getD (insertMany m l) k fallback = fallback :=\n  HashMap.getKeyD_insertManyIfNewUnit_list_of_not_mem_of_contains_eq_false\n    not_mem contains_eq_false\n"
+},
+{
+"line": 750,
+"ns": "Std.HashSet",
+"name": "getD_insertMany_list_of_not_mem_of_mem",
+"full": "Std.HashSet.getD_insertMany_list_of_not_mem_of_mem",
+"attrs": "",
+"body": "theorem getD_insertMany_list_of_not_mem_of_mem [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} {k k' fallback : \u03b1} (k_beq : k == k')\n    (not_mem : \u00ac k \u2208 m)\n    (distinct : l.Pairwise (fun a b => (a == b) = false)) (mem : k \u2208 l)  :\n    getD (insertMany m l) k' fallback = k :=\n  HashMap.getKeyD_insertManyIfNewUnit_list_of_not_mem_of_mem\n    k_beq not_mem distinct mem\n"
+},
+{
+"line": 758,
+"ns": "Std.HashSet",
+"name": "getD_insertMany_list_of_mem",
+"full": "Std.HashSet.getD_insertMany_list_of_mem",
+"attrs": "",
+"body": "theorem getD_insertMany_list_of_mem [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} {k fallback : \u03b1} (mem : k \u2208 m) :\n    getD (insertMany m l) k fallback = getD m k fallback :=\n  HashMap.getKeyD_insertManyIfNewUnit_list_of_mem mem\n"
+},
+{
+"line": 763,
+"ns": "Std.HashSet",
+"name": "size_insertMany_list",
+"full": "Std.HashSet.size_insertMany_list",
+"attrs": "",
+"body": "theorem size_insertMany_list [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1}\n    (distinct : l.Pairwise (fun a b => (a == b) = false)) :\n    (\u2200 (a : \u03b1), a \u2208 m \u2192 l.contains a = false) \u2192\n      (insertMany m l).size = m.size + l.length :=\n  HashMap.size_insertManyIfNewUnit_list distinct\n"
+},
+{
+"line": 770,
+"ns": "Std.HashSet",
+"name": "size_le_size_insertMany_list",
+"full": "Std.HashSet.size_le_size_insertMany_list",
+"attrs": "",
+"body": "theorem size_le_size_insertMany_list [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} :\n    m.size \u2264 (insertMany m l).size :=\n  HashMap.size_le_size_insertManyIfNewUnit_list\n"
+},
+{
+"line": 775,
+"ns": "Std.HashSet",
+"name": "size_le_size_insertMany",
+"full": "Std.HashSet.size_le_size_insertMany",
+"attrs": "",
+"body": "theorem size_le_size_insertMany [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : \u03c1} : m.size \u2264 (insertMany m l).size :=\n  HashMap.size_le_size_insertManyIfNewUnit\n"
+},
+{
+"line": 781,
+"ns": "Std.HashSet",
+"name": "size_insertMany_list_le",
+"full": "Std.HashSet.size_insertMany_list_le",
+"attrs": "",
+"body": "theorem size_insertMany_list_le [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} :\n    (insertMany m l).size \u2264 m.size + l.length :=\n  HashMap.size_insertManyIfNewUnit_list_le\n"
+},
+{
+"line": 789,
+"ns": "Std.HashSet",
+"name": "isEmpty_insertMany_list",
+"full": "Std.HashSet.isEmpty_insertMany_list",
+"attrs": "@[simp, grind =] ",
+"body": "theorem isEmpty_insertMany_list [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} :\n    (insertMany m l).isEmpty = (m.isEmpty && l.isEmpty) :=\n  HashMap.isEmpty_insertManyIfNewUnit_list\n"
+},
+{
+"line": 794,
+"ns": "Std.HashSet",
+"name": "isEmpty_of_isEmpty_insertMany",
+"full": "Std.HashSet.isEmpty_of_isEmpty_insertMany",
+"attrs": "",
+"body": "theorem isEmpty_of_isEmpty_insertMany [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : \u03c1} : (insertMany m l).isEmpty \u2192 m.isEmpty :=\n  HashMap.isEmpty_of_isEmpty_insertManyIfNewUnit\n"
+},
+{
+"line": 803,
+"ns": "Std.HashSet",
+"name": "Equiv.beq",
+"full": "Std.HashSet.Equiv.beq",
+"attrs": "",
+"body": "theorem Equiv.beq [EquivBEq \u03b1] [LawfulHashable \u03b1] (h : m\u2081 ~m m\u2082) : m\u2081 == m\u2082 :=\n  HashMap.Equiv.beq h.1\n"
+},
+{
+"line": 806,
+"ns": "Std.HashSet",
+"name": "equiv_of_beq",
+"full": "Std.HashSet.equiv_of_beq",
+"attrs": "",
+"body": "theorem equiv_of_beq [LawfulBEq \u03b1] (h : m\u2081 == m\u2082) : m\u2081 ~m m\u2082 :=\n  \u27e8HashMap.equiv_of_beq h\u27e9\n"
+},
+{
+"line": 809,
+"ns": "Std.HashSet",
+"name": "beq_iff_equiv",
+"full": "Std.HashSet.beq_iff_equiv",
+"attrs": "",
+"body": "theorem beq_iff_equiv [LawfulBEq \u03b1] : (m\u2081 == m\u2082) \u2194 m\u2081 ~m m\u2082 :=\n  \u27e8equiv_of_beq, Equiv.beq\u27e9\n"
+},
+{
+"line": 812,
+"ns": "Std.HashSet",
+"name": "Equiv.beq_congr",
+"full": "Std.HashSet.Equiv.beq_congr",
+"attrs": "",
+"body": "theorem Equiv.beq_congr [EquivBEq \u03b1] [LawfulHashable \u03b1] {m\u2083 m\u2084 : HashSet \u03b1} (h\u2081 : m\u2081 ~m m\u2083) (h\u2082 : m\u2082 ~m m\u2084) : (m\u2081 == m\u2082) = (m\u2083 == m\u2084) :=\n  HashMap.Equiv.beq_congr h\u2081.1 h\u2082.1\n"
+},
+{
+"line": 824,
+"ns": "Std.HashSet",
+"name": "union_eq",
+"full": "Std.HashSet.union_eq",
+"attrs": "@[simp] ",
+"body": "theorem union_eq : m\u2081.union m\u2082 = m\u2081 \u222a m\u2082 := by\n  simp only [Union.union]\n"
+},
+{
+"line": 829,
+"ns": "Std.HashSet",
+"name": "contains_union",
+"full": "Std.HashSet.contains_union",
+"attrs": "@[simp] ",
+"body": "theorem contains_union [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k : \u03b1} :\n    (m\u2081 \u222a m\u2082).contains k = (m\u2081.contains k || m\u2082.contains k) :=\n  @HashMap.contains_union _ _ _ _ m\u2081.inner m\u2082.inner _ _  k\n"
+},
+{
+"line": 835,
+"ns": "Std.HashSet",
+"name": "mem_union_of_left",
+"full": "Std.HashSet.mem_union_of_left",
+"attrs": "",
+"body": "theorem mem_union_of_left [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    k \u2208 m\u2081 \u2192 k \u2208 m\u2081 \u222a m\u2082:=\n  @HashMap.mem_union_of_left _ _ _ _ m\u2081.inner m\u2082.inner _ _ k\n"
+},
+{
+"line": 839,
+"ns": "Std.HashSet",
+"name": "mem_union_of_right",
+"full": "Std.HashSet.mem_union_of_right",
+"attrs": "",
+"body": "theorem mem_union_of_right [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    k \u2208 m\u2082 \u2192 k \u2208 m\u2081 \u222a m\u2082:=\n  @HashMap.mem_union_of_right _ _ _ _ m\u2081.inner m\u2082.inner _ _  k\n"
+},
+{
+"line": 844,
+"ns": "Std.HashSet",
+"name": "mem_union_iff",
+"full": "Std.HashSet.mem_union_iff",
+"attrs": "@[simp] ",
+"body": "theorem mem_union_iff [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    (m\u2081 \u222a m\u2082).contains k \u2194 m\u2081.contains k \u2228 m\u2082.contains k :=\n  @HashMap.mem_union_iff _ _ _ _ m\u2081.inner m\u2082.inner _ _  k\n"
+},
+{
+"line": 848,
+"ns": "Std.HashSet",
+"name": "mem_of_mem_union_of_not_mem_right",
+"full": "Std.HashSet.mem_of_mem_union_of_not_mem_right",
+"attrs": "",
+"body": "theorem mem_of_mem_union_of_not_mem_right [EquivBEq \u03b1]\n    [LawfulHashable \u03b1] {k : \u03b1} :\n    k \u2208 m\u2081 \u222a m\u2082 \u2192 \u00ack \u2208 m\u2082 \u2192 k \u2208 m\u2081 :=\n  @HashMap.mem_of_mem_union_of_not_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _  k\n"
+},
+{
+"line": 853,
+"ns": "Std.HashSet",
+"name": "mem_of_mem_union_of_not_mem_left",
+"full": "Std.HashSet.mem_of_mem_union_of_not_mem_left",
+"attrs": "",
+"body": "theorem mem_of_mem_union_of_not_mem_left [EquivBEq \u03b1]\n    [LawfulHashable \u03b1] {k : \u03b1} :\n    k \u2208 m\u2081 \u222a m\u2082 \u2192 \u00ack \u2208 m\u2081 \u2192 k \u2208 m\u2082 :=\n  @HashMap.mem_of_mem_union_of_not_mem_left _ _ _ _ m\u2081.inner m\u2082.inner _ _  k\n"
+},
+{
+"line": 859,
+"ns": "Std.HashSet",
+"name": "Equiv.union_left",
+"full": "Std.HashSet.Equiv.union_left",
+"attrs": "",
+"body": "theorem Equiv.union_left {m\u2083 : HashSet \u03b1} [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    (equiv : m\u2081 ~m m\u2082) :\n    (m\u2081 \u222a m\u2083) ~m (m\u2082 \u222a m\u2083) :=\n  \u27e8HashMap.Equiv.union_left equiv.1\u27e9\n"
+},
+{
+"line": 864,
+"ns": "Std.HashSet",
+"name": "Equiv.union_right",
+"full": "Std.HashSet.Equiv.union_right",
+"attrs": "",
+"body": "theorem Equiv.union_right {m\u2083 : HashSet \u03b1} [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    (equiv : m\u2082 ~m m\u2083) :\n    (m\u2081 \u222a m\u2082) ~m (m\u2081 \u222a m\u2083) :=\n  \u27e8HashMap.Equiv.union_right equiv.1\u27e9\n"
+},
+{
+"line": 869,
+"ns": "Std.HashSet",
+"name": "Equiv.union_congr",
+"full": "Std.HashSet.Equiv.union_congr",
+"attrs": "",
+"body": "theorem Equiv.union_congr {m\u2083 m\u2084 : HashSet \u03b1} [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    (equiv\u2081 : m\u2081 ~m m\u2083)\n    (equiv\u2082 : m\u2082 ~m m\u2084) :\n    (m\u2081 \u222a m\u2082) ~m (m\u2083 \u222a m\u2084) :=\n  \u27e8HashMap.Equiv.union_congr equiv\u2081.1 equiv\u2082.1\u27e9\n"
+},
+{
+"line": 876,
+"ns": "Std.HashSet",
+"name": "get?_union",
+"full": "Std.HashSet.get?_union",
+"attrs": "",
+"body": "theorem get?_union [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    (m\u2081 \u222a m\u2082).get? k = (m\u2082.get? k).or (m\u2081.get? k) :=\n  @HashMap.getKey?_union _ _ _ _ m\u2081.inner m\u2082.inner _ _  k\n"
+},
+{
+"line": 880,
+"ns": "Std.HashSet",
+"name": "get?_union_of_not_mem_left",
+"full": "Std.HashSet.get?_union_of_not_mem_left",
+"attrs": "",
+"body": "theorem get?_union_of_not_mem_left [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k : \u03b1} (not_mem : \u00ack \u2208 m\u2081) :\n    (m\u2081 \u222a m\u2082).get? k = m\u2082.get? k :=\n  @HashMap.getKey?_union_of_not_mem_left _ _ _ _ m\u2081.inner m\u2082.inner _ _  k not_mem\n"
+},
+{
+"line": 885,
+"ns": "Std.HashSet",
+"name": "get?_union_of_not_mem_right",
+"full": "Std.HashSet.get?_union_of_not_mem_right",
+"attrs": "",
+"body": "theorem get?_union_of_not_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k : \u03b1} (not_mem : \u00ack \u2208 m\u2082) :\n    (m\u2081 \u222a m\u2082).get? k = m\u2081.get? k :=\n  @HashMap.getKey?_union_of_not_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _  k not_mem\n"
+},
+{
+"line": 891,
+"ns": "Std.HashSet",
+"name": "get_union_of_mem_right",
+"full": "Std.HashSet.get_union_of_mem_right",
+"attrs": "",
+"body": "theorem get_union_of_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k : \u03b1} (mem : k \u2208 m\u2082) :\n    (m\u2081 \u222a m\u2082).get k (mem_union_of_right mem) = m\u2082.get k mem :=\n  @HashMap.getKey_union_of_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _  k mem\n"
+},
+{
+"line": 896,
+"ns": "Std.HashSet",
+"name": "get_union_of_not_mem_left",
+"full": "Std.HashSet.get_union_of_not_mem_left",
+"attrs": "",
+"body": "theorem get_union_of_not_mem_left [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k : \u03b1} (not_mem : \u00ack \u2208 m\u2081) {h'} :\n    (m\u2081 \u222a m\u2082).get k h' = m\u2082.get k (mem_of_mem_union_of_not_mem_left h' not_mem) :=\n  @HashMap.getKey_union_of_not_mem_left _ _ _ _ m\u2081.inner m\u2082.inner _ _  k not_mem h'\n"
+},
+{
+"line": 901,
+"ns": "Std.HashSet",
+"name": "get_union_of_not_mem_right",
+"full": "Std.HashSet.get_union_of_not_mem_right",
+"attrs": "",
+"body": "theorem get_union_of_not_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k : \u03b1} (not_mem : \u00ack \u2208 m\u2082) {h'} :\n    (m\u2081 \u222a m\u2082).get k h' = m\u2081.get k (mem_of_mem_union_of_not_mem_right h' not_mem) :=\n  @HashMap.getKey_union_of_not_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _  k not_mem h'\n"
+},
+{
+"line": 907,
+"ns": "Std.HashSet",
+"name": "getD_union",
+"full": "Std.HashSet.getD_union",
+"attrs": "",
+"body": "theorem getD_union [EquivBEq \u03b1] [LawfulHashable \u03b1] {k fallback : \u03b1} :\n    (m\u2081 \u222a m\u2082).getD k fallback = m\u2082.getD k (m\u2081.getD k fallback) :=\n  @HashMap.getKeyD_union _ _ _ _ m\u2081.inner m\u2082.inner _ _  k fallback\n"
+},
+{
+"line": 911,
+"ns": "Std.HashSet",
+"name": "getD_union_of_not_mem_left",
+"full": "Std.HashSet.getD_union_of_not_mem_left",
+"attrs": "",
+"body": "theorem getD_union_of_not_mem_left [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k fallback : \u03b1} (not_mem : \u00ack \u2208 m\u2081) :\n    (m\u2081 \u222a m\u2082).getD k fallback = m\u2082.getD k fallback :=\n  @HashMap.getKeyD_union_of_not_mem_left _ _ _ _ m\u2081.inner m\u2082.inner _ _  k fallback not_mem\n"
+},
+{
+"line": 916,
+"ns": "Std.HashSet",
+"name": "getD_union_of_not_mem_right",
+"full": "Std.HashSet.getD_union_of_not_mem_right",
+"attrs": "",
+"body": "theorem getD_union_of_not_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k fallback : \u03b1} (not_mem : \u00ack \u2208 m\u2082) :\n    (m\u2081 \u222a m\u2082).getD k fallback = m\u2081.getD k fallback :=\n  @HashMap.getKeyD_union_of_not_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _  k fallback not_mem\n"
+},
+{
+"line": 922,
+"ns": "Std.HashSet",
+"name": "get!_union",
+"full": "Std.HashSet.get!_union",
+"attrs": "",
+"body": "theorem get!_union [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1] {k : \u03b1} :\n    (m\u2081 \u222a m\u2082).get! k = m\u2082.getD k (m\u2081.get! k) :=\n  @HashMap.getKey!_union _ _ _ _ m\u2081.inner m\u2082.inner _ _ _  k\n"
+},
+{
+"line": 926,
+"ns": "Std.HashSet",
+"name": "get!_union_of_not_mem_left",
+"full": "Std.HashSet.get!_union_of_not_mem_left",
+"attrs": "",
+"body": "theorem get!_union_of_not_mem_left [Inhabited \u03b1]\n    [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1}\n    (not_mem : \u00ack \u2208 m\u2081) :\n    (m\u2081 \u222a m\u2082).get! k = m\u2082.get! k :=\n  @HashMap.getKey!_union_of_not_mem_left _ _ _ _ m\u2081.inner m\u2082.inner _ _ _  k not_mem\n"
+},
+{
+"line": 932,
+"ns": "Std.HashSet",
+"name": "get!_union_of_not_mem_right",
+"full": "Std.HashSet.get!_union_of_not_mem_right",
+"attrs": "",
+"body": "theorem get!_union_of_not_mem_right [Inhabited \u03b1]\n    [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1}\n    (not_mem : \u00ack \u2208 m\u2082) :\n    (m\u2081 \u222a m\u2082).get! k = m\u2081.get! k :=\n  @HashMap.getKey!_union_of_not_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ _  k not_mem\n"
+},
+{
+"line": 939,
+"ns": "Std.HashSet",
+"name": "size_union_of_not_mem",
+"full": "Std.HashSet.size_union_of_not_mem",
+"attrs": "",
+"body": "theorem size_union_of_not_mem [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    (\u2200 (a : \u03b1), a \u2208 m\u2081 \u2192 \u00aca \u2208 m\u2082) \u2192\n    (m\u2081 \u222a m\u2082).size = m\u2081.size + m\u2082.size :=\n  @HashMap.size_union_of_not_mem _ _ _ _ m\u2081.inner m\u2082.inner _ _\n"
+},
+{
+"line": 944,
+"ns": "Std.HashSet",
+"name": "size_left_le_size_union",
+"full": "Std.HashSet.size_left_le_size_union",
+"attrs": "",
+"body": "theorem size_left_le_size_union [EquivBEq \u03b1] [LawfulHashable \u03b1] : m\u2081.size \u2264 (m\u2081 \u222a m\u2082).size :=\n  @HashMap.size_left_le_size_union _ _ _ _ m\u2081.inner m\u2082.inner _ _\n"
+},
+{
+"line": 947,
+"ns": "Std.HashSet",
+"name": "size_right_le_size_union",
+"full": "Std.HashSet.size_right_le_size_union",
+"attrs": "",
+"body": "theorem size_right_le_size_union [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    m\u2082.size \u2264 (m\u2081 \u222a m\u2082).size :=\n  @HashMap.size_right_le_size_union _ _ _ _ m\u2081.inner m\u2082.inner _ _\n"
+},
+{
+"line": 951,
+"ns": "Std.HashSet",
+"name": "size_union_le_size_add_size",
+"full": "Std.HashSet.size_union_le_size_add_size",
+"attrs": "",
+"body": "theorem size_union_le_size_add_size [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    (m\u2081 \u222a m\u2082).size \u2264 m\u2081.size + m\u2082.size :=\n  @HashMap.size_union_le_size_add_size _ _ _ _ m\u2081.inner m\u2082.inner _ _\n"
+},
+{
+"line": 957,
+"ns": "Std.HashSet",
+"name": "isEmpty_union",
+"full": "Std.HashSet.isEmpty_union",
+"attrs": "@[simp] ",
+"body": "theorem isEmpty_union [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    (m\u2081 \u222a m\u2082).isEmpty = (m\u2081.isEmpty && m\u2082.isEmpty) :=\n  @HashMap.isEmpty_union \u03b1 _ _ _ m\u2081.inner m\u2082.inner _ _\n"
+},
+{
+"line": 968,
+"ns": "Std.HashSet",
+"name": "inter_eq",
+"full": "Std.HashSet.inter_eq",
+"attrs": "@[simp] ",
+"body": "theorem inter_eq : m\u2081.inter m\u2082 = m\u2081 \u2229 m\u2082 := by\n  simp only [Inter.inter]\n"
+},
+{
+"line": 973,
+"ns": "Std.HashSet",
+"name": "contains_inter",
+"full": "Std.HashSet.contains_inter",
+"attrs": "@[simp] ",
+"body": "theorem contains_inter [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    (m\u2081 \u2229 m\u2082).contains k = (m\u2081.contains k && m\u2082.contains k) :=\n  @HashMap.contains_inter _ _ _ _ m\u2081.inner m\u2082.inner _ _ k\n"
+},
+{
+"line": 979,
+"ns": "Std.HashSet",
+"name": "mem_inter_iff",
+"full": "Std.HashSet.mem_inter_iff",
+"attrs": "@[simp] ",
+"body": "theorem mem_inter_iff [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    (m\u2081 \u2229 m\u2082).contains k \u2194 m\u2081.contains k \u2227 m\u2082.contains k :=\n  @HashMap.mem_inter_iff _ _ _ _ m\u2081.inner m\u2082.inner _ _ k\n"
+},
+{
+"line": 983,
+"ns": "Std.HashSet",
+"name": "not_mem_inter_of_not_mem_left",
+"full": "Std.HashSet.not_mem_inter_of_not_mem_left",
+"attrs": "",
+"body": "theorem not_mem_inter_of_not_mem_left [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1}\n    (not_mem : k \u2209 m\u2081) :\n    k \u2209 m\u2081 \u2229 m\u2082 :=\n  @HashMap.not_mem_inter_of_not_mem_left _ _ _ _ m\u2081.inner m\u2082.inner _ _ k not_mem\n"
+},
+{
+"line": 988,
+"ns": "Std.HashSet",
+"name": "not_mem_inter_of_not_mem_right",
+"full": "Std.HashSet.not_mem_inter_of_not_mem_right",
+"attrs": "",
+"body": "theorem not_mem_inter_of_not_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1}\n    (not_mem : k \u2209 m\u2082) :\n    k \u2209 m\u2081 \u2229 m\u2082 :=\n  @HashMap.not_mem_inter_of_not_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ k not_mem\n"
+},
+{
+"line": 994,
+"ns": "Std.HashSet",
+"name": "Equiv.inter_left",
+"full": "Std.HashSet.Equiv.inter_left",
+"attrs": "",
+"body": "theorem Equiv.inter_left {m\u2083 : HashSet \u03b1} [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    (equiv : m\u2081 ~m m\u2082) :\n    (m\u2081 \u2229 m\u2083) ~m (m\u2082 \u2229 m\u2083) :=\n  \u27e8HashMap.Equiv.inter_left equiv.1\u27e9\n"
+},
+{
+"line": 999,
+"ns": "Std.HashSet",
+"name": "Equiv.inter_right",
+"full": "Std.HashSet.Equiv.inter_right",
+"attrs": "",
+"body": "theorem Equiv.inter_right {m\u2083 : HashSet \u03b1} [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    (equiv : m\u2082 ~m m\u2083) :\n    (m\u2081 \u2229 m\u2082) ~m (m\u2081 \u2229 m\u2083) :=\n  \u27e8HashMap.Equiv.inter_right equiv.1\u27e9\n"
+},
+{
+"line": 1004,
+"ns": "Std.HashSet",
+"name": "Equiv.inter_congr",
+"full": "Std.HashSet.Equiv.inter_congr",
+"attrs": "",
+"body": "theorem Equiv.inter_congr {m\u2083 m\u2084 : HashSet \u03b1} [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    (equiv\u2081 : m\u2081 ~m m\u2083) (equiv\u2082 : m\u2082 ~m m\u2084) :\n    (m\u2081 \u2229 m\u2082) ~m (m\u2083 \u2229 m\u2084) :=\n  \u27e8HashMap.Equiv.inter_congr equiv\u2081.1 equiv\u2082.1\u27e9\n"
+},
+{
+"line": 1010,
+"ns": "Std.HashSet",
+"name": "get?_inter",
+"full": "Std.HashSet.get?_inter",
+"attrs": "",
+"body": "theorem get?_inter [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    (m\u2081 \u2229 m\u2082).get? k =\n    if k \u2208 m\u2082 then m\u2081.get? k else none :=\n  @HashMap.getKey?_inter _ _ _ _ m\u2081.inner m\u2082.inner _ _ k\n"
+},
+{
+"line": 1015,
+"ns": "Std.HashSet",
+"name": "get?_inter_of_mem_right",
+"full": "Std.HashSet.get?_inter_of_mem_right",
+"attrs": "",
+"body": "theorem get?_inter_of_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k : \u03b1} (mem : k \u2208 m\u2082) :\n    (m\u2081 \u2229 m\u2082).get? k = m\u2081.get? k :=\n  @HashMap.getKey?_inter_of_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ k mem\n"
+},
+{
+"line": 1020,
+"ns": "Std.HashSet",
+"name": "get?_inter_of_not_mem_left",
+"full": "Std.HashSet.get?_inter_of_not_mem_left",
+"attrs": "",
+"body": "theorem get?_inter_of_not_mem_left [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k : \u03b1} (not_mem : k \u2209 m\u2081) :\n    (m\u2081 \u2229 m\u2082).get? k = none :=\n  @HashMap.getKey?_inter_of_not_mem_left _ _ _ _ m\u2081.inner m\u2082.inner _ _ k not_mem\n"
+},
+{
+"line": 1025,
+"ns": "Std.HashSet",
+"name": "get?_inter_of_not_mem_right",
+"full": "Std.HashSet.get?_inter_of_not_mem_right",
+"attrs": "",
+"body": "theorem get?_inter_of_not_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k : \u03b1} (not_mem : k \u2209 m\u2082) :\n    (m\u2081 \u2229 m\u2082).get? k = none :=\n  @HashMap.getKey?_inter_of_not_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ k not_mem\n"
+},
+{
+"line": 1031,
+"ns": "Std.HashSet",
+"name": "get_inter",
+"full": "Std.HashSet.get_inter",
+"attrs": "@[simp]",
+"body": "@[simp] theorem get_inter [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k : \u03b1} {h_mem : k \u2208 m\u2081 \u2229 m\u2082} :\n    (m\u2081 \u2229 m\u2082).get k h_mem =\n    m\u2081.get k ((mem_inter_iff.1 h_mem).1) :=\n  @HashMap.getKey_inter _ _ _ _ m\u2081.inner m\u2082.inner _ _ k h_mem\n"
+},
+{
+"line": 1038,
+"ns": "Std.HashSet",
+"name": "getD_inter",
+"full": "Std.HashSet.getD_inter",
+"attrs": "",
+"body": "theorem getD_inter [EquivBEq \u03b1] [LawfulHashable \u03b1] {k fallback : \u03b1} :\n    (m\u2081 \u2229 m\u2082).getD k fallback =\n    if k \u2208 m\u2082 then m\u2081.getD k fallback else fallback :=\n  @HashMap.getKeyD_inter _ _ _ _ m\u2081.inner m\u2082.inner _ _ k fallback\n"
+},
+{
+"line": 1043,
+"ns": "Std.HashSet",
+"name": "getD_inter_of_mem_right",
+"full": "Std.HashSet.getD_inter_of_mem_right",
+"attrs": "",
+"body": "theorem getD_inter_of_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k fallback : \u03b1} (mem : k \u2208 m\u2082) :\n    (m\u2081 \u2229 m\u2082).getD k fallback = m\u2081.getD k fallback :=\n  @HashMap.getKeyD_inter_of_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ k fallback mem\n"
+},
+{
+"line": 1048,
+"ns": "Std.HashSet",
+"name": "getD_inter_of_not_mem_right",
+"full": "Std.HashSet.getD_inter_of_not_mem_right",
+"attrs": "",
+"body": "theorem getD_inter_of_not_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k fallback : \u03b1} (not_mem : k \u2209 m\u2082) :\n    (m\u2081 \u2229 m\u2082).getD k fallback = fallback :=\n  @HashMap.getKeyD_inter_of_not_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ k fallback not_mem\n"
+},
+{
+"line": 1053,
+"ns": "Std.HashSet",
+"name": "getD_inter_of_not_mem_left",
+"full": "Std.HashSet.getD_inter_of_not_mem_left",
+"attrs": "",
+"body": "theorem getD_inter_of_not_mem_left [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k fallback : \u03b1} (not_mem : k \u2209 m\u2081) :\n    (m\u2081 \u2229 m\u2082).getD k fallback = fallback :=\n  @HashMap.getKeyD_inter_of_not_mem_left _ _ _ _ m\u2081.inner m\u2082.inner _ _ k fallback not_mem\n"
+},
+{
+"line": 1059,
+"ns": "Std.HashSet",
+"name": "get!_inter",
+"full": "Std.HashSet.get!_inter",
+"attrs": "",
+"body": "theorem get!_inter [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1] {k : \u03b1} :\n    (m\u2081 \u2229 m\u2082).get! k =\n    if k \u2208 m\u2082 then m\u2081.get! k else default :=\n  @HashMap.getKey!_inter _ _ _ _ m\u2081.inner m\u2082.inner _ _ _ k\n"
+},
+{
+"line": 1064,
+"ns": "Std.HashSet",
+"name": "get!_inter_of_mem_right",
+"full": "Std.HashSet.get!_inter_of_mem_right",
+"attrs": "",
+"body": "theorem get!_inter_of_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1]\n    {k : \u03b1} (mem : k \u2208 m\u2082) :\n    (m\u2081 \u2229 m\u2082).get! k = m\u2081.get! k :=\n  @HashMap.getKey!_inter_of_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ _ k mem\n"
+},
+{
+"line": 1069,
+"ns": "Std.HashSet",
+"name": "get!_inter_of_not_mem_right",
+"full": "Std.HashSet.get!_inter_of_not_mem_right",
+"attrs": "",
+"body": "theorem get!_inter_of_not_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1]\n    {k : \u03b1} (not_mem : k \u2209 m\u2082) :\n    (m\u2081 \u2229 m\u2082).get! k = default :=\n  @HashMap.getKey!_inter_of_not_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ _ k not_mem\n"
+},
+{
+"line": 1074,
+"ns": "Std.HashSet",
+"name": "get!_inter_of_not_mem_left",
+"full": "Std.HashSet.get!_inter_of_not_mem_left",
+"attrs": "",
+"body": "theorem get!_inter_of_not_mem_left [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1]\n    {k : \u03b1} (not_mem : k \u2209 m\u2081) :\n    (m\u2081 \u2229 m\u2082).get! k = default :=\n  @HashMap.getKey!_inter_of_not_mem_left _ _ _ _ m\u2081.inner m\u2082.inner _ _ _ k not_mem\n"
+},
+{
+"line": 1080,
+"ns": "Std.HashSet",
+"name": "size_inter_le_size_left",
+"full": "Std.HashSet.size_inter_le_size_left",
+"attrs": "",
+"body": "theorem size_inter_le_size_left [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    (m\u2081 \u2229 m\u2082).size \u2264 m\u2081.size :=\n  @HashMap.size_inter_le_size_left _ _ _ _ m\u2081.inner m\u2082.inner _ _\n"
+},
+{
+"line": 1084,
+"ns": "Std.HashSet",
+"name": "size_inter_le_size_right",
+"full": "Std.HashSet.size_inter_le_size_right",
+"attrs": "",
+"body": "theorem size_inter_le_size_right [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    (m\u2081 \u2229 m\u2082).size \u2264 m\u2082.size :=\n  @HashMap.size_inter_le_size_right _ _ _ _ m\u2081.inner m\u2082.inner _ _\n"
+},
+{
+"line": 1088,
+"ns": "Std.HashSet",
+"name": "size_inter_eq_size_left",
+"full": "Std.HashSet.size_inter_eq_size_left",
+"attrs": "",
+"body": "theorem size_inter_eq_size_left [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    (h : \u2200 (a : \u03b1), a \u2208 m\u2081 \u2192 a \u2208 m\u2082) :\n    (m\u2081 \u2229 m\u2082).size = m\u2081.size :=\n  @HashMap.size_inter_eq_size_left _ _ _ _ m\u2081.inner m\u2082.inner _ _ h\n"
+},
+{
+"line": 1093,
+"ns": "Std.HashSet",
+"name": "size_inter_eq_size_right",
+"full": "Std.HashSet.size_inter_eq_size_right",
+"attrs": "",
+"body": "theorem size_inter_eq_size_right [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    (h : \u2200 (a : \u03b1), a \u2208 m\u2082 \u2192 a \u2208 m\u2081) :\n    (m\u2081 \u2229 m\u2082).size = m\u2082.size :=\n  @HashMap.size_inter_eq_size_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ h\n"
+},
+{
+"line": 1098,
+"ns": "Std.HashSet",
+"name": "size_add_size_eq_size_union_add_size_inter",
+"full": "Std.HashSet.size_add_size_eq_size_union_add_size_inter",
+"attrs": "",
+"body": "theorem size_add_size_eq_size_union_add_size_inter [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    m\u2081.size + m\u2082.size = (m\u2081 \u222a m\u2082).size + (m\u2081 \u2229 m\u2082).size :=\n  @HashMap.size_add_size_eq_size_union_add_size_inter _ _ _ _ m\u2081.inner m\u2082.inner _ _\n"
+},
+{
+"line": 1104,
+"ns": "Std.HashSet",
+"name": "isEmpty_inter_left",
+"full": "Std.HashSet.isEmpty_inter_left",
+"attrs": "@[simp] ",
+"body": "theorem isEmpty_inter_left [EquivBEq \u03b1] [LawfulHashable \u03b1] (h : m\u2081.isEmpty) :\n    (m\u2081 \u2229 m\u2082).isEmpty = true :=\n  @HashMap.isEmpty_inter_left \u03b1 _ _ _ m\u2081.inner m\u2082.inner _ _ h\n"
+},
+{
+"line": 1109,
+"ns": "Std.HashSet",
+"name": "isEmpty_inter_right",
+"full": "Std.HashSet.isEmpty_inter_right",
+"attrs": "@[simp] ",
+"body": "theorem isEmpty_inter_right [EquivBEq \u03b1] [LawfulHashable \u03b1] (h : m\u2082.isEmpty) :\n    (m\u2081 \u2229 m\u2082).isEmpty = true :=\n  @HashMap.isEmpty_inter_right \u03b1 _ _ _ m\u2081.inner m\u2082.inner _ _ h\n"
+},
+{
+"line": 1113,
+"ns": "Std.HashSet",
+"name": "isEmpty_inter_iff",
+"full": "Std.HashSet.isEmpty_inter_iff",
+"attrs": "",
+"body": "theorem isEmpty_inter_iff [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    (m\u2081 \u2229 m\u2082).isEmpty \u2194 \u2200 k, k \u2208 m\u2081 \u2192 k \u2209 m\u2082 :=\n  @HashMap.isEmpty_inter_iff \u03b1 _ _ _ m\u2081.inner m\u2082.inner _ _\n"
+},
+{
+"line": 1117,
+"ns": "Std.HashSet",
+"name": "isEmpty_inter_comm",
+"full": "Std.HashSet.isEmpty_inter_comm",
+"attrs": "",
+"body": "theorem isEmpty_inter_comm [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    (m\u2081 \u2229 m\u2082).isEmpty = (m\u2082 \u2229 m\u2081).isEmpty :=\n  @HashMap.isEmpty_inter_comm \u03b1 _ _ _ m\u2081.inner m\u2082.inner _ _\n"
+},
+{
+"line": 1128,
+"ns": "Std.HashSet",
+"name": "diff_eq",
+"full": "Std.HashSet.diff_eq",
+"attrs": "@[simp] ",
+"body": "theorem diff_eq : m\u2081.diff m\u2082 = m\u2081 \\ m\u2082 := by\n  simp only [SDiff.sdiff]\n"
+},
+{
+"line": 1133,
+"ns": "Std.HashSet",
+"name": "contains_diff",
+"full": "Std.HashSet.contains_diff",
+"attrs": "@[simp] ",
+"body": "theorem contains_diff [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    (m\u2081 \\ m\u2082).contains k = (m\u2081.contains k && !m\u2082.contains k) :=\n  @HashMap.contains_diff _ _ _ _ m\u2081.inner m\u2082.inner _ _ k\n"
+},
+{
+"line": 1139,
+"ns": "Std.HashSet",
+"name": "mem_diff_iff",
+"full": "Std.HashSet.mem_diff_iff",
+"attrs": "@[simp] ",
+"body": "theorem mem_diff_iff [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    k \u2208 m\u2081 \\ m\u2082 \u2194 k \u2208 m\u2081 \u2227 k \u2209 m\u2082 :=\n  @HashMap.mem_diff_iff _ _ _ _ m\u2081.inner m\u2082.inner _ _ k\n"
+},
+{
+"line": 1143,
+"ns": "Std.HashSet",
+"name": "not_mem_diff_of_not_mem_left",
+"full": "Std.HashSet.not_mem_diff_of_not_mem_left",
+"attrs": "",
+"body": "theorem not_mem_diff_of_not_mem_left [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1}\n    (not_mem : k \u2209 m\u2081) :\n    k \u2209 m\u2081 \\ m\u2082 :=\n  @HashMap.not_mem_diff_of_not_mem_left _ _ _ _ m\u2081.inner m\u2082.inner _ _ k not_mem\n"
+},
+{
+"line": 1148,
+"ns": "Std.HashSet",
+"name": "not_mem_diff_of_mem_right",
+"full": "Std.HashSet.not_mem_diff_of_mem_right",
+"attrs": "",
+"body": "theorem not_mem_diff_of_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1}\n    (mem : k \u2208 m\u2082) :\n    k \u2209 m\u2081 \\ m\u2082 :=\n  @HashMap.not_mem_diff_of_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ k mem\n"
+},
+{
+"line": 1154,
+"ns": "Std.HashSet",
+"name": "Equiv.diff_left",
+"full": "Std.HashSet.Equiv.diff_left",
+"attrs": "",
+"body": "theorem Equiv.diff_left {m\u2083 : HashSet \u03b1} [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    (equiv : m\u2081 ~m m\u2082) :\n    (m\u2081 \\ m\u2083) ~m (m\u2082 \\ m\u2083) :=\n  \u27e8HashMap.Equiv.diff_left equiv.1\u27e9\n"
+},
+{
+"line": 1159,
+"ns": "Std.HashSet",
+"name": "Equiv.diff_right",
+"full": "Std.HashSet.Equiv.diff_right",
+"attrs": "",
+"body": "theorem Equiv.diff_right {m\u2083 : HashSet \u03b1} [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    (equiv : m\u2082 ~m m\u2083) :\n    (m\u2081 \\ m\u2082) ~m (m\u2081 \\ m\u2083) :=\n  \u27e8HashMap.Equiv.diff_right equiv.1\u27e9\n"
+},
+{
+"line": 1164,
+"ns": "Std.HashSet",
+"name": "Equiv.diff_congr",
+"full": "Std.HashSet.Equiv.diff_congr",
+"attrs": "",
+"body": "theorem Equiv.diff_congr {m\u2083 m\u2084 : HashSet \u03b1} [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    (equiv\u2081 : m\u2081 ~m m\u2083) (equiv\u2082 : m\u2082 ~m m\u2084) :\n    (m\u2081 \\ m\u2082) ~m (m\u2083 \\ m\u2084) :=\n  \u27e8HashMap.Equiv.diff_congr equiv\u2081.1 equiv\u2082.1\u27e9\n"
+},
+{
+"line": 1170,
+"ns": "Std.HashSet",
+"name": "get?_diff",
+"full": "Std.HashSet.get?_diff",
+"attrs": "",
+"body": "theorem get?_diff [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} :\n    (m\u2081 \\ m\u2082).get? k =\n    if k \u2208 m\u2082 then none else m\u2081.get? k :=\n  @HashMap.getKey?_diff _ _ _ _ m\u2081.inner m\u2082.inner _ _ k\n"
+},
+{
+"line": 1175,
+"ns": "Std.HashSet",
+"name": "get?_diff_of_not_mem_right",
+"full": "Std.HashSet.get?_diff_of_not_mem_right",
+"attrs": "",
+"body": "theorem get?_diff_of_not_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k : \u03b1} (not_mem : k \u2209 m\u2082) :\n    (m\u2081 \\ m\u2082).get? k = m\u2081.get? k :=\n  @HashMap.getKey?_diff_of_not_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ k not_mem\n"
+},
+{
+"line": 1180,
+"ns": "Std.HashSet",
+"name": "get?_diff_of_not_mem_left",
+"full": "Std.HashSet.get?_diff_of_not_mem_left",
+"attrs": "",
+"body": "theorem get?_diff_of_not_mem_left [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k : \u03b1} (not_mem : k \u2209 m\u2081) :\n    (m\u2081 \\ m\u2082).get? k = none :=\n  @HashMap.getKey?_diff_of_not_mem_left _ _ _ _ m\u2081.inner m\u2082.inner _ _ k not_mem\n"
+},
+{
+"line": 1185,
+"ns": "Std.HashSet",
+"name": "get?_diff_of_mem_right",
+"full": "Std.HashSet.get?_diff_of_mem_right",
+"attrs": "",
+"body": "theorem get?_diff_of_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k : \u03b1} (mem : k \u2208 m\u2082) :\n    (m\u2081 \\ m\u2082).get? k = none :=\n  @HashMap.getKey?_diff_of_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ k mem\n"
+},
+{
+"line": 1191,
+"ns": "Std.HashSet",
+"name": "get_diff",
+"full": "Std.HashSet.get_diff",
+"attrs": "@[simp]",
+"body": "@[simp] theorem get_diff [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k : \u03b1} {h_mem : k \u2208 m\u2081 \\ m\u2082} :\n    (m\u2081 \\ m\u2082).get k h_mem =\n    m\u2081.get k ((mem_diff_iff.1 h_mem).1) :=\n  @HashMap.getKey_diff _ _ _ _ m\u2081.inner m\u2082.inner _ _ k h_mem\n"
+},
+{
+"line": 1198,
+"ns": "Std.HashSet",
+"name": "getD_diff",
+"full": "Std.HashSet.getD_diff",
+"attrs": "",
+"body": "theorem getD_diff [EquivBEq \u03b1] [LawfulHashable \u03b1] {k fallback : \u03b1} :\n    (m\u2081 \\ m\u2082).getD k fallback =\n    if k \u2208 m\u2082 then fallback else m\u2081.getD k fallback :=\n  @HashMap.getKeyD_diff _ _ _ _ m\u2081.inner m\u2082.inner _ _ k fallback\n"
+},
+{
+"line": 1203,
+"ns": "Std.HashSet",
+"name": "getD_diff_of_not_mem_right",
+"full": "Std.HashSet.getD_diff_of_not_mem_right",
+"attrs": "",
+"body": "theorem getD_diff_of_not_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k fallback : \u03b1} (not_mem : k \u2209 m\u2082) :\n    (m\u2081 \\ m\u2082).getD k fallback = m\u2081.getD k fallback :=\n  @HashMap.getKeyD_diff_of_not_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ k fallback not_mem\n"
+},
+{
+"line": 1208,
+"ns": "Std.HashSet",
+"name": "getD_diff_of_mem_right",
+"full": "Std.HashSet.getD_diff_of_mem_right",
+"attrs": "",
+"body": "theorem getD_diff_of_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k fallback : \u03b1} (mem : k \u2208 m\u2082) :\n    (m\u2081 \\ m\u2082).getD k fallback = fallback :=\n  @HashMap.getKeyD_diff_of_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ k fallback mem\n"
+},
+{
+"line": 1213,
+"ns": "Std.HashSet",
+"name": "getD_diff_of_not_mem_left",
+"full": "Std.HashSet.getD_diff_of_not_mem_left",
+"attrs": "",
+"body": "theorem getD_diff_of_not_mem_left [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {k fallback : \u03b1} (not_mem : k \u2209 m\u2081) :\n    (m\u2081 \\ m\u2082).getD k fallback = fallback :=\n  @HashMap.getKeyD_diff_of_not_mem_left _ _ _ _ m\u2081.inner m\u2082.inner _ _ k fallback not_mem\n"
+},
+{
+"line": 1219,
+"ns": "Std.HashSet",
+"name": "get!_diff",
+"full": "Std.HashSet.get!_diff",
+"attrs": "",
+"body": "theorem get!_diff [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1] {k : \u03b1} :\n    (m\u2081 \\ m\u2082).get! k =\n    if k \u2208 m\u2082 then default else m\u2081.get! k :=\n  @HashMap.getKey!_diff _ _ _ _ m\u2081.inner m\u2082.inner _ _ _ k\n"
+},
+{
+"line": 1224,
+"ns": "Std.HashSet",
+"name": "get!_diff_of_not_mem_right",
+"full": "Std.HashSet.get!_diff_of_not_mem_right",
+"attrs": "",
+"body": "theorem get!_diff_of_not_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1]\n    {k : \u03b1} (not_mem : k \u2209 m\u2082) :\n    (m\u2081 \\ m\u2082).get! k = m\u2081.get! k :=\n  @HashMap.getKey!_diff_of_not_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ _ k not_mem\n"
+},
+{
+"line": 1229,
+"ns": "Std.HashSet",
+"name": "get!_diff_of_mem_right",
+"full": "Std.HashSet.get!_diff_of_mem_right",
+"attrs": "",
+"body": "theorem get!_diff_of_mem_right [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1]\n    {k : \u03b1} (mem : k \u2208 m\u2082) :\n    (m\u2081 \\ m\u2082).get! k = default :=\n  @HashMap.getKey!_diff_of_mem_right _ _ _ _ m\u2081.inner m\u2082.inner _ _ _ k mem\n"
+},
+{
+"line": 1234,
+"ns": "Std.HashSet",
+"name": "get!_diff_of_not_mem_left",
+"full": "Std.HashSet.get!_diff_of_not_mem_left",
+"attrs": "",
+"body": "theorem get!_diff_of_not_mem_left [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1]\n    {k : \u03b1} (not_mem : k \u2209 m\u2081) :\n    (m\u2081 \\ m\u2082).get! k = default :=\n  @HashMap.getKey!_diff_of_not_mem_left _ _ _ _ m\u2081.inner m\u2082.inner _ _ _ k not_mem\n"
+},
+{
+"line": 1240,
+"ns": "Std.HashSet",
+"name": "size_diff_le_size_left",
+"full": "Std.HashSet.size_diff_le_size_left",
+"attrs": "",
+"body": "theorem size_diff_le_size_left [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    (m\u2081 \\ m\u2082).size \u2264 m\u2081.size :=\n  @HashMap.size_diff_le_size_left _ _ _ _ m\u2081.inner m\u2082.inner _ _\n"
+},
+{
+"line": 1244,
+"ns": "Std.HashSet",
+"name": "size_diff_eq_size_left",
+"full": "Std.HashSet.size_diff_eq_size_left",
+"attrs": "",
+"body": "theorem size_diff_eq_size_left [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    (h : \u2200 (a : \u03b1), a \u2208 m\u2081 \u2192 a \u2209 m\u2082) :\n    (m\u2081 \\ m\u2082).size = m\u2081.size :=\n  @HashMap.size_diff_eq_size_left _ _ _ _ m\u2081.inner m\u2082.inner _ _ h\n"
+},
+{
+"line": 1249,
+"ns": "Std.HashSet",
+"name": "size_diff_add_size_inter_eq_size_left",
+"full": "Std.HashSet.size_diff_add_size_inter_eq_size_left",
+"attrs": "",
+"body": "theorem size_diff_add_size_inter_eq_size_left [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    (m\u2081 \\ m\u2082).size + (m\u2081 \u2229 m\u2082).size = m\u2081.size :=\n  @HashMap.size_diff_add_size_inter_eq_size_left _ _ _ _ m\u2081.inner m\u2082.inner _ _\n"
+},
+{
+"line": 1255,
+"ns": "Std.HashSet",
+"name": "isEmpty_diff_left",
+"full": "Std.HashSet.isEmpty_diff_left",
+"attrs": "@[simp] ",
+"body": "theorem isEmpty_diff_left [EquivBEq \u03b1] [LawfulHashable \u03b1] (h : m\u2081.isEmpty) :\n    (m\u2081 \\ m\u2082).isEmpty = true :=\n  @HashMap.isEmpty_diff_left \u03b1 _ _ _ m\u2081.inner m\u2082.inner _ _ h\n"
+},
+{
+"line": 1259,
+"ns": "Std.HashSet",
+"name": "isEmpty_diff_iff",
+"full": "Std.HashSet.isEmpty_diff_iff",
+"attrs": "",
+"body": "theorem isEmpty_diff_iff [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    (m\u2081 \\ m\u2082).isEmpty \u2194 \u2200 k, k \u2208 m\u2081 \u2192 k \u2208 m\u2082 :=\n  @HashMap.isEmpty_diff_iff \u03b1 _ _ _ m\u2081.inner m\u2082.inner _ _\n"
+},
+{
+"line": 1268,
+"ns": "Std.HashSet",
+"name": "ofArray_eq_ofList",
+"full": "Std.HashSet.ofArray_eq_ofList",
+"attrs": "@[simp, grind =, cbv_eval] ",
+"body": "theorem ofArray_eq_ofList (a : Array \u03b1) :\n    ofArray a = ofList a.toList := by\n  apply ext\n  apply HashMap.unitOfArray_eq_unitOfList\n"
+},
+{
+"line": 1274,
+"ns": "Std.HashSet",
+"name": "ofList_nil",
+"full": "Std.HashSet.ofList_nil",
+"attrs": "@[simp, grind =] ",
+"body": "theorem ofList_nil :\n    ofList ([] : List \u03b1) = \u2205 :=\n  ext HashMap.unitOfList_nil\n"
+},
+{
+"line": 1279,
+"ns": "Std.HashSet",
+"name": "ofList_singleton",
+"full": "Std.HashSet.ofList_singleton",
+"attrs": "@[simp, grind =] ",
+"body": "theorem ofList_singleton {k : \u03b1} :\n    ofList [k] = (\u2205 : HashSet \u03b1).insert k :=\n  ext HashMap.unitOfList_singleton\n"
+},
+{
+"line": 1283,
+"ns": "Std.HashSet",
+"name": "ofList_cons",
+"full": "Std.HashSet.ofList_cons",
+"attrs": "@[grind _=_]",
+"body": "@[grind _=_] theorem ofList_cons {hd : \u03b1} {tl : List \u03b1} :\n    ofList (hd :: tl) =\n      insertMany ((\u2205 : HashSet \u03b1).insert hd) tl :=\n  ext HashMap.unitOfList_cons\n"
+},
+{
+"line": 1289,
+"ns": "Std.HashSet",
+"name": "ofList_eq_insertMany_empty",
+"full": "Std.HashSet.ofList_eq_insertMany_empty",
+"attrs": "@[cbv_eval] ",
+"body": "theorem ofList_eq_insertMany_empty {l : List \u03b1} :\n    ofList l = insertMany (\u2205 : HashSet \u03b1) l :=\n  ext HashMap.unitOfList_eq_insertManyIfNewUnit_empty\n"
+},
+{
+"line": 1294,
+"ns": "Std.HashSet",
+"name": "contains_ofList",
+"full": "Std.HashSet.contains_ofList",
+"attrs": "@[simp, grind =] ",
+"body": "theorem contains_ofList [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} {k : \u03b1} :\n    (ofList l).contains k = l.contains k :=\n  HashMap.contains_unitOfList\n"
+},
+{
+"line": 1300,
+"ns": "Std.HashSet",
+"name": "mem_ofList",
+"full": "Std.HashSet.mem_ofList",
+"attrs": "@[simp, grind =] ",
+"body": "theorem mem_ofList [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} {k : \u03b1} :\n    k \u2208 ofList l \u2194 l.contains k :=\n  HashMap.mem_unitOfList\n"
+},
+{
+"line": 1305,
+"ns": "Std.HashSet",
+"name": "get?_ofList_of_contains_eq_false",
+"full": "Std.HashSet.get?_ofList_of_contains_eq_false",
+"attrs": "",
+"body": "theorem get?_ofList_of_contains_eq_false [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} {k : \u03b1} (contains_eq_false : l.contains k = false) :\n    get? (ofList l) k = none :=\n  HashMap.getKey?_unitOfList_of_contains_eq_false contains_eq_false\n"
+},
+{
+"line": 1310,
+"ns": "Std.HashSet",
+"name": "get?_ofList_of_mem",
+"full": "Std.HashSet.get?_ofList_of_mem",
+"attrs": "",
+"body": "theorem get?_ofList_of_mem [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} {k k' : \u03b1} (k_beq : k == k')\n    (distinct : l.Pairwise (fun a b => (a == b) = false)) (mem : k \u2208 l) :\n    get? (ofList l) k' = some k :=\n  HashMap.getKey?_unitOfList_of_mem k_beq distinct mem\n"
+},
+{
+"line": 1316,
+"ns": "Std.HashSet",
+"name": "get_ofList_of_mem",
+"full": "Std.HashSet.get_ofList_of_mem",
+"attrs": "",
+"body": "theorem get_ofList_of_mem [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1}\n    {k k' : \u03b1} (k_beq : k == k')\n    (distinct : l.Pairwise (fun a b => (a == b) = false))\n    (mem : k \u2208 l) {h} :\n    get (ofList l) k' h = k :=\n  HashMap.getKey_unitOfList_of_mem k_beq distinct mem\n"
+},
+{
+"line": 1324,
+"ns": "Std.HashSet",
+"name": "get!_ofList_of_contains_eq_false",
+"full": "Std.HashSet.get!_ofList_of_contains_eq_false",
+"attrs": "",
+"body": "theorem get!_ofList_of_contains_eq_false [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    [Inhabited \u03b1] {l : List \u03b1} {k : \u03b1}\n    (contains_eq_false : l.contains k = false) :\n    get! (ofList l) k = default :=\n  HashMap.getKey!_unitOfList_of_contains_eq_false contains_eq_false\n"
+},
+{
+"line": 1330,
+"ns": "Std.HashSet",
+"name": "get!_ofList_of_mem",
+"full": "Std.HashSet.get!_ofList_of_mem",
+"attrs": "",
+"body": "theorem get!_ofList_of_mem [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    [Inhabited \u03b1] {l : List \u03b1} {k k' : \u03b1} (k_beq : k == k')\n    (distinct : l.Pairwise (fun a b => (a == b) = false))\n    (mem : k \u2208 l) :\n    get! (ofList l) k' = k :=\n  HashMap.getKey!_unitOfList_of_mem k_beq distinct mem\n"
+},
+{
+"line": 1337,
+"ns": "Std.HashSet",
+"name": "getD_ofList_of_contains_eq_false",
+"full": "Std.HashSet.getD_ofList_of_contains_eq_false",
+"attrs": "",
+"body": "theorem getD_ofList_of_contains_eq_false [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} {k fallback : \u03b1}\n    (contains_eq_false : l.contains k = false) :\n    getD (ofList l) k fallback = fallback :=\n  HashMap.getKeyD_unitOfList_of_contains_eq_false contains_eq_false\n"
+},
+{
+"line": 1343,
+"ns": "Std.HashSet",
+"name": "getD_ofList_of_mem",
+"full": "Std.HashSet.getD_ofList_of_mem",
+"attrs": "",
+"body": "theorem getD_ofList_of_mem [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} {k k' fallback : \u03b1} (k_beq : k == k')\n    (distinct : l.Pairwise (fun a b => (a == b) = false))\n    (mem : k \u2208 l) :\n    getD (ofList l) k' fallback = k :=\n  HashMap.getKeyD_unitOfList_of_mem k_beq distinct mem\n"
+},
+{
+"line": 1350,
+"ns": "Std.HashSet",
+"name": "size_ofList",
+"full": "Std.HashSet.size_ofList",
+"attrs": "",
+"body": "theorem size_ofList [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1}\n    (distinct : l.Pairwise (fun a b => (a == b) = false)) :\n    (ofList l).size = l.length :=\n  HashMap.size_unitOfList distinct\n"
+},
+{
+"line": 1356,
+"ns": "Std.HashSet",
+"name": "size_ofList_le",
+"full": "Std.HashSet.size_ofList_le",
+"attrs": "",
+"body": "theorem size_ofList_le [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} :\n    (ofList l).size \u2264 l.length :=\n  HashMap.size_unitOfList_le\n"
+},
+{
+"line": 1364,
+"ns": "Std.HashSet",
+"name": "isEmpty_ofList",
+"full": "Std.HashSet.isEmpty_ofList",
+"attrs": "@[simp, grind =] ",
+"body": "theorem isEmpty_ofList [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {l : List \u03b1} :\n    (ofList l).isEmpty = l.isEmpty :=\n  HashMap.isEmpty_unitOfList\n"
+},
+{
+"line": 1375,
+"ns": "Std.HashSet.Equiv",
+"name": "refl",
+"full": "Std.HashSet.Equiv.refl",
+"attrs": "@[refl, simp]",
+"body": "@[refl, simp] theorem refl (m : HashSet \u03b1) : m ~m m := \u27e8.rfl\u27e9"
+},
+{
+"line": 1376,
+"ns": "Std.HashSet.Equiv",
+"name": "rfl",
+"full": "Std.HashSet.Equiv.rfl",
+"attrs": "@[refl, simp] theorem refl (m : HashSet \u03b1) : m ~m m := \u27e8.rfl\u27e9 ",
+"body": "theorem rfl : m ~m m := \u27e8.rfl\u27e9"
+},
+{
+"line": 1377,
+"ns": "Std.HashSet.Equiv",
+"name": "symm",
+"full": "Std.HashSet.Equiv.symm",
+"attrs": "@[symm]",
+"body": "@[symm] theorem symm : m\u2081 ~m m\u2082 \u2192 m\u2082 ~m m\u2081\n  | \u27e8h\u27e9 => \u27e8h.symm\u27e9"
+},
+{
+"line": 1379,
+"ns": "Std.HashSet.Equiv",
+"name": "trans",
+"full": "Std.HashSet.Equiv.trans",
+"attrs": "",
+"body": "theorem trans : m\u2081 ~m m\u2082 \u2192 m\u2082 ~m m\u2083 \u2192 m\u2081 ~m m\u2083\n  | \u27e8h\u2081\u27e9, \u27e8h\u2082\u27e9 => \u27e8h\u2081.trans h\u2082\u27e9\n"
+},
+{
+"line": 1384,
+"ns": "Std.HashSet.Equiv",
+"name": "comm",
+"full": "Std.HashSet.Equiv.comm",
+"attrs": "",
+"body": "theorem comm : m\u2081 ~m m\u2082 \u2194 m\u2082 ~m m\u2081 := \u27e8symm, symm\u27e9"
+},
+{
+"line": 1385,
+"ns": "Std.HashSet.Equiv",
+"name": "congr_left",
+"full": "Std.HashSet.Equiv.congr_left",
+"attrs": "",
+"body": "theorem congr_left (h : m\u2081 ~m m\u2082) : m\u2081 ~m m\u2083 \u2194 m\u2082 ~m m\u2083 := \u27e8h.symm.trans, h.trans\u27e9"
+},
+{
+"line": 1386,
+"ns": "Std.HashSet.Equiv",
+"name": "congr_right",
+"full": "Std.HashSet.Equiv.congr_right",
+"attrs": "",
+"body": "theorem congr_right (h : m\u2081 ~m m\u2082) : m\u2083 ~m m\u2081 \u2194 m\u2083 ~m m\u2082 :=\n  \u27e8fun h' => h'.trans h, fun h' => h'.trans h.symm\u27e9\n"
+},
+{
+"line": 1389,
+"ns": "Std.HashSet.Equiv",
+"name": "isEmpty_eq",
+"full": "Std.HashSet.Equiv.isEmpty_eq",
+"attrs": "",
+"body": "theorem isEmpty_eq [EquivBEq \u03b1] [LawfulHashable \u03b1] (h : m\u2081 ~m m\u2082) : m\u2081.isEmpty = m\u2082.isEmpty :=\n  h.1.isEmpty_eq\n"
+},
+{
+"line": 1392,
+"ns": "Std.HashSet.Equiv",
+"name": "size_eq",
+"full": "Std.HashSet.Equiv.size_eq",
+"attrs": "",
+"body": "theorem size_eq [EquivBEq \u03b1] [LawfulHashable \u03b1] (h : m\u2081 ~m m\u2082) : m\u2081.size = m\u2082.size :=\n  h.1.size_eq\n"
+},
+{
+"line": 1395,
+"ns": "Std.HashSet.Equiv",
+"name": "contains_eq",
+"full": "Std.HashSet.Equiv.contains_eq",
+"attrs": "",
+"body": "theorem contains_eq [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} (h : m\u2081 ~m m\u2082) :\n    m\u2081.contains k = m\u2082.contains k :=\n  h.1.contains_eq\n"
+},
+{
+"line": 1399,
+"ns": "Std.HashSet.Equiv",
+"name": "mem_iff",
+"full": "Std.HashSet.Equiv.mem_iff",
+"attrs": "",
+"body": "theorem mem_iff [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} (h : m\u2081 ~m m\u2082) : k \u2208 m\u2081 \u2194 k \u2208 m\u2082 :=\n  h.1.mem_iff\n"
+},
+{
+"line": 1402,
+"ns": "Std.HashSet.Equiv",
+"name": "toList_perm",
+"full": "Std.HashSet.Equiv.toList_perm",
+"attrs": "",
+"body": "theorem toList_perm (h : m\u2081 ~m m\u2082) : m\u2081.toList.Perm m\u2082.toList :=\n  h.1.keys_perm\n"
+},
+{
+"line": 1405,
+"ns": "Std.HashSet.Equiv",
+"name": "of_toList_perm",
+"full": "Std.HashSet.Equiv.of_toList_perm",
+"attrs": "",
+"body": "theorem of_toList_perm (h : m\u2081.toList.Perm m\u2082.toList) : m\u2081 ~m m\u2082 :=\n  \u27e8.of_keys_unit_perm h\u27e9\n"
+},
+{
+"line": 1408,
+"ns": "Std.HashSet.Equiv",
+"name": "get?_eq",
+"full": "Std.HashSet.Equiv.get?_eq",
+"attrs": "",
+"body": "theorem get?_eq [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} (h : m\u2081 ~m m\u2082) :\n    m\u2081.get? k = m\u2082.get? k :=\n  h.1.getKey?_eq\n"
+},
+{
+"line": 1412,
+"ns": "Std.HashSet.Equiv",
+"name": "get_eq",
+"full": "Std.HashSet.Equiv.get_eq",
+"attrs": "",
+"body": "theorem get_eq [EquivBEq \u03b1] [LawfulHashable \u03b1] {k : \u03b1} (hk : k \u2208 m\u2081) (h : m\u2081 ~m m\u2082) :\n    m\u2081.get k hk = m\u2082.get k (h.mem_iff.mp hk) :=\n  h.1.getKey_eq hk\n"
+},
+{
+"line": 1416,
+"ns": "Std.HashSet.Equiv",
+"name": "get!_eq",
+"full": "Std.HashSet.Equiv.get!_eq",
+"attrs": "",
+"body": "theorem get!_eq [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1] {k : \u03b1} (h : m\u2081 ~m m\u2082) :\n    m\u2081.get! k = m\u2082.get! k :=\n  h.1.getKey!_eq\n"
+},
+{
+"line": 1420,
+"ns": "Std.HashSet.Equiv",
+"name": "getD_eq",
+"full": "Std.HashSet.Equiv.getD_eq",
+"attrs": "",
+"body": "theorem getD_eq [EquivBEq \u03b1] [LawfulHashable \u03b1] {k fallback : \u03b1} (h : m\u2081 ~m m\u2082) :\n    m\u2081.getD k fallback = m\u2082.getD k fallback :=\n  h.1.getKeyD_eq\n"
+},
+{
+"line": 1424,
+"ns": "Std.HashSet.Equiv",
+"name": "insert",
+"full": "Std.HashSet.Equiv.insert",
+"attrs": "",
+"body": "theorem insert [EquivBEq \u03b1] [LawfulHashable \u03b1] (k : \u03b1) (h : m\u2081 ~m m\u2082) :\n    m\u2081.insert k ~m m\u2082.insert k :=\n  \u27e8h.1.insertIfNew k ()\u27e9\n"
+},
+{
+"line": 1428,
+"ns": "Std.HashSet.Equiv",
+"name": "erase",
+"full": "Std.HashSet.Equiv.erase",
+"attrs": "",
+"body": "theorem erase [EquivBEq \u03b1] [LawfulHashable \u03b1] (k : \u03b1) (h : m\u2081 ~m m\u2082) :\n    m\u2081.erase k ~m m\u2082.erase k :=\n  \u27e8h.1.erase k\u27e9\n"
+},
+{
+"line": 1432,
+"ns": "Std.HashSet.Equiv",
+"name": "insertMany_list",
+"full": "Std.HashSet.Equiv.insertMany_list",
+"attrs": "",
+"body": "theorem insertMany_list [EquivBEq \u03b1] [LawfulHashable \u03b1] (l : List \u03b1) (h : m\u2081 ~m m\u2082) :\n    m\u2081.insertMany l ~m m\u2082.insertMany l :=\n  \u27e8h.1.insertManyIfNewUnit_list l\u27e9\n"
+},
+{
+"line": 1436,
+"ns": "Std.HashSet.Equiv",
+"name": "filter",
+"full": "Std.HashSet.Equiv.filter",
+"attrs": "",
+"body": "theorem filter (f : \u03b1 \u2192 Bool) (h : m\u2081 ~m m\u2082) : m\u2081.filter f ~m m\u2082.filter f :=\n  \u27e8h.1.filter _\u27e9\n"
+},
+{
+"line": 1439,
+"ns": "Std.HashSet.Equiv",
+"name": "of_forall_get?_eq",
+"full": "Std.HashSet.Equiv.of_forall_get?_eq",
+"attrs": "",
+"body": "theorem of_forall_get?_eq [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    (h : \u2200 k, m\u2081.get? k = m\u2082.get? k) : m\u2081 ~m m\u2082 :=\n  \u27e8.of_forall_getKey?_unit_eq h\u27e9\n"
+},
+{
+"line": 1443,
+"ns": "Std.HashSet.Equiv",
+"name": "of_forall_contains_eq",
+"full": "Std.HashSet.Equiv.of_forall_contains_eq",
+"attrs": "",
+"body": "theorem of_forall_contains_eq [LawfulBEq \u03b1] (h : \u2200 k, m\u2081.contains k = m\u2082.contains k) : m\u2081 ~m m\u2082 :=\n  \u27e8.of_forall_contains_unit_eq h\u27e9\n"
+},
+{
+"line": 1446,
+"ns": "Std.HashSet.Equiv",
+"name": "of_forall_mem_iff",
+"full": "Std.HashSet.Equiv.of_forall_mem_iff",
+"attrs": "",
+"body": "theorem of_forall_mem_iff [LawfulBEq \u03b1] (h : \u2200 k, k \u2208 m\u2081 \u2194 k \u2208 m\u2082) : m\u2081 ~m m\u2082 :=\n  \u27e8.of_forall_mem_unit_iff h\u27e9\n"
+},
+{
+"line": 1456,
+"ns": "Std.HashSet",
+"name": "equiv_emptyWithCapacity_iff_isEmpty",
+"full": "Std.HashSet.equiv_emptyWithCapacity_iff_isEmpty",
+"attrs": "@[simp] ",
+"body": "theorem equiv_emptyWithCapacity_iff_isEmpty [EquivBEq \u03b1] [LawfulHashable \u03b1] {c : Nat} :\n    m ~m emptyWithCapacity c \u2194 m.isEmpty :=\n  \u27e8fun \u27e8h\u27e9 => HashMap.equiv_emptyWithCapacity_iff_isEmpty.mp h,\n    fun h => \u27e8HashMap.equiv_emptyWithCapacity_iff_isEmpty.mpr h\u27e9\u27e9\n"
+},
+{
+"line": 1462,
+"ns": "Std.HashSet",
+"name": "equiv_empty_iff_isEmpty",
+"full": "Std.HashSet.equiv_empty_iff_isEmpty",
+"attrs": "@[simp] ",
+"body": "theorem equiv_empty_iff_isEmpty [EquivBEq \u03b1] [LawfulHashable \u03b1] : m ~m \u2205 \u2194 m.isEmpty :=\n  equiv_emptyWithCapacity_iff_isEmpty\n"
+},
+{
+"line": 1465,
+"ns": "Std.HashSet",
+"name": "inter_equiv_empty_comm",
+"full": "Std.HashSet.inter_equiv_empty_comm",
+"attrs": "",
+"body": "theorem inter_equiv_empty_comm [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {m\u2081 m\u2082 : HashSet \u03b1} :\n    (m\u2081 \u2229 m\u2082) ~m \u2205 \u2194 (m\u2082 \u2229 m\u2081) ~m \u2205 := by\n  rw [equiv_empty_iff_isEmpty, equiv_empty_iff_isEmpty, \u2190 Bool.eq_iff_iff]\n  exact isEmpty_inter_comm\n"
+},
+{
+"line": 1472,
+"ns": "Std.HashSet",
+"name": "emptyWithCapacity_equiv_iff_isEmpty",
+"full": "Std.HashSet.emptyWithCapacity_equiv_iff_isEmpty",
+"attrs": "@[simp] ",
+"body": "theorem emptyWithCapacity_equiv_iff_isEmpty [EquivBEq \u03b1] [LawfulHashable \u03b1] {c : Nat} :\n    emptyWithCapacity c ~m m \u2194 m.isEmpty :=\n  Equiv.comm.trans equiv_emptyWithCapacity_iff_isEmpty\n"
+},
+{
+"line": 1477,
+"ns": "Std.HashSet",
+"name": "empty_equiv_iff_isEmpty",
+"full": "Std.HashSet.empty_equiv_iff_isEmpty",
+"attrs": "@[simp] ",
+"body": "theorem empty_equiv_iff_isEmpty [EquivBEq \u03b1] [LawfulHashable \u03b1] : \u2205 ~m m \u2194 m.isEmpty :=\n  emptyWithCapacity_equiv_iff_isEmpty\n"
+},
+{
+"line": 1480,
+"ns": "Std.HashSet",
+"name": "equiv_iff_toList_perm",
+"full": "Std.HashSet.equiv_iff_toList_perm",
+"attrs": "",
+"body": "theorem equiv_iff_toList_perm [EquivBEq \u03b1] [LawfulHashable \u03b1] :\n    m\u2081 ~m m\u2082 \u2194 m\u2081.toList.Perm m\u2082.toList :=\n  \u27e8Equiv.toList_perm, Equiv.of_toList_perm\u27e9\n"
+},
+{
+"line": 1484,
+"ns": "Std.HashSet",
+"name": "equiv_iff_forall_mem_iff",
+"full": "Std.HashSet.equiv_iff_forall_mem_iff",
+"attrs": "",
+"body": "theorem equiv_iff_forall_mem_iff [LawfulBEq \u03b1] :\n    m\u2081 ~m m\u2082 \u2194 (\u2200 k, k \u2208 m\u2081 \u2194 k \u2208 m\u2082) :=\n  \u27e8fun h _ => h.mem_iff, Equiv.of_forall_mem_iff\u27e9\n"
+},
+{
+"line": 1488,
+"ns": "Std.HashSet",
+"name": "insertMany_list_equiv_foldl",
+"full": "Std.HashSet.insertMany_list_equiv_foldl",
+"attrs": "",
+"body": "theorem insertMany_list_equiv_foldl {m : HashSet \u03b1} {l : List \u03b1} :\n    m.insertMany l ~m l.foldl (init := m) fun acc a => acc.insert a := by\n  constructor\n  rw [\u2190 List.foldl_hom inner (g\u2082 := fun acc a => acc.insertIfNew a ())]\n  \u00b7 exact HashMap.insertManyIfNewUnit_list_equiv_foldl\n  \u00b7 exact fun _ _ => rfl\n"
+},
+{
+"line": 1495,
+"ns": "Std.HashSet",
+"name": "ofList_equiv_foldl",
+"full": "Std.HashSet.ofList_equiv_foldl",
+"attrs": "",
+"body": "theorem ofList_equiv_foldl {l : List \u03b1} :\n    ofList l ~m l.foldl (init := \u2205) fun acc a => acc.insert a := by\n  constructor\n  rw [\u2190 List.foldl_hom inner (g\u2082 := fun acc a => acc.insertIfNew a ())]\n  \u00b7 exact HashMap.unitOfList_equiv_foldl\n  \u00b7 exact fun _ _ => rfl\n"
+},
+{
+"line": 1508,
+"ns": "Std.HashSet",
+"name": "toList_filter",
+"full": "Std.HashSet.toList_filter",
+"attrs": "",
+"body": "theorem toList_filter {f : \u03b1 \u2192 Bool} :\n    (m.filter f).toList.Perm (m.toList.filter f) :=\n  HashMap.keys_filter_key\n"
+},
+{
+"line": 1512,
+"ns": "Std.HashSet",
+"name": "isEmpty_filter_iff",
+"full": "Std.HashSet.isEmpty_filter_iff",
+"attrs": "@[grind =]",
+"body": "@[grind =] theorem isEmpty_filter_iff [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {f : \u03b1 \u2192 Bool} :\n    (m.filter f).isEmpty \u2194 \u2200 k h, f (m.get k h) = false :=\n  HashMap.isEmpty_filter_iff\n"
+},
+{
+"line": 1517,
+"ns": "Std.HashSet",
+"name": "isEmpty_filter_eq_false_iff",
+"full": "Std.HashSet.isEmpty_filter_eq_false_iff",
+"attrs": "",
+"body": "theorem isEmpty_filter_eq_false_iff [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {f : \u03b1 \u2192 Bool} :\n    (m.filter f).isEmpty = false \u2194 \u2203 k h, f (m.get k h) :=\n  HashMap.isEmpty_filter_eq_false_iff\n"
+},
+{
+"line": 1525,
+"ns": "Std.HashSet",
+"name": "mem_filter",
+"full": "Std.HashSet.mem_filter",
+"attrs": "@[simp, grind =] ",
+"body": "theorem mem_filter [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {f : \u03b1 \u2192 Bool} {k : \u03b1} :\n    k \u2208 m.filter f \u2194 \u2203 h, f (m.get k h) :=\n  HashMap.mem_filter\n"
+},
+{
+"line": 1530,
+"ns": "Std.HashSet",
+"name": "contains_of_contains_filter",
+"full": "Std.HashSet.contains_of_contains_filter",
+"attrs": "",
+"body": "theorem contains_of_contains_filter [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {f : \u03b1 \u2192 Bool} {k : \u03b1} :\n    (m.filter f).contains k \u2192 m.contains k :=\n  HashMap.contains_of_contains_filter\n"
+},
+{
+"line": 1535,
+"ns": "Std.HashSet",
+"name": "mem_of_mem_filter",
+"full": "Std.HashSet.mem_of_mem_filter",
+"attrs": "",
+"body": "theorem mem_of_mem_filter [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {f : \u03b1 \u2192 Bool} {k : \u03b1} :\n    k \u2208 m.filter f \u2192 k \u2208 m :=\n  HashMap.mem_of_mem_filter\n"
+},
+{
+"line": 1540,
+"ns": "Std.HashSet",
+"name": "size_filter_le_size",
+"full": "Std.HashSet.size_filter_le_size",
+"attrs": "",
+"body": "theorem size_filter_le_size [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {f : \u03b1 \u2192 Bool} :\n    (m.filter f).size \u2264 m.size :=\n  HashMap.size_filter_le_size\n"
+},
+{
+"line": 1547,
+"ns": "Std.HashSet",
+"name": "size_filter_eq_size_iff",
+"full": "Std.HashSet.size_filter_eq_size_iff",
+"attrs": "",
+"body": "theorem size_filter_eq_size_iff [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {f : \u03b1 \u2192 Bool} :\n    (m.filter f).size = m.size \u2194 \u2200 k h, f (m.get k h) :=\n  HashMap.size_filter_eq_size_iff\n"
+},
+{
+"line": 1552,
+"ns": "Std.HashSet",
+"name": "filter_equiv_self_iff",
+"full": "Std.HashSet.filter_equiv_self_iff",
+"attrs": "",
+"body": "theorem filter_equiv_self_iff [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {f : \u03b1 \u2192 Bool} :\n    m.filter f ~m m \u2194 \u2200 k h, f (m.get k h) :=\n  \u27e8fun h => HashMap.filter_equiv_self_iff.mp h.1,\n    fun h => \u27e8HashMap.filter_equiv_self_iff.mpr h\u27e9\u27e9\n"
+},
+{
+"line": 1559,
+"ns": "Std.HashSet",
+"name": "get?_filter",
+"full": "Std.HashSet.get?_filter",
+"attrs": "@[simp, grind =] ",
+"body": "theorem get?_filter [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {f : \u03b1 \u2192 Bool} {k : \u03b1} :\n    (m.filter f).get? k = (m.get? k).filter f :=\n  HashMap.getKey?_filter_key\n"
+},
+{
+"line": 1565,
+"ns": "Std.HashSet",
+"name": "get_filter",
+"full": "Std.HashSet.get_filter",
+"attrs": "@[simp, grind =] ",
+"body": "theorem get_filter [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {f : \u03b1 \u2192 Bool} {k : \u03b1} {h} :\n    (m.filter f).get k h = m.get k (mem_of_mem_filter h) :=\n  HashMap.getKey_filter\n"
+},
+{
+"line": 1571,
+"ns": "Std.HashSet",
+"name": "get!_filter",
+"full": "Std.HashSet.get!_filter",
+"attrs": "@[grind =] ",
+"body": "theorem get!_filter [EquivBEq \u03b1] [LawfulHashable \u03b1] [Inhabited \u03b1]\n    {f : \u03b1 \u2192 Bool} {k : \u03b1} :\n    (m.filter f).get! k = ((m.get? k).filter f).get! :=\n  HashMap.getKey!_filter_key\n"
+},
+{
+"line": 1577,
+"ns": "Std.HashSet",
+"name": "getD_filter",
+"full": "Std.HashSet.getD_filter",
+"attrs": "@[grind =] ",
+"body": "theorem getD_filter [EquivBEq \u03b1] [LawfulHashable \u03b1]\n    {f : \u03b1 \u2192 Bool} {k fallback : \u03b1} :\n    (m.filter f).getD k fallback = ((m.get? k).filter f).getD fallback :=\n  HashMap.getKeyD_filter_key\n"
+}
+]
