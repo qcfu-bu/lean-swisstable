@@ -1,0 +1,480 @@
+module
+
+@[expose] public section
+
+/-!
+# `Proto.Swiss.SwissMap`: the SwissTable layout without SIMD (UNPROVED prototype)
+
+hashbrown's generic (non-SIMD) layout, in core Lean. Every array access is `uget`/`uset` with the
+one unproved bounds fact `inBounds`, and the loops' termination proofs are `sorry`/`partial`:
+the hot paths are the code a verified version would compile to, with the proofs left out.
+
+## Layout
+
+`cap = mask + 1` slots, a power of two, at least 8.
+
+* `ctrl : ByteArray`, `cap + 8` bytes: control byte `ctrl[i]` of slot `i`, and after them a
+  copy of `ctrl[0..8)` (the mirror), so that the 8 bytes from any slot are in the array and a
+  group read never wraps. `setCtrl` writes both copies on every write.
+* `keys, vals : Array α / Array β`, `cap + 1` cells: slot `i` in cell `i`, and in cell `cap` the
+  placeholder (the first key and value ever inserted). Free slots hold the placeholder: erase
+  writes it back, so an erased key or value is released at once.
+* The empty map (`∅`, `emptyWithCapacity n`) allocates nothing: `ctrl` is a shared group of 8
+  EMPTY bytes, `mask = 0`, `keys = vals = #[]`, and `reqCap` remembers the capacity asked for.
+  Every probe of it ends in its first group without a key comparison, so lookups need no special
+  case; the first insert allocates the table for `max reqCap 1` entries, filled with that
+  insert's key and value as placeholders.
+
+## Control bytes (hashbrown's encoding)
+
+    EMPTY = 0xFF = 0b1111_1111     DELETED = 0x80 = 0b1000_0000     FULL = 0b0hhh_hhhh (h2)
+
+With `g` a group of 8 control bytes read as one little-endian `UInt64`, `L = 0x0101…01`,
+`H = 0x8080…80`:
+
+* `matchFree g  = g &&& H`                  — EMPTY or DELETED (top bit set); exact;
+* `matchEmpty g = g &&& (g <<< 1) &&& H`    — EMPTY only (bits 7 and 6 set); exact;
+* `matchByte g h2·L = (x - L) &&& ~~~x &&& H` with `x = g ^^^ h2·L` — FULL bytes equal to h2.
+  It has no false negatives; its false positives (a byte `h2 ^^^ 1` above a true match, through
+  the borrow) are FULL bytes too, since a byte with its top bit set never matches. A false
+  positive costs one key comparison.
+
+On ARM64 each test is 1–2 instructions (`and` with a shifted operand, `and` with the repeated
+immediate). The abseil encoding (EMPTY 0x80, DELETED 0xFE) costs the same here (`bic` with
+`lsl #6` for empty); hashbrown's lets the in-place rehash convert a group as
+`~~~full + (full >>> 7)`.
+
+## Hashing and probing
+
+`q = (hash a * ⌊2^64/φ⌋) >>> (57 - lg)` keeps the top `lg + 7` bits of the Fibonacci product:
+the start slot is `q >>> 7` (masked), `h2` is `q &&& 0x7F`, the 7 bits below it. The multiply
+is needed because Lean's `hash` on `Nat` is the identity (whose top 7 bits are 0); taking both
+from the top of the product makes them depend on every bit of the hash. Hashes are not stored:
+growth and the in-place rehash recompute them.
+
+Probing is triangular over groups, as in hashbrown and abseil: the groups (8-slot windows) from
+`pos₀ + 8·k(k+1)/2`, `k = 0, 1, …`. Over `cap / 8` windows this visits every window of the
+residue class of `pos₀` exactly once, so a probe stops after at most `cap / 8` groups (the
+`stride > mask` exit). At load up to 7/8 it avoids the clustering of linear probing over
+groups; the cost is that the second group is not adjacent in memory.
+
+A probe walks the matches of `h2` in each group from the lowest byte (index by
+`((m &&& -m) >>> 7) * 0x0001020304050607 >>> 56`, clear by `m &&& (m - 1)`), comparing the
+stored key with `==` (stored key on the left, as Std), and stops at the first group with an
+EMPTY byte. `insert` makes one pass that also remembers the first EMPTY or DELETED slot it
+passes (hashbrown's `find_or_find_insert_slot`).
+
+## Load, growth, tombstones
+
+`growthLeft = cap/8·7 - size - tombstones`. Filling an EMPTY slot spends one, filling a DELETED
+slot none. A new key that would fill an EMPTY slot when `growthLeft = 0` reserves first
+(hashbrown's `reserve_rehash`): when `size + 1 ≤ (cap/8·7) / 2` the table is rehashed in place
+(tombstones fill it), else it grows to the least power of two holding
+`max (size + 1) (cap/8·7 + 1)`, i.e. doubles.
+
+Erase (hashbrown's rule): with `lead` the run of non-EMPTY slots ending just before slot `i`
+and `trail` the run starting at `i`, the slot becomes DELETED when `lead + trail ≥ 8` (some
+8-window around it was never seen with an EMPTY, so a probe may have passed it) and EMPTY
+otherwise (then `growthLeft` gets the slot back). Computed without counting zeros: with `ea`
+and `eb` the EMPTY masks of the windows at `i` and `i - 8`, DELETED iff
+`ea = 0 ∨ eb < ((ea &&& -ea) >>> 7)`.
+
+The in-place rehash is hashbrown's `rehash_in_place`: convert FULL → DELETED and
+DELETED → EMPTY, re-mirror, then for each DELETED slot (an unprocessed entry) find the first
+free slot of its probe; keep it where it is if that is in the same probe window, move it if the
+target is EMPTY, swap and reprocess if the target is DELETED.
+
+## Measured alternatives (rand keys, ns/op, 2026-10-24)
+
+* Linear probing over groups (`pos += 8`): equal or slower everywhere measured; miss at 98304
+  5.98 vs 5.48, churn-get 11.10 vs 10.81 (90 vs 82 instructions/op).
+* The exact per-byte match `~~~(((x &&& 0x7F…) + 0x7F…) ||| x) &&& H` instead of the borrow
+  trick: +1–2 instructions/op, within ±2% on getd-shuf/miss (rand, string; 1000, 98304). It has
+  no false positives and each byte is computed alone, which is the easier form to prove.
+* `insertNew` inlined into `insert` rather than specialised: −15 to −33 instructions/op,
+  insert/hashcons/churn 3–9% faster, insert-cap unchanged.
+-/
+
+set_option cleanup.letToHave false
+
+namespace Proto.SwissF
+
+universe u v w
+
+/-- UNPROVED: stands for every array bounds fact the invariant of a verified version would
+supply. (False as stated; it is never used computationally.) -/
+theorem inBounds {i : USize} {n : Nat} : i.toNat < n := sorry
+
+/-! ## Control bytes and groups -/
+
+/-- The control byte of a slot that has never been full since the last rehash. -/
+@[inline] def EMPTY : UInt8 := 0xFF
+/-- The control byte of a tombstone. -/
+@[inline] def DELETED : UInt8 := 0x80
+
+@[inline] def lsbs : UInt64 := 0x0101010101010101
+@[inline] def msbs : UInt64 := 0x8080808080808080
+/-- `⌊2^64 / φ⌋`. -/
+@[inline] def fibMul : UInt64 := 0x9E3779B97F4A7C15
+
+/-- The 8 control bytes from `i`, little-endian (one unaligned 64-bit load after clang). -/
+@[inline] def load8 (c : @& ByteArray) (i : USize) : UInt64 :=
+  (c.uget i inBounds).toUInt64 |||
+  ((c.uget (i + 1) inBounds).toUInt64 <<< 8) |||
+  ((c.uget (i + 2) inBounds).toUInt64 <<< 16) |||
+  ((c.uget (i + 3) inBounds).toUInt64 <<< 24) |||
+  ((c.uget (i + 4) inBounds).toUInt64 <<< 32) |||
+  ((c.uget (i + 5) inBounds).toUInt64 <<< 40) |||
+  ((c.uget (i + 6) inBounds).toUInt64 <<< 48) |||
+  ((c.uget (i + 7) inBounds).toUInt64 <<< 56)
+
+/-- Bit 7 of byte `j` set where byte `j` of `g` may equal the byte of `h2s` (no false negatives;
+false positives only on FULL bytes). -/
+@[inline] def matchByte (g h2s : UInt64) : UInt64 :=
+  let x := g ^^^ h2s
+  (x - lsbs) &&& ~~~x &&& msbs
+
+/-- Bit 7 of byte `j` set exactly where byte `j` of `g` is EMPTY. -/
+@[inline] def matchEmpty (g : UInt64) : UInt64 := g &&& (g <<< 1) &&& msbs
+
+/-- Bit 7 of byte `j` set exactly where byte `j` of `g` is EMPTY or DELETED. -/
+@[inline] def matchFree (g : UInt64) : UInt64 := g &&& msbs
+
+/-- The index of the lowest byte of a nonzero mask. -/
+@[inline] def lowest (m : UInt64) : USize :=
+  ((((m &&& (0 - m)) >>> 7) * 0x0001020304050607) >>> 56).toUSize
+
+/-- Write control byte `b` of slot `i` and its mirror (`i + cap` when `i < 8`; otherwise the
+same byte again). -/
+@[inline] def setCtrl (c : ByteArray) (mask i : USize) (b : UInt8) : ByteArray :=
+  (c.uset i b inBounds).uset (((i - 8) &&& mask) + 8) b inBounds
+
+/-- 8 EMPTY bytes: the control array of the empty map (shared), and the seed of `emptyCtrl`. -/
+def emptyGroup : ByteArray := ⟨#[0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]⟩
+
+partial def dbl (cap : Nat) (b : ByteArray) : ByteArray :=
+  if b.size < cap then dbl cap (b ++ b) else b
+
+/-- The control array of an empty table of `cap ≥ 8` slots (a power of two): `cap + 8` EMPTY
+bytes, by doubling appends. -/
+def emptyCtrl (cap : Nat) : ByteArray := dbl cap emptyGroup ++ emptyGroup
+
+/-! ## The map -/
+
+/-- A finite map from `α` to `β`: a SwissTable without SIMD. -/
+structure SwissMap (α : Type u) (β : Type v) [BEq α] [Hashable α] where
+  /-- Control bytes: `cap` slots and the mirror of the first 8. -/
+  ctrl : ByteArray
+  /-- `cap` keys and the placeholder key. -/
+  keys : Array α
+  /-- `cap` values and the placeholder value. -/
+  vals : Array β
+  /-- The number of entries. -/
+  size : Nat
+  /-- How many EMPTY slots may still be filled before a rehash or growth. -/
+  growthLeft : Nat
+  /-- `cap - 1` (`0` for the empty map). -/
+  mask : USize
+  /-- `57 - log₂ cap`. -/
+  shift : UInt64
+  /-- The capacity asked for by `emptyWithCapacity`, used by the first insert. -/
+  reqCap : Nat
+
+namespace SwissMap
+
+variable {α : Type u} {β : Type v} [BEq α] [Hashable α]
+
+/-- The top `lg + 7` bits of the Fibonacci product of the hash. -/
+@[inline] def hq (shift : UInt64) (a : α) : UInt64 := (hash a * fibMul) >>> shift
+/-- The start slot of the probe. -/
+@[inline] def home (q : UInt64) (mask : USize) : USize := (q >>> 7).toUSize &&& mask
+/-- The control byte of a full slot. -/
+@[inline] def h2 (q : UInt64) : UInt8 := (q &&& 0x7F).toUInt8
+/-- `h2` in every byte. -/
+@[inline] def h2s (q : UInt64) : UInt64 := (q &&& 0x7F) * lsbs
+
+/-! ## Probes -/
+
+/-- The slot of a key `== a`, or `mask + 1`. State: the group `g` at `pos` and its remaining
+`h2` matches `m`. -/
+@[specialize] def findLoop (ctrl : @& ByteArray) (keys : @& Array α) (a : @& α) (mask : USize)
+    (s : UInt64) (pos stride : USize) (g m : UInt64) : USize :=
+  if m != 0 then
+    let i := (pos + lowest m) &&& mask
+    if keys.uget i inBounds == a then i
+    else findLoop ctrl keys a mask s pos stride g (m &&& (m - 1))
+  else if matchEmpty g != 0 then mask + 1
+  else
+    let stride := stride + 8
+    if stride > mask then mask + 1
+    else
+      let pos := (pos + stride) &&& mask
+      let g := load8 ctrl pos
+      findLoop ctrl keys a mask s pos stride g (matchByte g s)
+termination_by (mask.toNat + 8 - stride.toNat, m.toNat)
+decreasing_by all_goals sorry
+
+/-- `findLoop`, also remembering the first EMPTY or DELETED slot `ins` passed (`> mask`: none
+yet). The slot `i ≤ mask` of a key `== a`, or `mask + 1 + ins`. -/
+@[specialize] def findInsLoop (ctrl : @& ByteArray) (keys : @& Array α) (a : @& α) (mask : USize)
+    (s : UInt64) (pos stride : USize) (g m : UInt64) (ins : USize) : USize :=
+  if m != 0 then
+    let i := (pos + lowest m) &&& mask
+    if keys.uget i inBounds == a then i
+    else findInsLoop ctrl keys a mask s pos stride g (m &&& (m - 1)) ins
+  else
+    let ins := if ins > mask then
+        let f := matchFree g
+        if f != 0 then (pos + lowest f) &&& mask else ins
+      else ins
+    if matchEmpty g != 0 then ins + (mask + 1)
+    else
+      let stride := stride + 8
+      if stride > mask then ins + (mask + 1)
+      else
+        let pos := (pos + stride) &&& mask
+        let g := load8 ctrl pos
+        findInsLoop ctrl keys a mask s pos stride g (matchByte g s) ins
+termination_by (mask.toNat + 8 - stride.toNat, m.toNat)
+decreasing_by all_goals sorry
+
+/-- The first EMPTY or DELETED slot of the probe from `pos`. -/
+partial def findFree (ctrl : @& ByteArray) (mask pos stride : USize) : USize :=
+  let f := matchFree (load8 ctrl pos)
+  if f != 0 then (pos + lowest f) &&& mask
+  else
+    let stride := stride + 8
+    findFree ctrl mask ((pos + stride) &&& mask) stride
+
+/-- The slot of a key `== a`, or `mask + 1`. -/
+@[inline] def find (m : @& SwissMap α β) (a : @& α) : USize :=
+  let q := hq m.shift a
+  let pos := home q m.mask
+  let s := h2s q
+  let g := load8 m.ctrl pos
+  findLoop m.ctrl m.keys a m.mask s pos 0 g (matchByte g s)
+
+/-! ## The empty map and allocation -/
+
+/-- The empty map, with room for `capacity` entries once the first insert allocates it. -/
+def emptyWithCapacity (capacity := 8) : SwissMap α β :=
+  ⟨emptyGroup, #[], #[], 0, 0, 0, 0, capacity⟩
+
+instance : EmptyCollection (SwissMap α β) := ⟨emptyWithCapacity 0⟩
+
+partial def lgForGo (n lg : Nat) : Nat := if 2 ^ lg / 8 * 7 ≥ n then lg else lgForGo n (lg + 1)
+
+/-- `log₂` of the least table (at least 8 slots) holding `n` entries at load 7/8. -/
+def lgFor (n : Nat) : Nat := lgForGo n 3
+
+/-- An empty table of `2 ^ lg` slots with placeholders `k0` and `v0`. -/
+def emptyTable (lg : Nat) (k0 : α) (v0 : β) (req : Nat) : SwissMap α β :=
+  let cap := 2 ^ lg
+  ⟨emptyCtrl cap, Array.replicate (cap + 1) k0, Array.replicate (cap + 1) v0, 0, cap / 8 * 7,
+    (cap - 1).toUSize, (57 - lg).toUInt64, req⟩
+
+/-- Insert the absent key `a ↦ b` into a table with room (`growthLeft > 0` or a DELETED slot on
+its probe): the first free slot of its probe. -/
+@[specialize] def insertFresh (m : SwissMap α β) (a : α) (b : β) : SwissMap α β :=
+  let ⟨ctrl, keys, vals, size, gl, mask, shift, req⟩ := m
+  let q := hq shift a
+  let i := findFree ctrl mask (home q mask) 0
+  let old := ctrl.uget i inBounds
+  ⟨setCtrl ctrl mask i (h2 q), keys.uset i a inBounds, vals.uset i b inBounds, size + 1,
+    if old == EMPTY then gl - 1 else gl, mask, shift, req⟩
+
+/-- Move every full slot of the old table from `i` on into the new one (hashes recomputed). -/
+@[specialize] partial def moveAll (oc : @& ByteArray) (ok : @& Array α) (ov : @& Array β)
+    (omask i : USize) (nc : ByteArray) (nk : Array α) (nv : Array β) (nmask : USize)
+    (nshift : UInt64) : ByteArray × Array α × Array β :=
+  if i > omask then (nc, nk, nv)
+  else if oc.uget i inBounds &&& 0x80 == 0 then
+    let k := ok.uget i inBounds
+    let q := hq nshift k
+    let j := findFree nc nmask (home q nmask) 0
+    moveAll oc ok ov omask (i + 1) (setCtrl nc nmask j (h2 q)) (nk.uset j k inBounds)
+      (nv.uset j (ov.uget i inBounds) inBounds) nmask nshift
+  else moveAll oc ok ov omask (i + 1) nc nk nv nmask nshift
+
+/-- Rehash into a fresh table of `2 ^ lg` slots. -/
+@[specialize] def resize (m : SwissMap α β) (lg : Nat) (k0 : α) (v0 : β) : SwissMap α β :=
+  let ⟨ctrl, keys, vals, size, _, mask, _, req⟩ := m
+  let t : SwissMap α β := emptyTable lg k0 v0 req
+  let (nc, nk, nv) := moveAll ctrl keys vals mask 0 t.ctrl t.keys t.vals t.mask t.shift
+  ⟨nc, nk, nv, size, t.growthLeft - size, t.mask, t.shift, req⟩
+
+/-- In-place rehash, step 1: FULL → DELETED, DELETED → EMPTY, EMPTY → EMPTY. -/
+partial def convertLoop (c : ByteArray) (mask i : USize) : ByteArray :=
+  if i > mask then c
+  else
+    let b := c.uget i inBounds
+    convertLoop (c.uset i (if b &&& 0x80 == 0 then DELETED else EMPTY) inBounds) mask (i + 1)
+
+/-- Copy `ctrl[0..8)` into the mirror. -/
+partial def mirrorLoop (c : ByteArray) (mask j : USize) : ByteArray :=
+  if j ≥ 8 then c
+  else mirrorLoop (c.uset (mask + 1 + j) (c.uget j inBounds) inBounds) mask (j + 1)
+
+/-- In-place rehash, step 2 (hashbrown's `rehash_in_place`): every DELETED slot from `i` on holds
+an entry not yet placed. -/
+@[specialize] partial def rehashLoop (ctrl : ByteArray) (keys : Array α) (vals : Array β)
+    (mask : USize) (shift : UInt64) (i : USize) : ByteArray × Array α × Array β :=
+  if i > mask then (ctrl, keys, vals)
+  else if ctrl.uget i inBounds != DELETED then rehashLoop ctrl keys vals mask shift (i + 1)
+  else
+    let q := hq shift (keys.uget i inBounds)
+    let p0 := home q mask
+    let j := findFree ctrl mask p0 0
+    if ((i - p0) &&& mask) >>> 3 == ((j - p0) &&& mask) >>> 3 then
+      rehashLoop (setCtrl ctrl mask i (h2 q)) keys vals mask shift (i + 1)
+    else
+      let prev := ctrl.uget j inBounds
+      let ctrl := setCtrl ctrl mask j (h2 q)
+      let ki := keys.uget i inBounds
+      let vi := vals.uget i inBounds
+      if prev == EMPTY then
+        let p := mask + 1
+        let k0 := keys.uget p inBounds
+        let v0 := vals.uget p inBounds
+        let ctrl := setCtrl ctrl mask i EMPTY
+        let keys := (keys.uset j ki inBounds).uset i k0 inBounds
+        let vals := (vals.uset j vi inBounds).uset i v0 inBounds
+        rehashLoop ctrl keys vals mask shift (i + 1)
+      else
+        let kj := keys.uget j inBounds
+        let vj := vals.uget j inBounds
+        let keys := (keys.uset j ki inBounds).uset i kj inBounds
+        let vals := (vals.uset j vi inBounds).uset i vj inBounds
+        rehashLoop ctrl keys vals mask shift i
+
+/-- Rehash in place, clearing the tombstones. -/
+@[specialize] def rehashInPlace (m : SwissMap α β) : SwissMap α β :=
+  let ⟨ctrl, keys, vals, size, _, mask, shift, req⟩ := m
+  let ctrl := mirrorLoop (convertLoop ctrl mask 0) mask 0
+  let (ctrl, keys, vals) := rehashLoop ctrl keys vals mask shift 0
+  ⟨ctrl, keys, vals, size, (mask.toNat + 1) / 8 * 7 - size, mask, shift, req⟩
+
+/-- Insert the absent key `a ↦ b` when no EMPTY slot may be filled (`growthLeft = 0`): allocate
+the empty map, rehash in place, or grow (hashbrown's `reserve_rehash`), then insert. -/
+@[specialize] def reserveInsert (m : SwissMap α β) (a : α) (b : β) : SwissMap α β :=
+  let m :=
+    if m.keys.size == 0 then emptyTable (lgFor (max m.reqCap 1)) a b m.reqCap
+    else
+      let full := (m.mask.toNat + 1) / 8 * 7
+      if m.size + 1 ≤ full / 2 then resize m (lgFor full) a b
+      else resize m (lgFor (max (m.size + 1) (full + 1))) a b
+  insertFresh m a b
+
+/-! ## Insertion and erasure -/
+
+/-- Insert the new key `a ↦ b` at the free slot `i` of its probe (`q` its hash bits). -/
+@[inline] def insertNew (m : SwissMap α β) (a : α) (b : β) (q : UInt64) (i : USize) :
+    SwissMap α β :=
+  let ⟨ctrl, keys, vals, size, gl, mask, shift, req⟩ := m
+  let old := ctrl.uget i inBounds
+  if old == EMPTY then
+    if gl == 0 then reserveInsert ⟨ctrl, keys, vals, size, gl, mask, shift, req⟩ a b
+    else
+      ⟨setCtrl ctrl mask i (h2 q), keys.uset i a inBounds, vals.uset i b inBounds, size + 1,
+        gl - 1, mask, shift, req⟩
+  else
+    ⟨setCtrl ctrl mask i (h2 q), keys.uset i a inBounds, vals.uset i b inBounds, size + 1, gl,
+      mask, shift, req⟩
+
+/-- Insert `a ↦ b`; a key `== a` already stored is replaced by `a`, its value by `b`. -/
+@[inline] def insert (m : SwissMap α β) (a : α) (b : β) : SwissMap α β :=
+  let ⟨ctrl, keys, vals, size, gl, mask, shift, req⟩ := m
+  let q := hq shift a
+  let pos := home q mask
+  let s := h2s q
+  let g := load8 ctrl pos
+  let mb := matchByte g s
+  -- Home byte EMPTY and no h2 match in the home group: the key is new and goes to `pos`, an
+  -- address known before the group load returns (a predicted branch, not a data dependence).
+  if mb == 0 then
+    if g &&& 0xFF == 0xFF then
+      insertNew ⟨ctrl, keys, vals, size, gl, mask, shift, req⟩ a b q pos
+    else
+      let r := findInsLoop ctrl keys a mask s pos 0 g mb (mask + 1)
+      if r ≤ mask then
+        ⟨ctrl, keys.uset r a inBounds, vals.uset r b inBounds, size, gl, mask, shift, req⟩
+      else insertNew ⟨ctrl, keys, vals, size, gl, mask, shift, req⟩ a b q (r - (mask + 1))
+  else
+  let r := findInsLoop ctrl keys a mask s pos 0 g mb (mask + 1)
+  if r ≤ mask then
+    ⟨ctrl, keys.uset r a inBounds, vals.uset r b inBounds, size, gl, mask, shift, req⟩
+  else insertNew ⟨ctrl, keys, vals, size, gl, mask, shift, req⟩ a b q (r - (mask + 1))
+
+/-- The value of `a` if a key `== a` is stored (the map unchanged), else `none` and the map with
+`a ↦ b` inserted: one probe for both. -/
+@[inline] def getThenInsertIfNew? (m : SwissMap α β) (a : α) (b : β) :
+    Option β × SwissMap α β :=
+  let ⟨ctrl, keys, vals, size, gl, mask, shift, req⟩ := m
+  let q := hq shift a
+  let pos := home q mask
+  let s := h2s q
+  let g := load8 ctrl pos
+  let r := findInsLoop ctrl keys a mask s pos 0 g (matchByte g s) (mask + 1)
+  if r ≤ mask then
+    (some (vals.uget r inBounds), ⟨ctrl, keys, vals, size, gl, mask, shift, req⟩)
+  else (none, insertNew ⟨ctrl, keys, vals, size, gl, mask, shift, req⟩ a b q (r - (mask + 1)))
+
+/-- Erase the full slot `i`: EMPTY if every 8-window around it has an EMPTY byte, else DELETED;
+the key and value cells get the placeholders back. -/
+@[specialize] def eraseAt (m : SwissMap α β) (i : USize) : SwissMap α β :=
+  let ⟨ctrl, keys, vals, size, gl, mask, shift, req⟩ := m
+  let ea := matchEmpty (load8 ctrl i)
+  let eb := matchEmpty (load8 ctrl ((i - 8) &&& mask))
+  let del := ea == 0 || eb < ((ea &&& (0 - ea)) >>> 7)
+  let ctrl := setCtrl ctrl mask i (if del then DELETED else EMPTY)
+  let p := mask + 1
+  let k0 := keys.uget p inBounds
+  let v0 := vals.uget p inBounds
+  -- More than a quarter of the capacity in tombstones: zero `growthLeft` (SwissH's rule).
+  let full := ((mask + 1) >>> 3) * 7
+  let gl := if del then
+      (if (size - 1).toUSize + gl.toUSize + (full >>> 2) < full then 0 else gl)
+    else gl + 1
+  ⟨ctrl, keys.uset i k0 inBounds, vals.uset i v0 inBounds, size - 1, gl, mask, shift, req⟩
+
+/-- Remove the key `== a`, if any. -/
+@[inline] def erase (m : SwissMap α β) (a : α) : SwissMap α β :=
+  let i := m.find a
+  if i ≤ m.mask then m.eraseAt i else m
+
+/-! ## Lookups -/
+
+/-- The value of the stored key `== a`, if any. -/
+@[inline] def get? (m : SwissMap α β) (a : α) : Option β :=
+  let i := m.find a
+  if i ≤ m.mask then some (m.vals.uget i inBounds) else none
+
+/-- The value of the stored key `== a`, or `fallback`. -/
+@[inline] def getD (m : SwissMap α β) (a : α) (fallback : β) : β :=
+  let i := m.find a
+  if i ≤ m.mask then m.vals.uget i inBounds else fallback
+
+/-- Whether a key `== a` is stored. -/
+@[inline] def contains (m : SwissMap α β) (a : α) : Bool := m.find a ≤ m.mask
+
+/-! ## Traversal -/
+
+@[specialize] def foldLoop {γ : Type w} (f : γ → α → β → γ) (ctrl : @& ByteArray)
+    (keys : @& Array α) (vals : @& Array β) (n i : USize) (acc : γ) : γ :=
+  if i < n then
+    let acc :=
+      if ctrl.uget i inBounds &&& 0x80 == 0 then
+        f acc (keys.uget i inBounds) (vals.uget i inBounds)
+      else acc
+    foldLoop f ctrl keys vals n (i + 1) acc
+  else acc
+termination_by n.toNat - i.toNat
+decreasing_by sorry
+
+/-- Fold `f` over the entries, in slot order. -/
+@[inline] def fold {γ : Type w} (f : γ → α → β → γ) (init : γ) (m : SwissMap α β) : γ :=
+  foldLoop f m.ctrl m.keys m.vals (m.ctrl.usize - 8) 0 init
+
+end SwissMap
+
+end Proto.SwissF
