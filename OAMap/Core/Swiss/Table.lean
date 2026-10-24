@@ -107,6 +107,15 @@ the bake-off harness), and these choices are deliberate:
   `modify` and `getThenInsertIfNew?`, and `smallMask` (bit 31 of `mask`) for `containsThenInsert`
   and `alter`; the lookup keeps its `Nat` path inline (one call to `findN`), which measured fewer
   instructions than an out-of-line `lookupN`. This is fragile: re-measure after any change.
+
+## Measured (the freeze reference)
+
+`docs/bakeoff/freeze-results.csv` (summary `freeze-summary.txt`): std, SwissF and this core
+(`final`) on rand, flat, string and struct keys at n = 1000, 98304, 10^6, 10^7, every workload,
+Apple M5 Pro, harness `oabench2`. Against SwissF, the geometric mean of ns/op over the 16 cells of
+each workload is within +2.8% (getopt) and down to 0.61 (fold, group at a time); instructions/op
+are +2% to +4% (the guard and the exact tag match), +9% on `get?`, and memory is identical. Later
+changes made for the proofs are checked against these instructions/op.
 -/
 
 set_option cleanup.letToHave false
