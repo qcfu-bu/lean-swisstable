@@ -71,6 +71,19 @@ tools/select-core.sh linear      # a bake-off core, once OAMap/Core/Linear.lean 
 lake build OAMapTest.CoreSpec    # the acceptance test for the selected core
 ```
 
+### The SwissTable core (branch `core/swiss`, in progress)
+
+The bake-off winner (`docs/bakeoff/decision.md`) is being built in `OAMap/Core/Swiss/`:
+
+* `Group.lean`: the verified SWAR groups of control bytes (no `sorry`).
+* `Table.lean`: the frozen executable code of the 23 contract definitions. Its array bounds are
+  `by sorry` and its loops' `decreasing_by` are `sorry` until the proofs land; nothing else is
+  missing.
+* `OAMap/Core/Swiss.lean` (what `tools/select-core.sh swiss` selects): the 22 contract lemmas,
+  stated and `sorry`. `lake build OAMapTest.CoreSpec`, `SealCheck`, `Unverified`, `Semantics` and
+  `Cbv` pass with it selected; `Audit` and `tools/audit.py` reject it until the proofs are done,
+  so `OAMap/Core/Table.lean` keeps selecting `ListRef` until then.
+
 ## Tools
 
 * `tools/ci.sh`, `tools/select-core.sh`: above.
