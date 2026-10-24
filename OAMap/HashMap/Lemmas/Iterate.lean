@@ -97,19 +97,9 @@ theorem mem_keysArray [LawfulBEq α] {k : α} :
 
 theorem forall_mem_keysArray_iff_forall_mem_getKey [EquivBEq α] [LawfulHashable α]
     {p : α → Prop} :
-    (∀ k ∈ m.keysArray, p k) ↔ ∀ (k : α) (h : k ∈ m), p (m.getKey k h) :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `h`
-  -- Std (HashMap): DHashMap.forall_mem_keysArray_iff_forall_mem_getKey
-  -- Std (DHashMap.forall_mem_keysArray_iff_forall_mem_getKey): Raw₀.forall_mem_keysArray_iff_forall_contains_getKey ⟨m.1, m.2.size_buckets_pos⟩ m.2
-  -- Std (DHashMap.Internal.Raw₀.forall_mem_keysArray_iff_forall_contains_getKey): by
-  --   simp [← toArray_keys_eq_keysArray, h, forall_mem_keys_iff_forall_contains_getKey]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   simp [← toArray_keys, h, forall_mem_keys_iff_forall_contains_getKey]
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   simp [← toArray_keys, forall_mem_keys_iff_forall_contains_getKey]
-  --   error 1: Unknown identifier `forall_mem_keys_iff_forall_contains_getKey`
-  sorry
+    (∀ k ∈ m.keysArray, p k) ↔ ∀ (k : α) (h : k ∈ m), p (m.getKey k h) := by
+  simp only [← toArray_keys, List.mem_toArray]
+  simp_to_model [keys, getKey, mem] using List.forall_mem_keys_iff_forall_containsKey_getKey
 
 theorem contains_of_mem_keysArray [EquivBEq α] [LawfulHashable α] {k : α}
     (h' : k ∈ m.keysArray) : m.contains k :=
@@ -201,19 +191,9 @@ theorem mem_toArray_iff_getElem?_eq_some [LawfulBEq α]
 
 theorem getElem?_eq_some_iff_exists_beq_and_mem_toArray [EquivBEq α] [LawfulHashable α]
     {k : α} {v : β} :
-    m[k]? = some v ↔ ∃ (k' : α), k == k' ∧ (k', v) ∈ m.toArray :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `h`
-  -- Std (HashMap): DHashMap.Const.get?_eq_some_iff_exists_beq_and_mem_toArray
-  -- Std (DHashMap.Const.get?_eq_some_iff_exists_beq_and_mem_toArray): Raw₀.Const.get?_eq_some_iff_exists_beq_and_mem_toArray ⟨m.1, m.2.size_buckets_pos⟩ m.2
-  -- Std (DHashMap.Internal.Raw₀.Const.get?_eq_some_iff_exists_beq_and_mem_toArray): by
-  --   simp [← toArray_toList_eq_toArray, get?_eq_some_iff_exists_beq_and_mem_toList, h]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   simp [← toArray_toList, getElem?_eq_some_iff_exists_beq_and_mem_toList, h]
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   simp [← toArray_toList, getElem?_eq_some_iff_exists_beq_and_mem_toList]
-  --   error 1: Tactic `simp` failed with a nested error:
-  sorry
+    m[k]? = some v ↔ ∃ (k' : α), k == k' ∧ (k', v) ∈ m.toArray := by
+  rw [getElem?_eq_some_iff_exists_beq_and_mem_toList, ← toArray_toList]
+  simp only [List.mem_toArray]
 
 theorem find?_toArray_eq_some_iff_getKey?_eq_some_and_getElem?_eq_some
     [EquivBEq α] [LawfulHashable α] {k k' : α} {v : β} :
@@ -250,20 +230,10 @@ theorem forM_eq_forM [Monad m'] [LawfulMonad m'] {f : (a : α) → β → m' PUn
   rfl
 
 theorem forM_eq_forM_toList [Monad m'] [LawfulMonad m'] {f : α × β → m' PUnit} :
-    ForM.forM m f = ForM.forM m.toList f :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Tactic `apply` failed: could not unify the conclusion of `@forM_eq_forM_toProd`
-  -- Std (HashMap): DHashMap.Const.forMUncurried_eq_forM_toList
-  -- Std (DHashMap.Const.forMUncurried_eq_forM_toList): Raw₀.Const.forM_eq_forM_toList ⟨m.1, m.2.size_buckets_pos⟩
-  -- Std (DHashMap.Internal.Raw₀.Const.forM_eq_forM_toList): by
-  --   simp_to_model [forM, Const.toList] using List.forM_eq_forM_toProd
-  -- tried 0 (simp_to_model): by simp_to_model [forM, toList] using List.forM_eq_forM_toProd
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   simp_to_model [forM, toList] using List.forM_eq_forM_toProd
-  --   error 1: Tactic `apply` failed: could not unify the conclusion of `@forM_eq_forM_toProd`
-  -- tried 2 (simp_to_model (at *)): by simp_to_model [forM, toList] at * using List.forM_eq_forM_toProd
-  --   error 2: Tactic `apply` failed: could not unify the conclusion of `@forM_eq_forM_toProd`
-  sorry
+    ForM.forM m f = ForM.forM m.toList f := by
+  show m.forM (fun a b => f (a, b)) = m.toList.forM f
+  rw [Model.forM_eq_forM_toListModel, Model.toList_eq_toListModel_map]
+  exact List.forM_eq_forM_toProd (m' := m') (l := Model.toListModel m) (f := fun a b => f (a, b))
 
 @[simp, grind =]
 theorem forIn_eq_forIn [Monad m'] [LawfulMonad m']
@@ -273,20 +243,11 @@ theorem forIn_eq_forIn [Monad m'] [LawfulMonad m']
 
 theorem forIn_eq_forIn_toList [Monad m'] [LawfulMonad m']
     {f : α × β → δ → m' (ForInStep δ)} {init : δ} :
-    ForIn.forIn m init f = ForIn.forIn m.toList init f :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Tactic `apply` failed: could not unify the conclusion of `@forIn_eq_forIn_toProd`
-  -- Std (HashMap): DHashMap.Const.forInUncurried_eq_forIn_toList
-  -- Std (DHashMap.Const.forInUncurried_eq_forIn_toList): Raw₀.Const.forIn_eq_forIn_toList ⟨m.1, m.2.size_buckets_pos⟩
-  -- Std (DHashMap.Internal.Raw₀.Const.forIn_eq_forIn_toList): by
-  --   simp_to_model [forIn, Const.toList] using List.forIn_eq_forIn_toProd
-  -- tried 0 (simp_to_model): by simp_to_model [forIn, toList] using List.forIn_eq_forIn_toProd
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   simp_to_model [forIn, toList] using List.forIn_eq_forIn_toProd
-  --   error 1: Tactic `apply` failed: could not unify the conclusion of `@forIn_eq_forIn_toProd`
-  -- tried 2 (simp_to_model (at *)): by simp_to_model [forIn, toList] at * using List.forIn_eq_forIn_toProd
-  --   error 2: Tactic `apply` failed: could not unify the conclusion of `@forIn_eq_forIn_toProd`
-  sorry
+    ForIn.forIn m init f = ForIn.forIn m.toList init f := by
+  show m.forIn (fun a b acc => f (a, b) acc) init = ForIn.forIn m.toList init f
+  rw [Model.forIn_eq_forIn_toListModel, Model.toList_eq_toListModel_map]
+  exact List.forIn_eq_forIn_toProd (m' := m') (l := Model.toListModel m)
+    (f := fun a b d => f (a, b) d)
 
 @[simp, grind =]
 theorem forIn_toList (c : HashMap α β) : ForIn.toList c = c.toList :=
@@ -306,37 +267,17 @@ theorem fold_eq_foldl_keys {f : δ → α → δ} {init : δ} :
   simp_to_model [fold, keys] using List.foldl_eq_foldl_keys
 
 theorem forM_eq_forM_keys [Monad m'] [LawfulMonad m'] {f : α → m' PUnit} :
-    ForM.forM m (fun a => f a.1) = m.keys.forM f :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Tactic `apply` failed: could not unify the conclusion of `@List.forM_eq_forM_keys`
-  -- Std (HashMap): DHashMap.forM_eq_forM_keys
-  -- Std (DHashMap.forM_eq_forM_keys): Raw₀.forM_eq_forM_keys ⟨m.1, m.2.size_buckets_pos⟩
-  -- Std (DHashMap.Internal.Raw₀.forM_eq_forM_keys): by
-  --   simp_to_model [forM, keys] using List.forM_eq_forM_keys
-  -- tried 0 (simp_to_model): by simp_to_model [forM, keys] using List.forM_eq_forM_keys
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   simp_to_model [forM, keys] using List.forM_eq_forM_keys
-  --   error 1: Tactic `apply` failed: could not unify the conclusion of `@List.forM_eq_forM_keys`
-  -- tried 2 (simp_to_model (at *)): by simp_to_model [forM, keys] at * using List.forM_eq_forM_keys
-  --   error 2: Tactic `apply` failed: could not unify the conclusion of `@List.forM_eq_forM_keys`
-  sorry
+    ForM.forM m (fun a => f a.1) = m.keys.forM f := by
+  show m.forM (fun a _ => f a) = m.keys.forM f
+  rw [Model.forM_eq_forM_toListModel, Model.keys_eq_keys_toListModel]
+  exact List.forM_eq_forM_keys (m' := m')
 
 theorem forIn_eq_forIn_keys [Monad m'] [LawfulMonad m']
     {f : α → δ → m' (ForInStep δ)} {init : δ} :
-    ForIn.forIn m init (fun a d => f a.1 d) = ForIn.forIn m.keys init f :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Tactic `apply` failed: could not unify the conclusion of `@List.forIn_eq_forIn_keys`
-  -- Std (HashMap): DHashMap.forIn_eq_forIn_keys
-  -- Std (DHashMap.forIn_eq_forIn_keys): Raw₀.forIn_eq_forIn_keys ⟨m.1, m.2.size_buckets_pos⟩
-  -- Std (DHashMap.Internal.Raw₀.forIn_eq_forIn_keys): by
-  --   simp_to_model [forIn, keys] using List.forIn_eq_forIn_keys
-  -- tried 0 (simp_to_model): by simp_to_model [forIn, keys] using List.forIn_eq_forIn_keys
-  -- tried 1 (renamed Raw0 text (chain)): by
-  --   simp_to_model [forIn, keys] using List.forIn_eq_forIn_keys
-  --   error 1: Tactic `apply` failed: could not unify the conclusion of `@List.forIn_eq_forIn_keys`
-  -- tried 2 (simp_to_model (at *)): by simp_to_model [forIn, keys] at * using List.forIn_eq_forIn_keys
-  --   error 2: Tactic `apply` failed: could not unify the conclusion of `@List.forIn_eq_forIn_keys`
-  sorry
+    ForIn.forIn m init (fun a d => f a.1 d) = ForIn.forIn m.keys init f := by
+  show m.forIn (fun a _ d => f a d) init = ForIn.forIn m.keys init f
+  rw [Model.forIn_eq_forIn_toListModel, Model.keys_eq_keys_toListModel]
+  exact List.forIn_eq_forIn_keys (m' := m')
 
 theorem foldM_eq_foldlM_toArray [Monad m'] [LawfulMonad m']
     {f : δ → α → β → m' δ} {init : δ} :
@@ -348,18 +289,9 @@ theorem fold_eq_foldl_toArray {f : δ → α → β → δ} {init : δ} :
   simp [← toArray_toList, fold_eq_foldl_toList]
 
 theorem forM_eq_forM_toArray [Monad m'] [LawfulMonad m'] {f : α → β → m' PUnit} :
-    m.forM f = m.toArray.forM (fun a => f a.1 a.2) :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
-  -- Std (HashMap): DHashMap.Const.forM_eq_forM_toArray
-  -- Std (DHashMap.Const.forM_eq_forM_toArray): Raw₀.Const.forM_eq_forM_toArray ⟨m.1, m.2.size_buckets_pos⟩
-  -- Std (DHashMap.Internal.Raw₀.Const.forM_eq_forM_toArray): by
-  --   rw [← toArray_toList_eq_toArray, List.forM_toArray', forM_eq_forM_toList]
-  --   rfl
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   rw [← toArray_toList, List.forM_toArray', forM_eq_forM_toList]
-  --   rfl
-  sorry
+    m.forM f = m.toArray.forM (fun a => f a.1 a.2) := by
+  rw [← toArray_toList, List.forM_toArray' _ _ rfl, forM_eq_forM, forM_eq_forM_toList]
+  rfl
 
 theorem forIn_eq_forIn_toArray [Monad m'] [LawfulMonad m']
     {f : α → β → δ → m' (ForInStep δ)} {init : δ} :
@@ -376,18 +308,8 @@ theorem fold_eq_foldl_keysArray {f : δ → α → δ} {init : δ} :
   simp [← toArray_keys, fold_eq_foldl_keys]
 
 theorem forM_eq_forM_keysArray [Monad m'] [LawfulMonad m'] {f : α → m' PUnit} :
-    m.forM (fun a _ => f a) = m.keysArray.forM f :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Tactic `rewrite` failed: Did not find an occurrence of the pattern
-  -- Std (HashMap): DHashMap.forM_eq_forM_keysArray
-  -- Std (DHashMap.forM_eq_forM_keysArray): Raw₀.forM_eq_forM_keysArray ⟨m.1, m.2.size_buckets_pos⟩
-  -- Std (DHashMap.Internal.Raw₀.forM_eq_forM_keysArray): by
-  --   rw [← toArray_keys_eq_keysArray, List.forM_toArray', forM_eq_forM_keys]
-  --   rfl
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   rw [← toArray_keys, List.forM_toArray', forM_eq_forM_keys]
-  --   rfl
-  sorry
+    m.forM (fun a _ => f a) = m.keysArray.forM f := by
+  rw [← toArray_keys, List.forM_toArray' _ _ rfl, forM_eq_forM, forM_eq_forM_keys]
 
 theorem forIn_eq_forIn_keysArray [Monad m'] [LawfulMonad m']
     {f : α → δ → m' (ForInStep δ)} {init : δ} :
@@ -397,110 +319,43 @@ theorem forIn_eq_forIn_keysArray [Monad m'] [LawfulMonad m']
 end monadic
 
 theorem all_eq_not_any_not {p : (a : α) → β → Bool} :
-    m.all p = ! m.any (fun a b => ! p a b) :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `all_toList`
-  -- Std (HashMap): DHashMap.all_eq_not_any_not
-  -- Std (DHashMap.all_eq_not_any_not): Raw₀.all_eq_not_any_not ⟨m.1, m.2.size_buckets_pos⟩
-  -- Std (DHashMap.Internal.Raw₀.all_eq_not_any_not): by
-  --   rw [← all_toList, ← any_toList, List.all_eq_not_any_not]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   rw [← all_toList, ← any_toList, List.all_eq_not_any_not]
-  sorry
+    m.all p = ! m.any (fun a b => ! p a b) := by
+  rw [Model.all_eq_all_toListModel, Model.any_eq_any_toListModel, List.all_eq_not_any_not]
 
 theorem any_eq_not_all_not {p : (a : α) → β → Bool} :
-    m.any p = ! m.all (fun a b => ! p a b) :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `all_toList`
-  -- Std (HashMap): DHashMap.any_eq_not_all_not
-  -- Std (DHashMap.any_eq_not_all_not): Raw₀.any_eq_not_all_not ⟨m.1, m.2.size_buckets_pos⟩
-  -- Std (DHashMap.Internal.Raw₀.any_eq_not_all_not): by
-  --   rw [← all_toList, ← any_toList, List.any_eq_not_all_not]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   rw [← all_toList, ← any_toList, List.any_eq_not_all_not]
-  sorry
+    m.any p = ! m.all (fun a b => ! p a b) := by
+  rw [Model.all_eq_all_toListModel, Model.any_eq_any_toListModel, List.any_eq_not_all_not]
 
 @[simp]
 theorem any_toList {p : α → β → Bool} :
-    m.toList.any (fun x => p x.1 x.2) = m.any p :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `Raw.any`
-  -- Std (HashMap): DHashMap.Const.any_toList
-  -- Std (DHashMap.Const.any_toList): Raw₀.Const.any_toList ⟨m.1, m.2.size_buckets_pos⟩
-  -- Std (DHashMap.Internal.Raw₀.Const.any_toList): by
-  --   simp only [Raw.any, ForIn.forIn, Id.run_bind]
-  --   rw [forIn_eq_forIn_toList, forIn_eq_forIn']
-  --   induction Raw.Const.toList m.1 with
-  --   | nil => simp
-  --   | cons hd tl ih =>
-  --     simp only [List.forIn'_cons, Id.run_bind, List.any_cons]
-  --     by_cases h : p hd.fst hd.snd = true
-  --     · simp [h]
-  --     · simp [h, ih]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   simp only [Raw.any, ForIn.forIn, Id.run_bind]
-  --   rw [forIn_eq_forIn_toList, forIn_eq_forIn']
-  --   induction Raw.Const.toList m.1 with
-  --   | nil => simp
-  --   | cons hd tl ih =>
-  --     simp only [List.forIn'_cons, Id.run_bind, List.any_cons]
-  --     by_cases h : p hd.fst hd.snd = true
-  --     · simp [h]
-  --     · simp [h, ih]
-  sorry
+    m.toList.any (fun x => p x.1 x.2) = m.any p := by
+  rw [Model.toList_eq_toListModel_map, Model.any_eq_any_toListModel, List.any_map]
+  rfl
 
 theorem any_eq_true_iff_exists_mem_getKey_getElem [LawfulHashable α] [EquivBEq α]
     {p : α → β → Bool} :
-    m.any p = true ↔ ∃ (a : α) (h : a ∈ m), p (m.getKey a h) (m[a]'h) :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `Const.get`
-  -- Std (HashMap): DHashMap.Const.any_eq_true_iff_exists_mem_getKey_get
-  -- Std (DHashMap.Const.any_eq_true_iff_exists_mem_getKey_get): Raw₀.Const.any_eq_true ⟨m.1, m.2.size_buckets_pos⟩ m.2
-  -- Std (DHashMap.Internal.Raw₀.Const.any_eq_true): by
-  --   simp only [← any_toList, List.any_eq_true, Prod.exists,
-  --     mem_toList_iff_getKey?_eq_some_and_get?_eq_some _ h, get?_eq_some_iff _ h,
-  --     getKey?_eq_some_iff _ h]
-  --   constructor
-  --   · intro h'
-  --     rcases h' with ⟨a, b, h', hp⟩
-  --     rcases h' with ⟨ha, h₁, hb⟩
-  --     rcases ha with ⟨h₂, ha⟩
-  --     exists a
-  --     exists h₁
-  --     simp [ha, hb, hp]
-  --   · intro h'
-  --     rcases h' with ⟨a, h', hp⟩
-  --     exists m.getKey a h'
-  --     exists Const.get m a h'
-  --     simp only [hp, and_true]
-  --     have ha : m.contains (m.getKey a h') := by
-  --       apply contains_of_getKey?_eq_some _ h
-  --       rw [getKey?_eq_some_iff (k := a) _ h]
-  --       exists h'
-  --     simp [ha, getKey_congr _ h (getKey_beq _ h h'), get_congr _ h (getKey_beq _ h h')]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   simp only [← any_toList, List.any_eq_true, Prod.exists,
-  --     mem_toList_iff_getKey?_eq_some_and_getElem?_eq_some, getElem?_eq_some_iff,
-  --     getKey?_eq_some_iff]
-  --   constructor
-  --   · intro h'
-  --     rcases h' with ⟨a, b, h', hp⟩
-  --     rcases h' with ⟨ha, h₁, hb⟩
-  --     rcases ha with ⟨h₂, ha⟩
-  --     exists a
-  --     exists h₁
-  --     simp [ha, hb, hp]
-  --   · intro h'
-  --     rcases h' with ⟨a, h', hp⟩
-  --     exists m.getKey a h'
-  --     exists Const.get m a h'
-  --     simp only [hp, and_true]
-  --     have ha : m.contains (m.getKey a h') := by
-  --       apply mem_of_getKey?_eq_some
-  --       rw [getKey?_eq_some_iff (k := a)]
-  --       exists h'
-  --     simp [ha, getKey_congr (getKey_beq h'), getElem_congr (getKey_beq h')]
-  sorry
+    m.any p = true ↔ ∃ (a : α) (h : a ∈ m), p (m.getKey a h) (m[a]'h) := by
+  simp only [← any_toList, List.any_eq_true, Prod.exists,
+    mem_toList_iff_getKey?_eq_some_and_getElem?_eq_some, getElem?_eq_some_iff,
+    getKey?_eq_some_iff]
+  constructor
+  · intro h'
+    rcases h' with ⟨a, b, h', hp⟩
+    rcases h' with ⟨ha, h₁, hb⟩
+    rcases ha with ⟨h₂, ha⟩
+    exists a
+    exists h₁
+    simp [ha, hb, hp]
+  · intro h'
+    rcases h' with ⟨a, h', hp⟩
+    exists m.getKey a h'
+    exists m[a]'h'
+    simp only [hp, and_true]
+    have ha : m.getKey a h' ∈ m := by
+      apply mem_of_getKey?_eq_some
+      rw [getKey?_eq_some_iff (k := a)]
+      exists h'
+    simp [ha, getKey_congr (getKey_beq h'), getElem_congr (getKey_beq h')]
 
 theorem any_eq_true_iff_exists_mem_getElem [LawfulBEq α] {p : α → β → Bool} :
     m.any p = true ↔ ∃ (a : α) (h : a ∈ m), p a (m[a]'h) := by
@@ -532,32 +387,9 @@ theorem any_eq_false_iff_forall_mem_getElem [LawfulBEq α] {p : α → β → Bo
 
 @[simp]
 theorem all_toList {p : α → β → Bool} :
-    m.toList.all (fun x => p x.1 x.2) = m.all p :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `Raw.all`
-  -- Std (HashMap): DHashMap.Const.all_toList
-  -- Std (DHashMap.Const.all_toList): Raw₀.Const.all_toList ⟨m.1, m.2.size_buckets_pos⟩
-  -- Std (DHashMap.Internal.Raw₀.Const.all_toList): by
-  --   simp only [Raw.all, ForIn.forIn, Bool.not_eq_true, Id.run_bind]
-  --   rw [forIn_eq_forIn_toList, forIn_eq_forIn']
-  --   induction Raw.Const.toList m.1 with
-  --   | nil => simp
-  --   | cons hd tl ih =>
-  --     simp only [List.forIn'_cons, Id.run_bind, List.all_cons]
-  --     by_cases h : p hd.fst hd.snd = false
-  --     · simp [h]
-  --     · simp [h, ih]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   simp only [Raw.all, ForIn.forIn, Bool.not_eq_true, Id.run_bind]
-  --   rw [forIn_eq_forIn_toList, forIn_eq_forIn']
-  --   induction Raw.Const.toList m.1 with
-  --   | nil => simp
-  --   | cons hd tl ih =>
-  --     simp only [List.forIn'_cons, Id.run_bind, List.all_cons]
-  --     by_cases h : p hd.fst hd.snd = false
-  --     · simp [h]
-  --     · simp [h, ih]
-  sorry
+    m.toList.all (fun x => p x.1 x.2) = m.all p := by
+  rw [Model.toList_eq_toListModel_map, Model.all_eq_all_toListModel, List.all_map]
+  rfl
 
 theorem all_eq_true_iff_forall_mem_getKey_getElem [EquivBEq α] [LawfulHashable α]
     {p : (a : α) → β → Bool} :
@@ -578,40 +410,16 @@ theorem all_eq_false_iff_exists_mem_getElem [LawfulBEq α] {p : α → β → Bo
   simp [all_eq_false_iff_exists_mem_getKey_getElem, getKey_eq]
 
 theorem any_keys [LawfulHashable α] [EquivBEq α] {p : α → Bool} :
-    m.keys.any p = m.any (fun a _ => p a) :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `Raw.Const.toList`
-  -- Std (HashMap): DHashMap.Const.any_keys
-  -- Std (DHashMap.Const.any_keys): Raw₀.Const.any_keys ⟨m.1, m.2.size_buckets_pos⟩
-  -- Std (DHashMap.Internal.Raw₀.Const.any_keys): by
-  --   simp only [← any_toList, ← map_fst_toList_eq_keys, List.any_map]
-  --   induction (Raw.Const.toList m.1) with
-  --   | nil => simp
-  --   | cons hd tl ih => simp [ih]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   simp only [← any_toList, ← map_fst_toList_eq_keys, List.any_map]
-  --   induction (Raw.Const.toList m.1) with
-  --   | nil => simp
-  --   | cons hd tl ih => simp [ih]
-  sorry
+    m.keys.any p = m.any (fun a _ => p a) := by
+  rw [Model.keys_eq_keys_toListModel, Model.any_eq_any_toListModel, List.keys_eq_map,
+    List.any_map]
+  rfl
 
 theorem all_keys [LawfulHashable α] [EquivBEq α] {p : α → Bool} :
-    m.keys.all p = m.all (fun a _ => p a) :=
-  -- REVIEW: no generated proof compiles.
-  -- error: Unknown identifier `Raw.Const.toList`
-  -- Std (HashMap): DHashMap.Const.all_keys
-  -- Std (DHashMap.Const.all_keys): Raw₀.Const.all_keys ⟨m.1, m.2.size_buckets_pos⟩
-  -- Std (DHashMap.Internal.Raw₀.Const.all_keys): by
-  --   simp only [← all_toList, ← map_fst_toList_eq_keys, List.all_map]
-  --   induction (Raw.Const.toList m.1) with
-  --   | nil => simp
-  --   | cons hd tl ih => simp [ih]
-  -- tried 0 (renamed Raw0 text (check)): by
-  --   simp only [← all_toList, ← map_fst_toList_eq_keys, List.all_map]
-  --   induction (Raw.Const.toList m.1) with
-  --   | nil => simp
-  --   | cons hd tl ih => simp [ih]
-  sorry
+    m.keys.all p = m.all (fun a _ => p a) := by
+  rw [Model.keys_eq_keys_toListModel, Model.all_eq_all_toListModel, List.keys_eq_map,
+    List.all_map]
+  rfl
 
 end
 
