@@ -74,6 +74,7 @@ the `#eval` line and indent all the fields equally, as in `ParityRunMock.lean`.
 | `verbose` | `false` | also list the declarations that pass |
 | `maxShow` | `0` | maximal number of entries printed per section (`0` = all) |
 | `failOnError` | `true` | log an error at the end, so that `lean` exits with status 1 |
+| `failOnWarning` | `false` | also log that error when some entry has a warning or there are extras (`ParityRun` sets it) |
 | `jsonOut` | `none` | write `{entries: [{kind, std, ours, status, issues: [{severity, tag, lines}]}], extras}` |
 
 ## What is compared
@@ -138,7 +139,8 @@ has it and Std's does not.
 
 **Definitions and instances** are checked by signature (type), kind and attributes. Their
 values are not compared, except for notation declarations (`ParserDescr`), whose parser
-description is compared. Inductive types (`HashMap`, `HashSet`, `Equiv`) are checked by type.
+description is compared, after renaming the `Name` literals in Std's (a notation's description
+names its own syntax kind, such as `` `Std.HashMap.«term_~m_» ``). Inductive types (`HashMap`, `HashSet`, `Equiv`) are checked by type.
 Their constructors and projections are internals and are skipped by default.
 
 **Root causes.** When a statement mentions a Std operation whose own signature differs (for

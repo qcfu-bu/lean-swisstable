@@ -22,12 +22,11 @@ Rules:
 * **U** lemmas take no hypotheses on `BEq`/`Hashable`, **L** lemmas take
   `[EquivBEq α] [LawfulHashable α]`, exactly as the Table lemma they come from. The map is
   explicit, the keys, values and functions are implicit (`proofs.md` §4).
-* One Table lemma is still `sorry` in `OAMap.Core.Bulk`: `beq_eq_beqModel`, whose statement
-  cannot be derived from the public lemmas about `Const.beqModel` (see its docstring there). Its
-  bridge `beq_eq_beqModel` here is the same one-line application, and nothing else uses it:
-  `beq_of_perm`, `perm_of_beq`, `beq_congr` and `beq_iff_equiv` do not depend on it, and the
-  user lemmas about `==` (`Equiv.beq`, `equiv_of_beq`, `beq_iff_equiv`, `Equiv.beq_congr`) are
-  proved from those four.
+* There is no bridge from `m₁ == m₂` to `Const.beqModel` (Std's `Raw₀.Const.beq_eq_beqModel`):
+  `Const.beqModel` is not `@[expose]`d and cannot be pinned down from Std's public lemmas (see
+  `OAMap.Core.Bulk`). The user lemmas about `==` (`Equiv.beq`, `equiv_of_beq`, `beq_iff_equiv`,
+  `Equiv.beq_congr`) are proved from `beq_of_perm`, `perm_of_beq`, `beq_congr` and
+  `beq_iff_equiv` instead.
 
 Owner: API, Wave 1.
 -/
@@ -322,13 +321,6 @@ theorem insertManyIfNewUnit_list_eq_foldl (m : HashMap α Unit) {l : List α} :
   exact List.foldl_hom HashMap.inner fun _ _ => Eq.refl _
 
 /-! ## Boolean equality -/
-
-/-- **Depends on a `sorry`** of `OAMap.Core.Bulk` (`Core.Table.beq_eq_beqModel`). Std's
-`Raw₀.Const.beq_eq_beqModel` needs only `[PartialEquivBEq α]`; this one takes `[EquivBEq α]`
-like the Table lemma. -/
-theorem beq_eq_beqModel [EquivBEq α] [LawfulHashable α] [BEq β] {m₁ m₂ : HashMap α β} :
-    (m₁ == m₂) = Const.beqModel (toListModel m₁) (toListModel m₂) :=
-  m₁.inner.beq_eq_beqModel m₂.inner
 
 theorem beq_of_perm [EquivBEq α] [LawfulHashable α] [BEq β] [ReflBEq β] {m₁ m₂ : HashMap α β}
     (h : (toListModel m₁).Perm (toListModel m₂)) : (m₁ == m₂) = true :=

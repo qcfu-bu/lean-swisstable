@@ -74,6 +74,9 @@ structure Config where
   maxShow : Nat := 0
   /-- Log an error (so `lean` exits with status 1) when some check fails with an error. -/
   failOnError : Bool := true
+  /-- Also log an error when some check gives a warning, or when there are extras (with
+  `reportExtras`): every difference from Std then fails the run. -/
+  failOnWarning : Bool := false
   /-- Also write the results as JSON to this file. -/
   jsonOut : Option System.FilePath := none
   deriving Inhabited
@@ -190,6 +193,14 @@ partial def Ctx.trExpr (ctx : Ctx) (e : Expr) : Expr :=
       some (.const (ctx.tr n) us)
     | .proj s i b => some (.proj (ctx.tr s) i (ctx.trExpr b))
     | _ => none
+
+/-- Renames the `Name` literals of a term (the syntax kinds inside a `ParserDescr`, such as
+`` `Std.HashMap.«term_~m_» ``) like the constants: a notation's kind is its own declaration name. -/
+def Ctx.trNameLits (ctx : Ctx) (e : Expr) : Expr :=
+  e.replace fun t =>
+    match t.name? with
+    | some n => if n.isAnonymous then none else some (toExpr (ctx.tr n))
+    | none => none
 
 def isUnder (pres : Array Name) (n : Name) : Bool := pres.any (·.isPrefixOf n)
 
@@ -705,7 +716,7 @@ def checkPair (ctx : Ctx) (db : AttrDB) (kind : String) (stdName oursName : Name
   -- notations: compare the parser descriptions
   if sInfo.type.isConstOf ``ParserDescr || sInfo.type.isConstOf ``TrailingParserDescr then
     if let (some sv, some cv) := (sInfo.value?, cInfo.value?) then
-      unless eqT (ctx.trExpr sv) cv do
+      unless eqT (ctx.trNameLits (ctx.trExpr sv)) cv do
         issues := issues.push { sev := .error, tag := "notation", lines :=
           #[s!"Std : {← ppIn {} sv}", s!"ours: {← ppIn {} cv}"] }
   -- attributes
@@ -992,5 +1003,8 @@ def run (cfg : Config := {}) : CommandElabM Unit := liftTermElabM do
     IO.FS.writeFile p j.pretty
   if cfg.failOnError && nErr > 0 then
     logError m!"parity check failed: {nErr} Std declarations with errors"
+  if cfg.failOnWarning && (nWarn > 0 || (cfg.reportExtras && !extras.isEmpty)) then
+    logError m!"parity check failed: {nWarn} Std declarations with warnings, \
+      {if cfg.reportExtras then extras.size else 0} extras"
 
 end Parity

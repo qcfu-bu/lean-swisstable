@@ -20,6 +20,6 @@ check fails (`docs/ARCHITECTURE.md` §9.2):
 | `Cbv`        | `by cbv` closes the same goals as on Std                    |
 | `Unverified` | `#guard` tests for functions without Std lemmas             |
 
-Until the Merge phase, `ParityRun` and `Audit` report without failing on missing declarations and
-on `sorry`; their docstrings say which line to change.
+Since the Merge, `ParityRun` fails on any difference from Std outside its `ignore` list, and
+`Audit` on any dependency on `sorryAx`.
 -/

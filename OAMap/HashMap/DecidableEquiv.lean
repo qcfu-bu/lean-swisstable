@@ -8,8 +8,7 @@ public import OAMap.HashMap.Model
 Std's `Std/Data/HashMap/DecidableEquiv.lean`: the instance has Std's binders and statement, so its
 auto-generated name (`instDecidableEquivOfLawfulBEq`) is Std's. Std decides `m₁ ~m m₂` through
 `DHashMap`'s instance; ours decides it by `m₁ == m₂` (`OAMap.Core.Table.beq`, Std's algorithm) and
-`Model.beq_iff_equiv` (`docs/ARCHITECTURE.md` §6.4). That route does not go through
-`Model.beq_eq_beqModel`, so the instance does not depend on the `sorry` of `OAMap.Core.Bulk`.
+`Model.beq_iff_equiv` (`docs/ARCHITECTURE.md` §6.4), not through `Const.beqModel`.
 Like Std's file, this one needs the model lemmas but none of the user lemmas, so it imports
 `OAMap.HashMap.Model` rather than `OAMap.HashMap.Lemmas`.
 

@@ -12,15 +12,14 @@ were written in a separate design directory: where they say "this directory", re
 for the scripts (including `tools2/secdeps.py`, now `tools/secdeps.py`) and `tools/data/` for
 the JSON inputs.
 
-Status: Wave 1 merged, Wave 2 in progress. The reference core `OAMap.Core.ListRef` implements the
-core contract and passes `test/OAMapTest/CoreSpec.lean`. `Core/Derived.lean`, `Core/Bulk.lean`,
-the `HashMap` API (`Basic`, `AdditionalOperations`), the model bridge (`Model`), `simp_to_model`
-(`Tactic`) and `DecidableEquiv` are written. The nine `HashMap/Lemmas/*.lean` files and
-`HashSet/{Basic,Lemmas,DecidableEquiv}.lean` are generated from Std's text (below): every Std
-statement is present (parity reports no statement, binder or attribute difference), and the
-proofs that do not compile yet are `sorry` under a `-- REVIEW` comment carrying Std's proof chain
-and the candidates tried. The iterator files, `OAMapTest/Cbv.lean`, `Unverified.lean` and
-`bench/` are still stubs.
+Status: Waves 1 and 2 merged, against the reference core `OAMap.Core.ListRef` (the layout-specific
+core comes from the benchmark bake-off). Every proof is complete: no `sorry`, and every constant
+of the library depends only on `propext`, `Classical.choice` and `Quot.sound`. Parity with Std
+reports 1118 of 1118 Std declarations ok, 0 missing and 0 extras. The nine
+`HashMap/Lemmas/*.lean` files and `HashSet/{Basic,Lemmas,DecidableEquiv}.lean` are generated from
+Std's text (below), with hand proofs where no generated proof compiled (each file's docstring
+lists them). The array iterators, their lemmas, `OAMapTest/Cbv.lean` and `Unverified.lean` are
+written; `bench/` is still a stub.
 
 ## Build and test
 
@@ -39,13 +38,12 @@ their check fails:
 | `SealCheck` | modules above the core use only the 45 contract names, import no core directly, and never `import all` |
 | `Audit` | every constant of `OAMap` uses only `propext`, `Classical.choice`, `Quot.sound`; no axiom, `opaque`, `partial`, `unsafe`, `implemented_by`, `extern` |
 | `ParityRun` | statement, attribute and axiom parity with `Std.HashMap`/`Std.HashSet` |
-| `Cbv`, `Unverified` | stubs (Wave 3) |
+| `Cbv` | `by cbv` closes the same goals as on Std |
+| `Unverified` | `#guard` tests for the functions without Std lemmas |
 
-**Gates until the Merge phase.** `ParityRun` is built and run by every `lake test`, but its
-`failOnError := false` and `maxShow := 5` lines (marked `-- GATE`) keep missing declarations and
-`sorry` from failing the build. `Audit` likewise only lists `sorry` while `failOnSorry := false`.
-At the Merge, delete the two GATE lines of `test/OAMapTest/ParityRun.lean` and set
-`failOnSorry := true` in `test/OAMapTest/Audit.lean`.
+**Gates (on since the Merge).** `ParityRun` fails on any difference from Std outside its `ignore`
+list (the 16 iterator declarations, checked by `tools/srccheck.py`): errors, warnings and extras
+(`failOnWarning := true`). `Audit` fails on any dependency on `sorryAx` (`failOnSorry := true`).
 
 ## Parity
 
@@ -54,7 +52,7 @@ lake build OAMap Parity && lake env lean test/OAMapTest/ParityRun.lean
 ```
 
 runs the checker alone (about 1 s) and writes `.lake/parity.json`. For a to-do list, set
-`maxShow := 0` and `showMissingStatements := true` in the configuration (see `docs/parity.md`).
+`showMissingStatements := true` in the configuration (see `docs/parity.md`).
 
 ## Selecting the core
 
@@ -94,5 +92,5 @@ lake build OAMapTest.CoreSpec    # the acceptance test for the selected core
   from Std's text (`python3 -I tools/gen_basic.py STD_DATA_DIR tools/inventory.json
   OAMap/HashMap`; it reproduces the committed files exactly).
 * `tools/srccheck.py`: checks the source text and attributes of the 16 iterator declarations that
-  parity ignores against `inventory.json` (fails until the iterator files are written).
+  parity ignores against `inventory.json`.
 * `tools/inventory.json`: the API to reproduce, with Std's exact signatures and attributes.

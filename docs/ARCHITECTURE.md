@@ -640,7 +640,10 @@ in `Mock2.lean` §Layer 1.5), `toListModel_insertMany_list`,
 `toListModel_inter` and `toListModel_diff` (L, Std's statements verbatim:
 `((t₁.toListModel).filter fun p => containsKey p.1 t₂.toListModel)` and
 `List.filter (fun k => !List.contains (t₂.toListModel.map Sigma.fst) k.fst) t₁.toListModel`),
-`beq_eq_beqModel` (`[PartialEquivBEq α] [LawfulHashable α] [BEq β]`, to `Const.beqModel`).
+`beq_eq_all_getValue?` (the model of `beq`: Std's `Const.beqModel` unfolded) with `beq_of_perm`,
+`perm_of_beq` and `beq_congr`. There is no twin of Std's `Raw₀.Const.beq_eq_beqModel`:
+`Const.beqModel` is not `@[expose]`d, and no public lemma of Std pins it down for an arbitrary
+`BEq β`, so it cannot be proved without `import all`.
 
 If the bake-off winner later fuses `union` or `inter` for speed, the corresponding lemma moves
 into the core contract. Nothing above `Bulk.lean` changes.
@@ -717,8 +720,8 @@ theorem mem_of_mem_insertIfNew' … -- the one DHashMap lemma HashSet's proofs u
 
 The full list is `proofs.md` §4 (1 invariant, 12 queries, 4 empty-map queries, 11 iteration
 lemmas, 8 operations, 1 Equiv lemma, 7 fused-operation lemmas) plus the Bulk lemmas
-(`toListModel_union/inter/diff/insertMany_list/insertManyIfNewUnit_list`, `beq_eq_beqModel`,
-`insertMany_ind`, the loop equalities). That is about 60 lemmas. None is proved by `rfl`.
+(`toListModel_union/inter/diff/insertMany_list/insertManyIfNewUnit_list`, `beq_of_perm`,
+`perm_of_beq`, `beq_congr`, `insertMany_ind`, the loop equalities). That is about 60 lemmas. None is proved by `rfl`.
 
 ## 5. Proof-derivation strategy, and why
 
@@ -796,7 +799,6 @@ meta def queryMap : Std.HashMap Name (Name × Array (MacroM (TSyntax `term))) :=
      ⟨`forIn, (``Model.forIn_eq_forIn_toListModel, #[])⟩,
      ⟨`all, (``Model.all_eq_all_toListModel, #[])⟩,
      ⟨`any, (``Model.any_eq_any_toListModel, #[])⟩,
-     ⟨`beq, (``Model.beq_eq_beqModel, #[])⟩,
      ⟨`Equiv, (``Model.equiv_iff_toListModel_perm,
        #[`(_root_.List.Perm.congr_left), `(_root_.List.Perm.congr_right)])⟩]
 
@@ -976,8 +978,8 @@ goals as on Std (for example `((∅ : HashMap Nat Nat).insert 1 2).contains 1 = 
 
 `DecidableEquiv.lean`: `instance [BEq α] [LawfulBEq α] [Hashable α] [BEq β] [LawfulBEq β]
 (m₁ m₂ : HashMap α β) : Decidable (m₁ ~m m₂) := decidable_of_iff _ …` from
-`Model.beq_eq_beqModel` and the list lemma relating `Const.beqModel` to `Perm` under
-`LawfulBEq` (Std's route through `DHashMap.Equiv`).
+`m₁ == m₂` (`OAMap.Core.Table.beq`, Std's algorithm) and `Model.beq_iff_equiv`, which is
+proved from `Model.beq_of_perm` and `Model.perm_of_beq` under `LawfulBEq`.
 
 ## 7. HashSet
 

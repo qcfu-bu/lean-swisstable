@@ -6,8 +6,8 @@
 #   3. srccheck.py        source text of the 16 iterator declarations parity ignores
 #   4. audit.py           text-level spec-integrity audit of OAMap/ (no sorry, axiom, unsafe, ...)
 #
-# Until the Merge phase, ParityRun and Audit report missing declarations and `sorry` without
-# failing (their GATE lines); steps 3 and 4 are always strict.
+# Every step is strict: ParityRun fails on any difference from Std outside its ignore list, and
+# Audit on any dependency on sorryAx.
 set -eu
 cd "$(dirname "$0")/.."
 echo "ci: core = $(tools/select-core.sh)"

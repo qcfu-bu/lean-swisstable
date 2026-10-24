@@ -30,9 +30,11 @@ hash map: `Raw₀.Const.toListModel_insertMany_list` holds for every list, and a
 `Raw₀` built from the model (`rawOf`) turns it into a statement about any list with distinct
 keys. That is why this file imports `Std.Data.DHashMap.Internal.WF` (privately, for proofs only).
 
-`beq_eq_beqModel` is left as `sorry`: no public statement of Std pins down `Const.beqModel` for an
-arbitrary `BEq β`, so it cannot be proved without `import all`, which is forbidden here. Its
-docstring gives the details.
+There is no twin of Std's `Raw₀.Const.beq_eq_beqModel`: `Const.beqModel` is not `@[expose]`d
+and no public statement of Std pins it down for an arbitrary `BEq β`, so it could not be proved
+without `import all`, which is forbidden here. `beq_eq_all_getValue?` states the model of `beq`
+directly, and `beq_of_perm`, `perm_of_beq` and `beq_congr` replace Std's uses of
+`Const.beqModel_eq_true_of_perm`, `Const.perm_of_beqModel` and `Const.beqModel_congr`.
 
 Owner: GEN, Wave 1.
 -/
@@ -484,30 +486,15 @@ theorem toListModel_diff [EquivBEq α] [LawfulHashable α] (t₁ t₂ : Table α
 
 /-! ### `beq` -/
 
-/-- `beq` in terms of the models: the definition of `Const.beqModel`, unfolded. -/
+/-- `beq` in terms of the models: the definition of `Const.beqModel`, unfolded. Std's
+`Raw₀.Const.beq_eq_beqModel` needs only `[PartialEquivBEq α]`; this one takes `[EquivBEq α]`
+because the contract's `lookup_eq` does, and every user lemma about `==` has it. -/
 theorem beq_eq_all_getValue? [EquivBEq α] [LawfulHashable α] [BEq β] (t₁ t₂ : Table α β) :
     t₁.beq t₂ = if t₁.toListModel.length ≠ t₂.toListModel.length then false
       else t₁.toListModel.all fun x => getValue? x.1 t₂.toListModel == some x.2 := by
   unfold beq
   rw [size_eq_length, size_eq_length, all_eq_all_toListModel]
   simp only [get?_eq_getValue?]
-
-/-- **Blocked (`sorry`).** `Const.beqModel` is not `@[expose]`d and no public lemma states its
-definition; with it, this lemma is `beq_eq_all_getValue?` followed by unfolding. Every public
-statement about `Const.beqModel` or `Raw₀.Const.beq` assumes `ReflBEq β` or `LawfulBEq β`, or is a
-congruence, so they cannot tell Std's definition apart from one with the two sides of `==`
-swapped, and for a non-symmetric `BEq β` the two differ. Under `[LawfulBEq α] [LawfulBEq β]` the
-lemma follows from `Const.beqModel_iff_perm`, `perm_of_beq` and `beq_of_perm`. The three lemmas
-below, `beq_of_perm`, `perm_of_beq` and `beq_congr`, are proved without it and give what Std's user
-lemmas take from `Const.beqModel_eq_true_of_perm`, `Const.perm_of_beqModel` and
-`Const.beqModel_congr`. Std's `Raw₀` version needs only `[PartialEquivBEq α]`; this one takes
-`[EquivBEq α]` because the contract's `lookup_eq` does, and every user lemma about `==` has it. -/
-theorem beq_eq_beqModel [EquivBEq α] [LawfulHashable α] [BEq β] (t₁ t₂ : Table α β) :
-    t₁.beq t₂ = Const.beqModel t₁.toListModel t₂.toListModel := by
-  -- REVIEW: decision pending (delete this lemma, restate it under `LawfulBEq`, or allow an
-  -- `import all` bridge for `Const.beqModel`; see the docstring). Only `Model.beq_eq_beqModel`
-  -- and the `beq` row of `simp_to_model`'s query table use it; no user lemma does.
-  sorry
 
 theorem beq_of_perm [EquivBEq α] [LawfulHashable α] [BEq β] [ReflBEq β] {t₁ t₂ : Table α β}
     (h : t₁.toListModel.Perm t₂.toListModel) : t₁.beq t₂ = true := by

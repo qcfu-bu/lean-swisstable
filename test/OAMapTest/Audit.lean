@@ -16,8 +16,7 @@ auxiliary declarations Lean generates for them), this check fails (logs an error
 It complements Parity's axiom check, which only sees the declarations that have a Std
 counterpart, and the text-level audit `tools/audit.py`.
 
-**Gate (until the Merge phase).** Theorems that depend on `sorryAx` are listed but do not fail the
-check while `failOnSorry` is `false`. Set it to `true` at the Merge.
+A constant that depends on `sorryAx` fails the check too (`failOnSorry`, on since the Merge).
 -/
 
 open Lean Elab Command
@@ -27,8 +26,8 @@ namespace OAMapTest.Audit
 /-- The axioms a declaration of the library may depend on. -/
 def standardAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
 
-/-- GATE (until the Merge phase): set to `true` to make `sorry` fatal. -/
-def failOnSorry : Bool := false
+/-- Whether a dependency on `sorryAx` fails the check (on since the Merge). -/
+def failOnSorry : Bool := true
 
 #eval show CommandElabM Unit from do
   let env ← getEnv

@@ -20,6 +20,9 @@ Std's `simp_to_model` (`Std/Data/DHashMap/Internal/RawLemmas.lean`) with the cha
   `containsKey k l = b` from a hypothesis `k ∈ m`, `k ∉ m` or `m.contains k = b` that was not
   rewritten (because `simp … at *` could not rewrite it in place, or because no location was given).
 
+Std's `beq` query (`m₁ == m₂` to `Const.beqModel`) has no row: there is no such bridge lemma
+(see `OAMap.HashMap.Model`), and `simp_to_model [beq]` ignores the name, as for any unknown name.
+
 Std's `empty` macro (`intros; simp_all [List.isEmpty_iff]`) is not provided: as a scoped token it
 would make `empty` a keyword wherever `OAMap.HashMap` is open. Write its expansion instead.
 
@@ -82,7 +85,6 @@ private meta def queryMap : Std.HashMap Name (Name × Array (MacroM (TSyntax `te
      ⟨`forIn, (``Model.forIn_eq_forIn_toListModel, #[])⟩,
      ⟨`all, (``Model.all_eq_all_toListModel, #[])⟩,
      ⟨`any, (``Model.any_eq_any_toListModel, #[])⟩,
-     ⟨`beq, (``Model.beq_eq_beqModel, #[])⟩,
      ⟨`Equiv, (``Model.equiv_iff_toListModel_perm,
        #[`(_root_.List.Perm.congr_left), `(_root_.List.Perm.congr_right)])⟩]
 

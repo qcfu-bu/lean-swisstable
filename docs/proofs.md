@@ -218,8 +218,9 @@ theorem toListModel_inter (m₁ m₂) :
     (toListModel (m₁ ∩ m₂)).Perm ((toListModel m₁).filter fun p => containsKey p.1 (toListModel m₂))           -- L
 theorem toListModel_diff (m₁ m₂) :
     (toListModel (m₁ \ m₂)).Perm ((toListModel m₁).filter fun p => !((toListModel m₂).map Sigma.fst).contains p.1)  -- L
-theorem beq_eq_beqModel [PartialEquivBEq α] [LawfulHashable α] [BEq β] {m₁ m₂} :
-    (m₁ == m₂) = Const.beqModel (toListModel m₁) (toListModel m₂)                                -- if beq is Std's definition
+theorem beq_of_perm (h : (toListModel m₁).Perm (toListModel m₂)) : (m₁ == m₂) = true           -- L, [ReflBEq β]
+theorem perm_of_beq (h : (m₁ == m₂) = true) : (toListModel m₁).Perm (toListModel m₂)           -- [LawfulBEq α] [LawfulBEq β]
+-- (no `beq_eq_beqModel`: `Const.beqModel` is not exposed, see ARCHITECTURE.md §4.2)
 ```
 
 `union`, `inter` and `diff` are generic only if they are written on top of `insert`, `filter`

@@ -267,7 +267,7 @@ OVERRIDES = {
     'isEmpty_of_isEmpty_insertManyIfNewUnit': [
         'insertManyIfNewUnit_ind (motive := fun m\' => m\'.isEmpty → m.isEmpty) m l id\n'
         '    fun _ _ _ h => by simp only [isEmpty_insertIfNew, Bool.false_eq_true] at h'],
-    # `beq` without `Model.beq_eq_beqModel` (which is still `sorry` in OAMap.Core.Bulk)
+    # `beq` through Model.beq_of_perm/perm_of_beq/beq_congr (there is no bridge to Const.beqModel)
     'Equiv.beq': ['Model.beq_of_perm h.1'],
     'equiv_of_beq': ['⟨Model.perm_of_beq h⟩'],
     'Equiv.beq_congr': ['Model.beq_congr w₁.1 w₂.1'],
