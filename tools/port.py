@@ -654,6 +654,8 @@ def uses_ext(text):
 def hashmap_lemma_files(std, porter, review, choice_log, hand):
     """{module path: text} of the nine Lemmas files and the aggregator."""
     src = open(os.path.join(std, 'HashMap', 'Lemmas.lean')).read()
+    # Std's copyright notice, kept at the top of every file cut from it
+    notice = src[:src.index('-/\n') + 3]
     blocks = split.parse(src)
     ext_block = next(b for b in blocks if b.kind == 'private theorem' and b.name == 'ext')
     out = {}
@@ -725,7 +727,7 @@ def hashmap_lemma_files(std, porter, review, choice_log, hand):
         par = proofs_paragraph(intro, hand_names, n_sorry, HAND_NOTES.get(fname))
         doc = (f'/-!\n# Hash map lemmas: {title}\n\n{par}\n\n{GEN_NOTE}\n\n'
                f'Owner: PORT (Wave 1), {owner} (Wave 2).\n-/')
-        header = ('module\n\n' + imports + '\n\n@[expose] public section\n\n' + doc + '\n\n'
+        header = (notice + 'module\n\n' + imports + '\n\n@[expose] public section\n\n' + doc + '\n\n'
                   'set_option linter.missingDocs true\nset_option autoImplicit false\n\n'
                   'universe u v w w\'\n\n'
                   + '\n\n'.join(v.text for v in top_vars))
@@ -735,7 +737,7 @@ def hashmap_lemma_files(std, porter, review, choice_log, hand):
     # the aggregator, with Std's final attribute command
     last = next(b for b in blocks if b.kind == 'attribute')
     out['SwissTable/HashMap/Lemmas.lean'] = (
-        'module\n\npublic import SwissTable.HashMap.Lemmas.FilterMap\n\n'
+        notice + 'module\n\npublic import SwissTable.HashMap.Lemmas.FilterMap\n\n'
         '@[expose] public section\n\n'
         '/-!\n# Hash map lemmas\n\n'
         'This module contains lemmas about `SwissTable.HashMap`. Most of the lemmas require\n'

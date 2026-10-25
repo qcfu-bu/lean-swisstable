@@ -263,3 +263,12 @@ tools/ci.sh                # all of the above, plus the source audit, the lemma-
 ```
 
 The design notes, the proof architecture and the raw benchmark data are in `docs/`.
+
+## License
+
+SwissTable is released under the Apache License 2.0 (`LICENSE`), the license of Lean and its
+standard library. Much of the user-facing layer is adapted from Std: the operations' definitions
+and docstrings, the lemma statements and the proofs the lemmas are generated from, the bulk
+algorithms and the `simp_to_model` tactic. The files that take Std's text keep its copyright
+notice (Microsoft Corporation and Lean FRO, LLC), and their module docstrings say what was
+changed. The table itself is new code, following the design of Rust's hashbrown.
