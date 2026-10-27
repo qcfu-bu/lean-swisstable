@@ -577,7 +577,7 @@ theorem ctrlWordN_congr {c : ByteArray} {i j : Nat} (e : i = j) {h : i + 8 ≤ c
 theorem byte_ctrlWordN (c : ByteArray) (i : Nat) (h : i + 8 ≤ c.size) {j : Nat} (hj : j < 8) :
     byte (ctrlWordN c i h) j = c[i + j]'(by omega) := by
   unfold ctrlWordN
-  rw [byte_or8 _ _ _ _ _ _ _ _ hj]
+  rw [or_tree8, byte_or8 _ _ _ _ _ _ _ _ hj]
   rcases j with _ | _ | _ | _ | _ | _ | _ | _ | j <;> simp
   all_goals omega
 

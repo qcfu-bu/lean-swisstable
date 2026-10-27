@@ -18,7 +18,8 @@ byte `k < cap` is the control byte of slot `k`, and bytes `cap .. cap + 7` repea
 ## Contents
 
 * `ctrlWord c i h`: the 8 bytes from `i`, little-endian, read by 8 `ByteArray.uget`s that clang
-  combines into one unaligned 64-bit load. `byte_ctrlWord`: byte `j` of it is
+  combines into one unaligned 64-bit load (or'ed as a balanced tree, see `ctrlWord`; `or_tree8`
+  relates it to the left-to-right form of `byte_or8`). `byte_ctrlWord`: byte `j` of it is
   `c[(i + j) % USize.size]`, the index computed in `USize`; `byte_ctrlWord'`: it is `c[i + j]`
   when `i + 8` does not wrap.
 * Match masks. A *mask* (`IsMask`) has its set bits among the flag bits `8 * j + 7`; `flag m j` is
@@ -307,16 +308,30 @@ theorem add_lit_lt {n : Nat} {i : USize} (h : i.toNat + 8 ≤ n) (k : Nat) (hk :
   exact Nat.lt_of_le_of_lt (Nat.mod_le _ _) (by omega)
 
 /-- The 8 control bytes from `i`, little-endian: byte `j` is `c[i + j]` (`byte_ctrlWord`). Eight
-byte loads that clang combines into one unaligned 64-bit load. -/
+byte loads that clang combines into one unaligned 64-bit load.
+
+The bytes are or'ed as a balanced tree. Or'ed left to right (`b₀ ||| b₁ <<< 8 ||| …`), clang did
+not always combine them: on x86-64 with AVX2 (`-march=x86-64-v3` and later, so `-march=native` on
+most x86 machines) its SLP vectorizer turns them into vector code (widening vector loads, shifts, a
+horizontal `or` and a `vmovq`, about ten instructions) before the backend can combine them, and on
+arm64 and baseline x86-64 the home-group read of `insert` stayed eight byte loads. The tree is one
+`ldr` on arm64 and one `movq` at every x86-64 level, in every function of the library and the
+benchmark. -/
 @[inline] def ctrlWord (c : @& ByteArray) (i : USize) (h : i.toNat + 8 ≤ c.size) : UInt64 :=
-  (c.uget i (by omega)).toUInt64 |||
-  ((c.uget (i + USize.ofNat 1) (add_lit_lt h 1 (by decide))).toUInt64 <<< 8) |||
-  ((c.uget (i + USize.ofNat 2) (add_lit_lt h 2 (by decide))).toUInt64 <<< 16) |||
-  ((c.uget (i + USize.ofNat 3) (add_lit_lt h 3 (by decide))).toUInt64 <<< 24) |||
-  ((c.uget (i + USize.ofNat 4) (add_lit_lt h 4 (by decide))).toUInt64 <<< 32) |||
-  ((c.uget (i + USize.ofNat 5) (add_lit_lt h 5 (by decide))).toUInt64 <<< 40) |||
-  ((c.uget (i + USize.ofNat 6) (add_lit_lt h 6 (by decide))).toUInt64 <<< 48) |||
-  ((c.uget (i + USize.ofNat 7) (add_lit_lt h 7 (by decide))).toUInt64 <<< 56)
+  (((c.uget i (by omega)).toUInt64 |||
+      ((c.uget (i + USize.ofNat 1) (add_lit_lt h 1 (by decide))).toUInt64 <<< 8)) |||
+    (((c.uget (i + USize.ofNat 2) (add_lit_lt h 2 (by decide))).toUInt64 <<< 16) |||
+      ((c.uget (i + USize.ofNat 3) (add_lit_lt h 3 (by decide))).toUInt64 <<< 24))) |||
+  ((((c.uget (i + USize.ofNat 4) (add_lit_lt h 4 (by decide))).toUInt64 <<< 32) |||
+      ((c.uget (i + USize.ofNat 5) (add_lit_lt h 5 (by decide))).toUInt64 <<< 40)) |||
+    (((c.uget (i + USize.ofNat 6) (add_lit_lt h 6 (by decide))).toUInt64 <<< 48) |||
+      ((c.uget (i + USize.ofNat 7) (add_lit_lt h 7 (by decide))).toUInt64 <<< 56)))
+
+/-- The balanced `or` of `ctrlWord` is the left-to-right one. -/
+theorem or_tree8 (x₀ x₁ x₂ x₃ x₄ x₅ x₆ x₇ : UInt64) :
+    ((x₀ ||| x₁) ||| (x₂ ||| x₃)) ||| ((x₄ ||| x₅) ||| (x₆ ||| x₇)) =
+      x₀ ||| x₁ ||| x₂ ||| x₃ ||| x₄ ||| x₅ ||| x₆ ||| x₇ := by
+  simp only [UInt64.or_assoc]
 
 /-- The bytes of 8 bytes placed at shifts `0, 8, …, 56`. -/
 theorem lane_shift8 : ∀ b < 256, ∀ s < 8, ∀ j < 8,
@@ -361,7 +376,7 @@ theorem byte_ctrlWord (c : ByteArray) (i : USize) (h : i.toNat + 8 ≤ c.size) {
     byte (ctrlWord c i h) j =
       c[(i.toNat + j) % USize.size]'(Nat.lt_of_le_of_lt (Nat.mod_le _ _) (by omega)) := by
   unfold ctrlWord
-  rw [byte_or8 _ _ _ _ _ _ _ _ hj]
+  rw [or_tree8, byte_or8 _ _ _ _ _ _ _ _ hj]
   have g : ∀ (k : Nat) (hk : k < 8) (hu : (i + USize.ofNat k).toNat < c.size),
       c.uget (i + USize.ofNat k) hu =
         c[(i.toNat + k) % USize.size]'(Nat.lt_of_le_of_lt (Nat.mod_le _ _) (by omega)) :=

@@ -187,14 +187,20 @@ The layout is Abseil's SwissTable in the portable, non-SIMD form of Rust's hashb
 ### Making it work in Lean, on a `ByteArray`
 
 **One load per group.** Core Lean only has byte-level `ByteArray.uget`. Eight of them at
-consecutive indices, shifted and OR'ed together, compile to one unaligned 64-bit load under
-Lake's default `-O3 -DNDEBUG`:
+consecutive indices, shifted and OR'ed together as a balanced tree, compile to one unaligned
+64-bit load under Lake's default `-O3 -DNDEBUG`, and also with `-march=native`:
 
 ```lean
 @[inline] def ctrlWord (c : @& ByteArray) (i : USize) (h : i.toNat + 8 ≤ c.size) : UInt64 :=
-  (c.uget i _).toUInt64 ||| ((c.uget (i + 1) _).toUInt64 <<< 8) ||| … |||
-  ((c.uget (i + 7) _).toUInt64 <<< 56)          -- arm64: a single `ldr x0, [x8, #24]`
+  (((c.uget i _).toUInt64 ||| ((c.uget (i + 1) _).toUInt64 <<< 8)) ||| …) |||
+  (… ||| (… ||| ((c.uget (i + 7) _).toUInt64 <<< 56)))
+  -- arm64: `ldr x0, [x8, #24]`; x86-64: `movq 24(%rdi,%rsi), %rax`
 ```
+
+The tree matters. OR'ed left to right, the same eight loads are turned into about ten vector
+instructions by clang's SLP vectorizer on x86-64 with AVX2 (`-march=x86-64-v3` and later), before
+they can be combined into one load. On arm64 and baseline x86-64, `insert`'s first group read
+also stayed eight byte loads.
 
 **A mirrored tail, so a group never wraps.**
 * Bytes `cap .. cap+7` repeat bytes `0 .. 7`, so the 8 bytes from any slot are in the array.

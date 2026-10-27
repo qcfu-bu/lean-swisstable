@@ -79,16 +79,16 @@ theorem size_set (c : ByteArray) (i : Nat) (b : UInt8) (h : i < c.size) :
   cases c; simp [ByteArray.set, ByteArray.size]
 
 /-- The 8 bytes from `i`, little-endian, at a `Nat` index: `ctrlWord` for tables beyond `2 ^ 31`
-slots. -/
+slots, or'ed as the same balanced tree (see `ctrlWord`). -/
 @[inline] def ctrlWordN (c : @& ByteArray) (i : Nat) (h : i + 8 ≤ c.size) : UInt64 :=
-  (c[i]'(by omega)).toUInt64 |||
-  ((c[i + 1]'(by omega)).toUInt64 <<< 8) |||
-  ((c[i + 2]'(by omega)).toUInt64 <<< 16) |||
-  ((c[i + 3]'(by omega)).toUInt64 <<< 24) |||
-  ((c[i + 4]'(by omega)).toUInt64 <<< 32) |||
-  ((c[i + 5]'(by omega)).toUInt64 <<< 40) |||
-  ((c[i + 6]'(by omega)).toUInt64 <<< 48) |||
-  ((c[i + 7]'(by omega)).toUInt64 <<< 56)
+  (((c[i]'(by omega)).toUInt64 |||
+      ((c[i + 1]'(by omega)).toUInt64 <<< 8)) |||
+    (((c[i + 2]'(by omega)).toUInt64 <<< 16) |||
+      ((c[i + 3]'(by omega)).toUInt64 <<< 24))) |||
+  ((((c[i + 4]'(by omega)).toUInt64 <<< 32) |||
+      ((c[i + 5]'(by omega)).toUInt64 <<< 40)) |||
+    (((c[i + 6]'(by omega)).toUInt64 <<< 48) |||
+      ((c[i + 7]'(by omega)).toUInt64 <<< 56)))
 
 /-- `setCtrl` at `Nat` indices: write slot `i` and its mirror `((i + cap - 8) % cap) + 8`
 (`i + cap` when `i < 8`, `i` itself otherwise). -/
